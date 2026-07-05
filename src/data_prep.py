@@ -9,6 +9,7 @@ def get_dataset():
     
     output_dir = "data/raw"
     output_file = os.path.join(output_dir, "twitter_data_english.csv")
+    print("changes")
 
     if not os.path.exists(output_dir): # if the dir dosenst exist, then make it, also implies no output file exists
         os.makedirs(output_dir)
