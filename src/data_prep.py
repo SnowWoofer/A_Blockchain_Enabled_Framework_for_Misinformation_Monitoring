@@ -4,31 +4,49 @@ import os
 import torch 
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 import jiwer
+import re
 
-def get_dataset():
+RAW_DIR = "data/raw"
+PROCESSED_DIR = "data/processed"
+if not os.path.exists(RAW_DIR): 
+    os.makedirs(RAW_DIR)
+    print(f"{RAW_DIR} created...")
     
-    output_dir = "data/raw"
-    output_file = os.path.join(output_dir, "twitter_data_english.csv")
-    print("changes")
+if not os.path.exists(PROCESSED_DIR):
+    os.makedirs(PROCESSED_DIR)
+    print(f"{PROCESSED_DIR} created...")
 
-    if not os.path.exists(output_dir): # if the dir dosenst exist, then make it, also implies no output file exists
-        os.makedirs(output_dir)
-        print(f"{output_dir} created...")
-        
-    if not os.path.exists(output_file) or os.path.getsize(output_file)!=121581666:   #get the dataset agin in not existaneat or wrong size
-        print("Dataset Missing...")
+
+def get_raw_dataset(lang,model,tokenizer,device):
+    raw_filename = os.path.join(RAW_DIR, f"twitter_data_{lang}_raw.csv")
+    eng_filename = os.path.join(RAW_DIR, "twitter_data_eng_raw.csv")
+            
+    if not os.path.exists(raw_filename) and lang == "eng":   #get the dataset agin in not existaneat or wrong size
+        print(f"Raw Dataset Missing For {lang}...\nGetting Original Dataset...")
         ds = load_dataset("roupenminassian/twitter-misinformation")
-
         df_train = ds["train"].to_pandas()
         df_train.insert(0, 'set', 'train')
         df_test = ds["test"].to_pandas()
         df_test.insert(0, 'set', 'test')
-        df_all = pd.concat([df_train, df_test], ignore_index=True)
-        df_all = df_all[['set','text', 'label']]
+        raw_data = pd.concat([df_train, df_test], ignore_index=True)
+        raw_data.insert(len(raw_data.columns), 'source', "")
+        raw_data = raw_data[['set','text', 'label', 'source']]
+        raw_data['text'], raw_data['source'] = zip(*raw_data['text'].apply(clean_text))
+        raw_data.to_csv(raw_filename)
 
-        df_all.to_csv(output_file, index=False)
-
-    print("Dataset Loaded")
+    elif not os.path.exists(raw_filename):
+        print(f"Raw Dataset Missing For {lang}...\nTranslating...")
+        if not os.path.exists(eng_filename):
+            raise FileNotFoundError("English Dataset Needs To Be Generated First...")
+        eng_base = pd.read_csv(eng_filename)
+        batch_size = 32
+        translated_text = []
+        for i in range(0, len(eng_base), batch_size):
+            batch = eng_base['text'].iloc[i:i+batch_size].tolist()
+            translated_batch = translate_text(batch, model, tokenizer, device, lang)
+            translated_text.extend(translated_batch)
+    
+    print("Raw Dataset Loaded")
     
 def translate_init():
     print("Starting Translator...")
@@ -70,43 +88,19 @@ def translate_text(text:str, model, tokenizer, device:str, lang_code:str):# -> d
     # Decode the tokens back into text
     result = tokenizer.batch_decode(translated_tokens, skip_special_tokens=True) # batch decodes tensors(1 and 0 matrcies) and skipps special tokens like prefix lang tokens and stuff like thta 
     print("Translation Completed...")
-
     return result
 
-def word_error_rate(original_arr, back_translated_arr):
-    incorrect_words = {}
-    correct = 0 
-    overflow = 0
-
-    for i in range(len(original_arr)):
-        original_words = original_arr[i].split(" ") # gets all words from sentence of original
-        back_words = back_translated_arr[i].split(" ")
-        if len(back_words) > len(original_words):
-            overflow += len(back_words) - len(original_words)
-
-        for j in range(len(original_words)): # for all words in snetence compare to 
-            if original_words[j] != back_words[j]:
-                incorrect_words[original_words[j]] = back_words[j]
-                correct += 1
-
-    
-    return incorrect_words, float(correct/(correct+len(incorrect_words)+overflow))
+def clean_text(text):
+    urls = re.findall(r'https\S+|pic\.twitter\.com\S+', text)
+    cleaned = re.sub(r'http\S+|pic\.twitter\.com\S+', '', text)
+    source_str = ", ".join(urls) if urls else ""
+    return cleaned.strip(),source_str
 
 if __name__ == "__main__":
-    test_text = ["The elections results are fake.", "I love soccer"]
-    get_dataset()
     model,tokenizer,device = translate_init()
-    test_translated = translate_text(test_text, model, tokenizer, device, "nso")
-    test_back_translated = translate_text(test_translated, model, tokenizer, device, "eng")
-    combined = []
+    get_raw_dataset("eng",model,tokenizer,device)
+    get_raw_dataset("nso",model,tokenizer,device)
+    get_raw_dataset("zul",model,tokenizer,device)
 
-    # for x,y in zip(test_text, test_back_translated):
-    #     combined.append([x,y])
-
-    out = jiwer.process_words(test_text, test_back_translated)
-    print(jiwer.visualize_alignment(out))    
-    # for i in range(len(test_text)):    
-    #     w[i] = jiwer.wer(test_text[i], test_back_translated[i]) #word_error_rate(test_text, test_back_translated)
-    
-    #print(test_back_translated,w)
-    # add 
+    # out = jiwer.process_words(test_text, test_back_translated)
+    # print(jiwer.visualize_alignment(out))    
