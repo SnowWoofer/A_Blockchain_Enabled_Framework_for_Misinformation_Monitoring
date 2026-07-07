@@ -16,13 +16,11 @@ if not os.path.exists(PROCESSED_DIR):
     os.makedirs(PROCESSED_DIR)
     print(f"{PROCESSED_DIR} created...")
 
-
-def get_raw_dataset(lang,model,tokenizer,device):
-    raw_filename = os.path.join(RAW_DIR, f"twitter_data_{lang}_raw.csv")
+def get_dataset():
     eng_filename = os.path.join(RAW_DIR, "twitter_data_eng_raw.csv")
             
-    if not os.path.exists(raw_filename) and lang == "eng":   #get the dataset agin in not existaneat or wrong size
-        print(f"Raw Dataset Missing For {lang}...\nGetting Original Dataset...")
+    if not os.path.exists(eng_filename):   #get the dataset agin in not existaneat or wrong size
+        print(f"Raw Dataset Missing For {eng_filename}...\nGetting Original Dataset...")
         ds = load_dataset("roupenminassian/twitter-misinformation")
         df_train = ds["train"].to_pandas()
         df_train.insert(0, 'set', 'train')
@@ -32,21 +30,40 @@ def get_raw_dataset(lang,model,tokenizer,device):
         raw_data.insert(len(raw_data.columns), 'source', "")
         raw_data = raw_data[['set','text', 'label', 'source']]
         raw_data['text'], raw_data['source'] = zip(*raw_data['text'].apply(clean_text))
-        raw_data.to_csv(raw_filename)
+        raw_data.to_csv(eng_filename)
 
-    elif not os.path.exists(raw_filename):
-        print(f"Raw Dataset Missing For {lang}...\nTranslating...")
-        if not os.path.exists(eng_filename):
-            raise FileNotFoundError("English Dataset Needs To Be Generated First...")
-        eng_base = pd.read_csv(eng_filename)
+
+def translate_dataset(dest_lang,src_lang,model,tokenizer,device,back_trans:bool):
+    dest_filename = os.path.join(RAW_DIR, f"twitter_data_{dest_lang}_raw.csv")
+    src_filename = os.path.join(RAW_DIR, f"twitter_data_{src_lang}_raw.csv")
+    back_filename = os.path.join(RAW_DIR, f"{dest_lang}_to_{src_lang}_back.csv")
+
+    if not os.path.exists(dest_filename) or True:
+        print(f"Raw Dataset Missing For {dest_lang}...\nTranslating...")
+        if not os.path.exists(src_filename):
+            raise FileNotFoundError(f"{src_lang} Dataset Needs To Be Generated First...")
+        src_base = pd.read_csv(src_filename)
+        
+        if os.path.exists(dest_filename):
+            already_done = len(pd.read_csv(dest_filename))
+        else:
+            already_done = 0
+        
         batch_size = 32
-        translated_text = []
-        for i in range(0, len(eng_base), batch_size):
-            batch = eng_base['text'].iloc[i:i+batch_size].tolist()
-            translated_batch = translate_text(batch, model, tokenizer, device, lang)
-            translated_text.extend(translated_batch)
+        for i in range(already_done, len(src_base), batch_size):
+            batch = src_base['text'].iloc[i:i+batch_size].fillna("").astype(str).tolist()
+            translated_batch = translate_text(batch, model, tokenizer, device, dest_lang)
+            batch_df = pd.DataFrame({'text': translated_batch})
+            #translated_text.extend(translated_batch)
+            batch_df.to_csv(dest_filename, mode='a', header=not os.path.exists(dest_filename), index=False)
+            if back_trans == True:
+                translated_batch_back = translate_text(translated_batch, model, tokenizer, device, src_lang)
+                batch_df_back = pd.DataFrame({'text': translated_batch_back})
+                #translated_text.extend(translated_batch)
+                batch_df_back.to_csv(back_filename, mode='a', header=not os.path.exists(back_filename), index=False)
+            print(f"Batch {i}[{batch_size*i} records translated] completed ")
     
-    print("Raw Dataset Loaded")
+    print("Raw Dataset Translated into {dest_lang}...")
     
 def translate_init():
     print("Starting Translator...")
@@ -97,10 +114,10 @@ def clean_text(text):
     return cleaned.strip(),source_str
 
 if __name__ == "__main__":
+    get_dataset()
     model,tokenizer,device = translate_init()
-    get_raw_dataset("eng",model,tokenizer,device)
-    get_raw_dataset("nso",model,tokenizer,device)
-    get_raw_dataset("zul",model,tokenizer,device)
+    translate_dataset("nso","eng",model,tokenizer,device,True)
+    translate_dataset("zul","eng",model,tokenizer,device,True)
 
     # out = jiwer.process_words(test_text, test_back_translated)
     # print(jiwer.visualize_alignment(out))    
