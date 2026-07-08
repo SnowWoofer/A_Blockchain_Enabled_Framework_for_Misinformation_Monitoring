@@ -1,3 +1,5 @@
 .env
 data
 temp.py
+__pycache__
+*.pyc
