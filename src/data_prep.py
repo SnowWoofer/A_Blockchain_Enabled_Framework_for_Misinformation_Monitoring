@@ -6,8 +6,9 @@ from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 import jiwer
 import re
 
-RAW_DIR = "data/raw"
-PROCESSED_DIR = "data/processed"
+DATA_DIR = os.environ.get("DATA_DIR", ".")
+RAW_DIR = os.path.join(DATA_DIR, "data/raw")
+PROCESSED_DIR = os.path.join(DATA_DIR, "data/processed")
 if not os.path.exists(RAW_DIR): 
     os.makedirs(RAW_DIR)
     print(f"{RAW_DIR} created...")
