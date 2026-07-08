@@ -5,6 +5,7 @@ import torch
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 import jiwer
 import re
+import argparse
 
 DATA_DIR = os.environ.get("DATA_DIR", ".")
 RAW_DIR = os.path.join(DATA_DIR, "data/raw")
@@ -34,36 +35,49 @@ def get_dataset():
         raw_data.to_csv(eng_filename)
 
 
-def translate_dataset(dest_lang,src_lang,model,tokenizer,device,back_trans:bool):
-    dest_filename = os.path.join(RAW_DIR, f"twitter_data_{dest_lang}_raw.csv")
+def translate_dataset(dest_lang,src_lang,model,tokenizer,device,back_trans:bool,start_index: int = 0, end_index: int = None, part_tag: str = ""):
+    dest_filename = os.path.join(RAW_DIR, f"twitter_data_{dest_lang}_raw{part_tag}.csv")
     src_filename = os.path.join(RAW_DIR, f"twitter_data_{src_lang}_raw.csv")
-    back_filename = os.path.join(RAW_DIR, f"{dest_lang}_to_{src_lang}_back.csv")
+    #back_filename = os.path.join(RAW_DIR, f"{dest_lang}_to_{src_lang}_back.csv")
 
-    if not os.path.exists(dest_filename) or True:
-        print(f"Raw Dataset Missing For {dest_lang}...\nTranslating...")
-        if not os.path.exists(src_filename):
-            raise FileNotFoundError(f"{src_lang} Dataset Needs To Be Generated First...")
-        src_base = pd.read_csv(src_filename)
-        
-        if os.path.exists(dest_filename):
-            already_done = len(pd.read_csv(dest_filename))
-        else:
-            already_done = 0
-        
-        batch_size = 32
-        for i in range(already_done, len(src_base), batch_size):
-            batch = src_base['text'].iloc[i:i+batch_size].fillna("").astype(str).tolist()
-            translated_batch = translate_text(batch, model, tokenizer, device, dest_lang)
-            batch_df = pd.DataFrame({'text': translated_batch})
-            #translated_text.extend(translated_batch)
-            batch_df.to_csv(dest_filename, mode='a', header=not os.path.exists(dest_filename), index=False)
-            if back_trans == True:
-                translated_batch_back = translate_text(translated_batch, model, tokenizer, device, src_lang)
-                batch_df_back = pd.DataFrame({'text': translated_batch_back})
-                #translated_text.extend(translated_batch)
-                batch_df_back.to_csv(back_filename, mode='a', header=not os.path.exists(back_filename), index=False)
-            print(f"Batch {i}[{batch_size*i} records translated] completed ")
+    print(f"Translating {dest_lang} rows {start_index} to {end_index}")
+
+    if not os.path.exists(src_filename):
+        raise FileNotFoundError(f"{src_lang} Dataset Needs To Be Generated First...")
+        # print(f"Raw Dataset Missing For {dest_lang}...\nTranslating...")
+        # if not os.path.exists(src_filename):
+            
+    src_base = pd.read_csv(src_filename, encoding='utf-8')
     
+    if end_index is None:
+        end_index = len(src_base)
+
+    if os.path.exists(dest_filename):
+        already_done = len(pd.read_csv(dest_filename, encoding='utf-8'))
+    else:
+        already_done = 0
+
+    resume_from  = start_index + already_done
+
+    batch_size = 32
+    for i in range(resume_from, end_index, batch_size):
+        batch_end = min(i + batch_size, end_index)
+        batch = src_base['text'].iloc[i:i+batch_size].fillna("").astype(str).tolist()
+        translated_batch = translate_text(batch, model, tokenizer, device, dest_lang)
+        batch_df = pd.DataFrame({
+            'text': batch,
+            'translated': translated_batch,
+        })
+        #translated_text.extend(translated_batch)
+        if back_trans:
+            translated_batch_back = translate_text(translated_batch, model, tokenizer, device, src_lang)
+            batch_df["back_translated"] = translated_batch_back
+            #batch_df_back = pd.DataFrame({'text': translated_batch_back})
+            #translated_text.extend(translated_batch)
+            #batch_df_back.to_csv(back_filename, mode='a', header=not os.path.exists(back_filename), index=False, encoding='utf-8')
+        batch_df.to_csv(dest_filename, mode='a', header=not os.path.exists(dest_filename), index=False, encoding='utf-8')
+        print(f"Rows {i} to {batch_end} completed ")
+
     print("Raw Dataset Translated into {dest_lang}...")
     
 def translate_init():
@@ -115,10 +129,29 @@ def clean_text(text):
     return cleaned.strip(),source_str
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--dest_lang", type=str, required=True)
+    parser.add_argument("--src_lang", type=str, required=True, default="eng")
+    parser.add_argument("--back_trans", action="store_true")
+    parser.add_argument("--start_index", type=int, default=0)
+    parser.add_argument("--end_index", type=int , default=None)
+    parser.add_argument("--part_tag", type=str, default="")
+    args = parser.parse_args()
+
     get_dataset()
     model,tokenizer,device = translate_init()
-    translate_dataset("nso","eng",model,tokenizer,device,True)
-    translate_dataset("zul","eng",model,tokenizer,device,True)
+
+    translate_dataset(
+        args.dest_lang,
+        args.src_lang,
+        model,
+        tokenizer,
+        device,
+        back_trans=args.back_trans, 
+        start_index=args.start_index,
+        end_index=args.end_index,
+        part_tag=args.part_tag,
+    )
 
     # out = jiwer.process_words(test_text, test_back_translated)
     # print(jiwer.visualize_alignment(out))    
