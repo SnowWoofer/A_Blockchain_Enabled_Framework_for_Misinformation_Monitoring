@@ -115,6 +115,8 @@ def translate_text(text:str, model, tokenizer, device:str, lang_code:str):# -> d
         **inputs, # unpckas python dictionary equaiaavlent to translate_tokens(inputs_var1=..., input_var2=...)
         forced_bos_token_id=tokenizer.convert_tokens_to_ids(lang_code+"_Latn"), # forces teh brigging of the token to prefix teh lang code for sepedi
         max_length=512, # max length of genreated text
+        repetition_penalty=1.3,
+        no_repeat_ngram_size=3,
     )
 
     # Decode the tokens back into text
