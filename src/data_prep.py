@@ -6,6 +6,7 @@ from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 import jiwer
 import re
 import argparse
+from openai import OpenAI;
 
 DATA_DIR = os.environ.get("DATA_DIR", ".")
 RAW_DIR = os.path.join(DATA_DIR, "data/raw")
@@ -97,7 +98,8 @@ def translate_init():
 
 def translate_text(text:str, model, tokenizer, device:str, lang_code:str):# -> dict:
     print("Starting Translation Of Text...")
-    # Use Pythorhces 's memeory optimissation conetxt mananbger
+    
+    #Use Pythorhces 's memeory optimissation conetxt mananbger
     with torch.no_grad():
         # Cleans basic social media artifictas or truncates the text to fit the modesl context
         # Meta's nnlb ses speciifif languauage codes: "eng_Latn" for english and "nso_Latn" for sepedi
