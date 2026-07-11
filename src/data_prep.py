@@ -11,17 +11,9 @@ from openai import OpenAI, APIError, APIConnectionError, RateLimitError, APITime
 from dotenv import load_dotenv
 import inspect
 
-# Force stdout to flush immediately so print() shows up live,
-# even when not running with `python -u`
 print = functools.partial(print, flush=True)
-
 load_dotenv()
 
-# Explicit per-phase timeouts. A single `timeout=180` still lets the TLS
-# handshake phase hang indefinitely on some Windows setups (antivirus SSL
-# inspection, corporate proxy/VPN, flaky adapter). This forces the connect/
-# handshake phase specifically to give up after 15s instead of hanging
-# forever, while still giving generation up to 180s to finish.
 _timeout = httpx.Timeout(connect=15.0, read=180.0, write=30.0, pool=15.0)
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"), timeout=_timeout, max_retries=0)
 
@@ -37,9 +29,8 @@ if not os.path.exists(PROCESSED_DIR):
     os.makedirs(PROCESSED_DIR)
     print(f"{PROCESSED_DIR} created...")
 
-
 def get_dataset():
-    print(f"Line: {inspect.currentframe().f_lineno}")
+    print("Entry Point: get_dataset()...")
     eng_filename = os.path.join(RAW_DIR, "twitter_data_eng_raw.csv")
     if not os.path.exists(eng_filename):
         print(f"Raw Dataset Missing For {eng_filename}...\nGetting Original Dataset...")
@@ -52,21 +43,26 @@ def get_dataset():
         raw_data.insert(len(raw_data.columns), 'source', "")
         raw_data = raw_data[['set', 'text', 'label', 'source']]
         raw_data['text'], raw_data['source'] = zip(*raw_data['text'].apply(clean_text))
-        raw_data.to_csv(eng_filename)
-    print("eng_dataset loaded")
-    print(f"Line: {inspect.currentframe().f_lineno}")
+        raw_data.to_csv(eng_filename,encoding='utf-8')
+    print(f"Exit Point: get_dataset()...")
 
 def clean_text(text):
-    print(f"Line: {inspect.currentframe().f_lineno}")
-    urls = re.findall(r'https\S+|pic\.twitter\.com\S+', text)
-    cleaned = re.sub(r'http\S+|pic\.twitter\.com\S+', '', text)
-    source_str = ", ".join(urls) if urls else ""
-    print(f"Line: {inspect.currentframe().f_lineno}")
+    print("Entry Point: clean_text()...")
+    pattern = r'https\S+|pic\.twitter\.com\S+|(?:\S+\s)?\(Reuters\)\s*-|Featured Image.*|entire story:.*|https?://\S+|RT\s@\S+|Read\s+more.*$|Via\s+:\S$'
+    twitter_usernames = r'@\S+'
+    combined = f"{pattern}|{twitter_usernames}"
+
+    urls = re.findall(combined, text, flags=re.IGNORECASE)
+    text = re.sub(pattern, '', text)
+    #text = re.sub(twitter_usernames, '@user', text)
+    cleaned = re.sub(r'\s+', ' ', text )
+    source_str = ", ".join(urls) if urls else "unspecified"
+    print("Exit Point: clean_text()...")
     return cleaned.strip(), source_str
 
-
 def build_system_prompt(src_lang: str, dest_lang: str) -> str:
-    print(f"Line: {inspect.currentframe().f_lineno}")
+    print("Entry Point: build_system_prompt()...")
+    print("Exit Point: build_system_prompt()...")
     return (
         f"You are a professional native-level translator fluent in both "
         f"{src_lang} and {dest_lang}.\n\n"
@@ -94,8 +90,9 @@ def build_system_prompt(src_lang: str, dest_lang: str) -> str:
 
 
 def build_user_prompt(batch: list) -> str:
-    print(f"Line: {inspect.currentframe().f_lineno}")
+    print("Entry Point: build_user_prompt()...")
     numbered = "\n".join(f"{i + 1}. {text}" for i, text in enumerate(batch))
+    print("Exit Point: build_user_prompt()...")
     return (
         f"Translate the following {len(batch)} numbered sentences. "
         f"Each output id must correspond to its input number.\n\n"
@@ -104,18 +101,13 @@ def build_user_prompt(batch: list) -> str:
 
 
 def translate_batch_gpt(batch: list, src_lang: str, dest_lang: str, max_retries: int = 2):
-    print(f"Line: {inspect.currentframe().f_lineno}")
+    print("Entry Point: translate_batch_gpt()...")
     system_prompt = build_system_prompt(src_lang, dest_lang)
     user_prompt = build_user_prompt(batch)
     expected_ids = list(range(1, len(batch) + 1))
 
-    # Rough token budget: each item needs original + translated + back_translated text,
-    # roughly 4x the original length in tokens (safe multiplier), plus JSON overhead
-    # (quotes, keys, brackets) per item (~20 tokens), plus a fixed buffer.
     approx_input_chars = sum(len(t) for t in batch)
     max_out_tokens = min(16000, max(1024, int(approx_input_chars * 4) + len(batch) * 40 + 500))
-
-    print(f"Line: {inspect.currentframe().f_lineno}")
     for attempt in range(max_retries + 1):
         try:
             print(f"Line: {inspect.currentframe().f_lineno}: sending request, attempt {attempt}, max_out_tokens={max_out_tokens}")
@@ -133,9 +125,6 @@ def translate_batch_gpt(batch: list, src_lang: str, dest_lang: str, max_retries:
             raw = response.choices[0].message.content.strip()
             print(f"Line: {inspect.currentframe().f_lineno}: finish_reason={finish_reason}, raw_len={len(raw)}")
             if finish_reason == "length":
-                # The model got cut off before finishing the JSON — this is exactly
-                # what produced your "Unterminated string" error. Don't even try to
-                # parse it; retry immediately with a bigger budget.
                 max_out_tokens = min(16000, int(max_out_tokens * 1.5))
                 print(f"Attempt {attempt}: response truncated (finish_reason=length), "
                       f"retrying with max_tokens={max_out_tokens}")
@@ -152,16 +141,13 @@ def translate_batch_gpt(batch: list, src_lang: str, dest_lang: str, max_retries:
         except (json.JSONDecodeError, KeyError, TypeError) as e:
             print(f"Attempt {attempt}: parse failed — {type(e).__name__}: {e}")
         except Exception as e:
-            # Catch-all safety net: anything not covered above (e.g. raw ssl.SSLError,
-            # socket-level errors that slip past httpx's own error wrapping) gets
-            # logged and retried instead of silently hanging past our httpx timeout.
             print(f"Attempt {attempt}: UNEXPECTED error — {type(e).__name__}: {e}")
-
+    print("Exit Point: translate_batch_gpt()...")
     raise RuntimeError(f"Failed to get valid batch translation after {max_retries + 1} attempts")
 
 
 def translate_dataset_gpt(dest_lang, src_lang, start_index: int = 0, end_index: int = None, part_tag: str = ""):
-    print(f"Line: {inspect.currentframe().f_lineno}")
+    print("Entry Point: translate_dataset_gpt()...")
     dest_filename = os.path.join(RAW_DIR, f"twitter_data_{dest_lang}_gpt{part_tag}.csv")
     src_filename = os.path.join(RAW_DIR, f"twitter_data_{src_lang}_raw.csv")
 
@@ -176,8 +162,6 @@ def translate_dataset_gpt(dest_lang, src_lang, start_index: int = 0, end_index: 
     already_done = len(pd.read_csv(dest_filename, encoding='utf-8')) if os.path.exists(dest_filename) else 0
     resume_from = start_index + already_done
 
-    # Smaller batch = smaller JSON response = less truncation risk, and cheaper
-    # retries when something does go wrong.
     batch_size = 8
     print(f"Line: {inspect.currentframe().f_lineno}")
     for i in range(resume_from, end_index, batch_size):
@@ -188,17 +172,17 @@ def translate_dataset_gpt(dest_lang, src_lang, start_index: int = 0, end_index: 
             results = translate_batch_gpt(batch, src_lang, dest_lang)
         except RuntimeError as e:
             print(f"Rows {i}-{batch_end} FAILED, stopping so checkpoint stays accurate: {e}")
-            break  # don't write partial/bad data — resume_from will retry this batch next run
+            break  
 
         batch_df = pd.DataFrame(results)
         batch_df.to_csv(dest_filename, mode='a', header=not os.path.exists(dest_filename), index=False, encoding='utf-8')
         print(f"Rows {i} to {batch_end} completed")
-    print(f"Line: {inspect.currentframe().f_lineno}")
-    print(f"GPT translation into {dest_lang} done (or paused on error).")
+    print("Exit Point: translate_dataset_gpt()...")
 
 
 if __name__ == "__main__":
-    print(f"Line: {inspect.currentframe().f_lineno}")
+    print("Entry Point: main()...")
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--dest_lang", type=str, required=True)
     parser.add_argument("--src_lang", type=str, required=True, default="eng")
@@ -206,8 +190,6 @@ if __name__ == "__main__":
     parser.add_argument("--end_index", type=int, default=None)
     parser.add_argument("--part_tag", type=str, default="")
     args = parser.parse_args()
-
-    print(f"Line: {inspect.currentframe().f_lineno}")
 
     get_dataset()
 
@@ -218,3 +200,4 @@ if __name__ == "__main__":
         end_index=args.end_index,
         part_tag=args.part_tag,
     )
+    print("Exit Point: main()...")
