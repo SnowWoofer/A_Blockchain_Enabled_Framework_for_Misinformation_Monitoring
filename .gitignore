@@ -1,5 +1,6 @@
 .env
 data
-temp.py
+temp*
 __pycache__
 *.pyc
+*.jsonl

@@ -1,203 +1,296 @@
-import pandas as pd
-from datasets import load_dataset
-import os
-import jiwer
-import re
 import argparse
 import json
-import functools
-import httpx
-from openai import OpenAI, APIError, APIConnectionError, RateLimitError, APITimeoutError
+import os
+import re
+from collections import defaultdict
+import pandas as pd
+from datasets import load_dataset
 from dotenv import load_dotenv
-import inspect
+from openai import OpenAI
 
-print = functools.partial(print, flush=True)
 load_dotenv()
-
-_timeout = httpx.Timeout(connect=15.0, read=180.0, write=30.0, pool=15.0)
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"), timeout=_timeout, max_retries=0)
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 DATA_DIR = os.environ.get("DATA_DIR", ".")
 RAW_DIR = os.path.join(DATA_DIR, "data/raw")
 PROCESSED_DIR = os.path.join(DATA_DIR, "data/processed")
 
-if not os.path.exists(RAW_DIR):
-    os.makedirs(RAW_DIR)
-    print(f"{RAW_DIR} created...")
+os.makedirs(RAW_DIR, exist_ok=True)
+os.makedirs(PROCESSED_DIR, exist_ok=True)
 
-if not os.path.exists(PROCESSED_DIR):
-    os.makedirs(PROCESSED_DIR)
-    print(f"{PROCESSED_DIR} created...")
 
-def get_dataset():
-    print("Entry Point: get_dataset()...")
-    eng_filename = os.path.join(RAW_DIR, "twitter_data_eng_raw.csv")
-    if not os.path.exists(eng_filename):
-        print(f"Raw Dataset Missing For {eng_filename}...\nGetting Original Dataset...")
-        ds = load_dataset("roupenminassian/twitter-misinformation")
-        df_train = ds["train"].to_pandas()
-        df_train.insert(0, 'set', 'train')
-        df_test = ds["test"].to_pandas()
-        df_test.insert(0, 'set', 'test')
-        raw_data = pd.concat([df_train, df_test], ignore_index=True)
-        raw_data.insert(len(raw_data.columns), 'source', "")
-        raw_data = raw_data[['set', 'text', 'label', 'source']]
-        raw_data['text'], raw_data['source'] = zip(*raw_data['text'].apply(clean_text))
-        raw_data.to_csv(eng_filename,encoding='utf-8')
-    print(f"Exit Point: get_dataset()...")
-
-def clean_text(text):
-    print("Entry Point: clean_text()...")
-    pattern = r'https\S+|pic\.twitter\.com\S+|(?:\S+\s)?\(Reuters\)\s*-|Featured Image.*|entire story:.*|https?://\S+|RT\s@\S+|Read\s+more.*$|Via\s+:\S$'
+def clean_text(text: str):
+    """Strips URLs, RT tags, boilerplate news phrases, and @mentions from a tweet,
+    returning the cleaned text plus a comma-joined list of anything stripped out."""
+    if not isinstance(text, str):
+        return "", "unspecified"
+    pattern = (
+        r'https\S+|pic\.twitter\.com\S+|(?:\S+\s)?\(Reuters\)\s*-|Featured Image.*|'
+        r'entire story:.*|https?://\S+|RT\s@\S+|Read\s+more.*$|Via\s+:\S$'
+    )
     twitter_usernames = r'@\S+'
     combined = f"{pattern}|{twitter_usernames}"
 
     urls = re.findall(combined, text, flags=re.IGNORECASE)
     text = re.sub(pattern, '', text)
-    #text = re.sub(twitter_usernames, '@user', text)
-    cleaned = re.sub(r'\s+', ' ', text )
+    cleaned = re.sub(r'\s+', ' ', text)
     source_str = ", ".join(urls) if urls else "unspecified"
-    print("Exit Point: clean_text()...")
     return cleaned.strip(), source_str
 
-def build_system_prompt(src_lang: str, dest_lang: str) -> str:
-    print("Entry Point: build_system_prompt()...")
-    print("Exit Point: build_system_prompt()...")
-    return (
-        f"You are a professional native-level translator fluent in both "
-        f"{src_lang} and {dest_lang}.\n\n"
-        f"TASK:\n"
-        f"For each input sentence: (1) translate it from {src_lang} to {dest_lang}, "
-        f"then (2) independently back-translate that translation to {src_lang}, "
-        f"as if you had never seen the original.\n\n"
-        f"OUTPUT FORMAT (strict):\n"
-        f"Return ONLY a single valid JSON array. No preamble, no explanation, "
-        f"no markdown code fences, no trailing commentary.\n"
-        f"Each array element must be an object with exactly these keys:\n"
-        f'  "id": integer, sequential starting at 1, matching input order\n'
-        f'  "original_text": string, copied exactly from the input\n'
-        f'  "translated_text": string\n'
-        f'  "back_translated_text": string\n\n'
-        f"RULES:\n"
-        f"- Preserve the exact number of input sentences in the output — "
-        f"never merge, split, or skip any, even if a sentence is empty, very short, "
-        f"or contains only a URL/emoji/hashtag.\n"
-        f'- If an input sentence is empty, return "" for translated_text and '
-        f"back_translated_text, not null.\n"
-        f"- Do not add explanations, notes, or apologies inside any field.\n"
-        f"- Ensure the JSON is syntactically valid: escape quotes/newlines properly."
+
+def get_dataset():
+    """Downloads and caches the raw English twitter-misinformation dataset,
+    cleaning text and extracting source URLs along the way."""
+    eng_filename = os.path.join(RAW_DIR, "twitter_data_eng_raw.csv")
+    if os.path.exists(eng_filename):
+        return
+
+    print(f"Raw dataset missing at {eng_filename}, downloading...")
+    ds = load_dataset("roupenminassian/twitter-misinformation")
+    df_train = ds["train"].to_pandas()
+    df_train.insert(0, 'set', 'train')
+    df_test = ds["test"].to_pandas()
+    df_test.insert(0, 'set', 'test')
+
+    raw_data = pd.concat([df_train, df_test], ignore_index=True)
+    raw_data.insert(len(raw_data.columns), 'source', "")
+    raw_data = raw_data[['set', 'text', 'label', 'source']]
+    raw_data['text'], raw_data['source'] = zip(*raw_data['text'].apply(clean_text))
+    raw_data.to_csv(eng_filename, index=False, encoding='utf-8')
+
+
+def split_text_by_chars(text: str, max_chars: int = 4000) -> list:
+    """Safely slices text into ~max_chars blocks without breaking words."""
+    if not text:
+        return [""]
+
+    words = text.split(" ")
+    chunks = []
+    current_chunk = []
+    current_length = 0
+
+    for word in words:
+        if current_length + len(word) + 1 > max_chars:
+            if current_chunk:
+                chunks.append(" ".join(current_chunk))
+            current_chunk = [word]
+            current_length = len(word)
+        else:
+            current_chunk.append(word)
+            current_length += len(word) + 1
+
+    if current_chunk:
+        chunks.append(" ".join(current_chunk))
+
+    return chunks if chunks else [""]
+
+
+import json
+import os
+import pandas as pd
+
+
+def build_bulletproof_batch_jsonl(
+    src_filename: str,
+    output_prefix: str,
+    src_lang: str,
+    dest_lang: str,
+    max_file_size_mb: int = 90,
+    max_requests_per_file: int = 45000,  # Strict safety line below 50k
+):
+    """Generates chunked JSONL files that strictly respect both the 100MB
+
+    file size limit AND the 50,000 total request line cap.
+    """
+    print(f"📦 Processing dataset: {src_filename}...")
+    df = pd.read_csv(src_filename, encoding="utf-8")
+
+    system_prompt = (
+        f"You are a professional native-level translator fluent in {src_lang} and {dest_lang}.\n"
+        f"Translate the user text exactly from {src_lang} to {dest_lang}.\n"
+        f"Return ONLY the direct translation. Do not add conversational intro text, markdown, or commentary."
     )
 
+    part_idx = 1
+    generated_files = []
+    current_file_path = f"{output_prefix}_part_{part_idx}.jsonl"
+    f = open(current_file_path, "w", encoding="utf-8")
+    generated_files.append(current_file_path)
 
-def build_user_prompt(batch: list) -> str:
-    print("Entry Point: build_user_prompt()...")
-    numbered = "\n".join(f"{i + 1}. {text}" for i, text in enumerate(batch))
-    print("Exit Point: build_user_prompt()...")
-    return (
-        f"Translate the following {len(batch)} numbered sentences. "
-        f"Each output id must correspond to its input number.\n\n"
-        f"{numbered}"
+    request_counter = 0
+    print(f"✍️ Writing to {current_file_path}...")
+
+    for idx, row in df.iterrows():
+        actual_global_idx = (
+            row["global_index"] if "global_index" in df.columns else idx
+        )
+        text = str(row["text"]).strip() if pd.notna(row["text"]) else ""
+
+        # Use your split_text_by_chars function here
+        chunks = split_text_by_chars(text, max_chars=4000)
+
+        for chunk_idx, chunk_text in enumerate(chunks):
+            custom_id = f"row_{actual_global_idx}_chunk_{chunk_idx}"
+
+            request_object = {
+                "custom_id": custom_id,
+                "method": "POST",
+                "url": "/v1/chat/completions",
+                "body": {
+                    "model": "gpt-4o-mini",
+                    "temperature": 0.3,
+                    "frequency_penalty": 0.5,
+                    "messages": [
+                        {"role": "system", "content": system_prompt},
+                        {
+                            "role": "user",
+                            "content": chunk_text if chunk_text else " ",
+                        },
+                    ],
+                },
+            }
+
+            f.write(json.dumps(request_object) + "\n")
+            request_counter += 1
+
+            # Trigger a file split if we cross either threshold
+            if request_counter >= max_requests_per_file:
+                f.close()
+                print(
+                    f"⚠️ {current_file_path} hit the {request_counter:,} request line limit. Splitting..."
+                )
+                part_idx += 1
+                request_counter = 0
+                current_file_path = f"{output_prefix}_part_{part_idx}.jsonl"
+                f = open(current_file_path, "w", encoding="utf-8")
+                generated_files.append(current_file_path)
+                print(f"✍️ Writing to {current_file_path}...")
+
+        # Secondary fallback size check every 1000 main data rows
+        if idx % 1000 == 0:
+            f.flush()
+            file_size_mb = os.path.getsize(current_file_path) / (1024 * 1024)
+            if file_size_mb > max_file_size_mb:
+                f.close()
+                print(
+                    f"⚠️ {current_file_path} reached {file_size_mb:.2f} MB. Splitting..."
+                )
+                part_idx += 1
+                request_counter = 0
+                current_file_path = f"{output_prefix}_part_{part_idx}.jsonl"
+                f = open(current_file_path, "w", encoding="utf-8")
+                generated_files.append(current_file_path)
+                print(f"✍️ Writing to {current_file_path}...")
+
+    f.close()
+    print(f"✅ Safe files constructed: {generated_files}")
+    return generated_files
+
+def submit_batch_job(jsonl_input_path: str) -> str:
+    print(f"Uploading {jsonl_input_path} to OpenAI...")
+    batch_file = client.files.create(file=open(jsonl_input_path, "rb"), purpose="batch")
+    print(f"File uploaded successfully. File ID: {batch_file.id}")
+
+    print("Submitting batch execution request...")
+    job = client.batches.create(
+        input_file_id=batch_file.id,
+        endpoint="/v1/chat/completions",
+        completion_window="24h",
     )
+    print(f"Batch job created successfully! Job ID: {job.id}")
+    return job.id
 
 
-def translate_batch_gpt(batch: list, src_lang: str, dest_lang: str, max_retries: int = 2):
-    print("Entry Point: translate_batch_gpt()...")
-    system_prompt = build_system_prompt(src_lang, dest_lang)
-    user_prompt = build_user_prompt(batch)
-    expected_ids = list(range(1, len(batch) + 1))
+def check_job_status(job_id: str):
+    job = client.batches.retrieve(job_id)
+    print(f"Job ID: {job.id} | Status: {job.status}")
+    if job.status == "completed":
+        print(f"Output file ID to download: {job.output_file_id}")
+    elif job.status == "failed":
+        print(f"Job failed. Error details: {job.errors}")
+    return job
 
-    approx_input_chars = sum(len(t) for t in batch)
-    max_out_tokens = min(16000, max(1024, int(approx_input_chars * 4) + len(batch) * 40 + 500))
-    for attempt in range(max_retries + 1):
-        try:
-            print(f"Line: {inspect.currentframe().f_lineno}: sending request, attempt {attempt}, max_out_tokens={max_out_tokens}")
-            response = client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-                temperature=0,
-                max_tokens=max_out_tokens,
-            )
-            print(f"Line: {inspect.currentframe().f_lineno}: response received")
-            finish_reason = response.choices[0].finish_reason
-            raw = response.choices[0].message.content.strip()
-            print(f"Line: {inspect.currentframe().f_lineno}: finish_reason={finish_reason}, raw_len={len(raw)}")
-            if finish_reason == "length":
-                max_out_tokens = min(16000, int(max_out_tokens * 1.5))
-                print(f"Attempt {attempt}: response truncated (finish_reason=length), "
-                      f"retrying with max_tokens={max_out_tokens}")
+
+def compile_results_to_dataframe(original_csv: str, results_file_ids: list, output_csv: str, new_column: str):
+    """
+    FIXED: Downloads and securely groups all text chunks by row index,
+    sorting sequentially to rebuild multi-chunk articles flawlessly.
+    """
+    print(f"🧵 Reassembling data from {results_file_ids} back into {original_csv}...")
+    df = pd.read_csv(original_csv, encoding="utf-8")
+    
+    # Initialize column if it doesn't exist
+    if new_column not in df.columns:
+        df[new_column] = ""
+
+    # Temporary storage mapping structure: row_index -> { chunk_index: content }
+    assembled_data = defaultdict(dict)
+
+    for file_id in results_file_ids:
+        print(f"Downloading processing components from file content token ID: {file_id}...")
+        file_response = client.files.content(file_id)
+        results_text = file_response.text
+
+        for line in results_text.strip().split("\n"):
+            if not line:
                 continue
+            data = json.loads(line)
+            custom_id = data["custom_id"]
+            
+            # Deconstruct tracking pointers
+            parts = custom_id.split("_")
+            row_idx = int(parts[1])
+            chunk_idx = int(parts[3])
 
-            parsed = json.loads(raw)
-            actual_ids = [item["id"] for item in parsed]
-            if actual_ids == expected_ids:
-                return parsed
-            print(f"Attempt {attempt}: id mismatch — got {len(actual_ids)}, expected {len(expected_ids)}")
+            if data["response"]["status_code"] == 200:
+                translated_content = data["response"]["body"]["choices"][0]["message"]["content"]
+                assembled_data[row_idx][chunk_idx] = translated_content.strip()
+            else:
+                assembled_data[row_idx][chunk_idx] = "[API_PROCESSING_ERROR]"
 
-        except (APIConnectionError, APITimeoutError, RateLimitError, APIError) as e:
-            print(f"Attempt {attempt}: API error — {type(e).__name__}: {e}")
-        except (json.JSONDecodeError, KeyError, TypeError) as e:
-            print(f"Attempt {attempt}: parse failed — {type(e).__name__}: {e}")
-        except Exception as e:
-            print(f"Attempt {attempt}: UNEXPECTED error — {type(e).__name__}: {e}")
-    print("Exit Point: translate_batch_gpt()...")
-    raise RuntimeError(f"Failed to get valid batch translation after {max_retries + 1} attempts")
+    # Stitch pieces together in strict ascending chronological order
+    print("Stitching array fragments back down onto core DataFrame indexes...")
+    for row_idx, chunks_dict in assembled_data.items():
+        sorted_chunks = [chunks_dict[k] for k in sorted(chunks_dict.keys())]
+        full_text = " ".join(sorted_chunks)
+        df.at[row_idx, new_column] = full_text
 
-
-def translate_dataset_gpt(dest_lang, src_lang, start_index: int = 0, end_index: int = None, part_tag: str = ""):
-    print("Entry Point: translate_dataset_gpt()...")
-    dest_filename = os.path.join(RAW_DIR, f"twitter_data_{dest_lang}_gpt{part_tag}.csv")
-    src_filename = os.path.join(RAW_DIR, f"twitter_data_{src_lang}_raw.csv")
-
-    if not os.path.exists(src_filename):
-        raise FileNotFoundError(f"{src_lang} Dataset Needs To Be Generated First...")
-
-    src_base = pd.read_csv(src_filename, encoding='utf-8')
-
-    if end_index is None:
-        end_index = len(src_base)
-    print(f"Line: {inspect.currentframe().f_lineno}")
-    already_done = len(pd.read_csv(dest_filename, encoding='utf-8')) if os.path.exists(dest_filename) else 0
-    resume_from = start_index + already_done
-
-    batch_size = 8
-    print(f"Line: {inspect.currentframe().f_lineno}")
-    for i in range(resume_from, end_index, batch_size):
-        batch_end = min(i + batch_size, end_index)
-        batch = src_base['text'].iloc[i:batch_end].fillna("").astype(str).tolist()
-
-        try:
-            results = translate_batch_gpt(batch, src_lang, dest_lang)
-        except RuntimeError as e:
-            print(f"Rows {i}-{batch_end} FAILED, stopping so checkpoint stays accurate: {e}")
-            break  
-
-        batch_df = pd.DataFrame(results)
-        batch_df.to_csv(dest_filename, mode='a', header=not os.path.exists(dest_filename), index=False, encoding='utf-8')
-        print(f"Rows {i} to {batch_end} completed")
-    print("Exit Point: translate_dataset_gpt()...")
+    df.to_csv(output_csv, index=False, encoding="utf-8")
+    print(f"🎉 Fully stitched state saved successfully to {output_csv}")
 
 
 if __name__ == "__main__":
-    print("Entry Point: main()...")
-
     parser = argparse.ArgumentParser()
     parser.add_argument("--dest_lang", type=str, required=True)
-    parser.add_argument("--src_lang", type=str, required=True, default="eng")
+    parser.add_argument("--src_lang", type=str, default="eng")
     parser.add_argument("--start_index", type=int, default=0)
     parser.add_argument("--end_index", type=int, default=None)
-    parser.add_argument("--part_tag", type=str, default="")
+    parser.add_argument("--part_tag", type=str, default="run")
     args = parser.parse_args()
 
     get_dataset()
 
-    translate_dataset_gpt(
-        dest_lang=args.dest_lang,
+    src_file = os.path.join(RAW_DIR, "twitter_data_eng_raw.csv")
+    df_full = pd.read_csv(src_file, encoding='utf-8')
+    
+    # Inject absolute global tracking metrics prior to slicing
+    df_full['global_index'] = df_full.index
+
+    end_idx = args.end_index if args.end_index is not None else len(df_full)
+    df_slice = df_full.iloc[args.start_index:end_idx].copy()
+    
+    temp_slice_csv = os.path.join(RAW_DIR, f"twitter_data_eng_slice_{args.part_tag}.csv")
+    df_slice.to_csv(temp_slice_csv, index=False, encoding='utf-8')
+
+    # Build split files safely containing loop defense protections
+    jsonl_prefix = f"{args.src_lang}_{args.dest_lang}_batch_{args.part_tag}"
+    generated_jsonl_files = build_bulletproof_batch_jsonl(
+        src_filename=temp_slice_csv,
+        output_prefix=jsonl_prefix,
         src_lang=args.src_lang,
-        start_index=args.start_index,
-        end_index=args.end_index,
-        part_tag=args.part_tag,
+        dest_lang=args.dest_lang,
     )
-    print("Exit Point: main()...")
+
+    # Submit jobs sequentially for all components generated below 100MB bounds
+    for jsonl_file in generated_jsonl_files:
+        job_id = submit_batch_job(jsonl_file)
