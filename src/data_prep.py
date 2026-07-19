@@ -218,3 +218,5 @@ if __name__ == "__main__":
     )
     for jsonl_file in generated_jsonl_files:
         submit_batch_job(jsonl_file)
+
+    #get_dataset("gpt_40_mini_nso_eng_output.jsonl")
