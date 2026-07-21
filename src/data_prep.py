@@ -229,14 +229,14 @@ def anonymize_text(text):
 #     print(f"Saved stitched output to {output_csv}")
 
 if __name__ == "__main__":
-    # parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser()
     # parser.add_argument("--dest_lang", type=str, required=True)
     # parser.add_argument("--src_lang", type=str, default="eng")
     # parser.add_argument("--start_index", type=int, default=0)
     # parser.add_argument("--end_index", type=int, default=None)
     # parser.add_argument("--part_tag", type=str, default="run")
-    # parser.add_argument("--input_file", type=str, required=True)
-    # args = parser.parse_args()
+    parser.add_argument("--input_file", type=str, required=True)
+    args = parser.parse_args()
     # src_file = get_dataset(args.input_file)
     # #src_file = os.path.join(RAW_DIR, args.input_file)
     # df_full = pd.read_csv(src_file, encoding='utf-8')
@@ -256,12 +256,20 @@ if __name__ == "__main__":
     #     submit_batch_job(jsonl_file)
 
     #get_dataset("gpt_40_mini_nso_eng_output.jsonl")
-    file = os.path.join(RAW_DIR, "twitter_data_eng_raw.csv")
-    file_end = os.path.join(RAW_DIR, "twitter_data_eng_raw_anon.csv")
+    file = os.path.join(RAW_DIR, args.input_file)
+    print(f"file: {file}")
+    
+    base, ext = os.path.splitext(file)
+    print(f"base:{base}")
+    print(f"ext: {ext}")
+    new_file = base + "_anon" + ".csv"
+    print(f"new file: {new_file}")
+    # filepath = os.path.join(RAW_DIR, new_file)
+    # print(f"filepath: {filepath}")
+    
 
     raw_data = pd.read_csv(file, encoding='utf-8')
+    for n in raw_data.columns:
+        raw_data[n] = raw_data[n].apply(anonymize_text)
 
-    raw_data['text'] = raw_data['text'].apply(anonymize_text)
-    raw_data['source'] = raw_data['source'].apply(anonymize_text)
-
-    raw_data.to_csv(file_end, index=False, encoding="utf-8")
+    raw_data.to_csv(new_file, index=False, encoding="utf-8")
