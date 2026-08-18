@@ -21,7 +21,7 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 CHAINCODE_PATH="${PROJECT_ROOT}/chaincode/misinformation/go"
-FABRIC_SAMPLES="${FABRIC_SAMPLES:-${PROJECT_ROOT}/fabric-samples}"
+export FABRIC_SAMPLES="${FABRIC_SAMPLES:-${PROJECT_ROOT}/fabric-samples}"
 TEST_NETWORK="${FABRIC_SAMPLES}/test-network"
 CC_NAME="misinformation"
 CC_VERSION="2.1"
@@ -90,6 +90,8 @@ echo ">> Deploying ${CC_NAME} v${CC_VERSION} (${CC_SRC_LANGUAGE})..."
   ${CC_ENDORSEMENT_POLICY}
 
 if [ -n "${THREE_ORG}" ]; then
+  echo ">> Bringing up org3 (addOrg3)..."
+  (cd "${TEST_NETWORK}/addOrg3" && ./addOrg3.sh up)
   echo ">> Switching to a 2-of-3 endorsement policy..."
   "${SCRIPT_DIR}/onboard-org3.sh"
 fi
@@ -117,7 +119,6 @@ if [ "${FOUNDING_LIMIT}" -ne 3 ]; then
 
 fi
 
-echo ">> Registering stakeholder orgs (1..${FOUNDING_LIMIT})..."
 "${SCRIPT_DIR}/register-orgs.sh" --limit "${FOUNDING_LIMIT}"
 "${SCRIPT_DIR}/gen-explorer-config.sh" --orgs "${FOUNDING_LIMIT}"
 echo

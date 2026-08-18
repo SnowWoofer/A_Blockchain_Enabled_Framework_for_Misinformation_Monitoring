@@ -80,3 +80,5 @@ info
 !blockchain/fabric-samples/.*
 blockchain/fabric-samples/.gith*
 TODO*
+!blockchain/explorer/config.json
+apps/ai_service/app/v1-0-0/api/*.db
