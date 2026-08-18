@@ -23,9 +23,6 @@ on their behalf.
   report id), SQLite fallback.
 - **Explorer** (`:8080`): network visualizer over the `fabric_test` network.
 
-See `info/` for deep-dives: `DEPLOYMENT.md` (API gateway), `RUN_CYCLE.md`
-(end-to-end trace), `CHEAT_SHEET.md` (live demo), `DATA_MODEL.md`.
-
 ## Dependencies
 
 ### Language / framework
