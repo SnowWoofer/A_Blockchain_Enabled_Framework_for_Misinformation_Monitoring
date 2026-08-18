@@ -1,21 +1,4 @@
-"""Python -> chaincode bridge (Track C, C1).
-
-Submits AI pipeline output (report_id, language, label, confidence, ...) to the
-Hyperledger Fabric ledger via the peer CLI (CLI shell-out — the PoC option
-documented in the plan; no Fabric SDK dependency needed, works in Colab/Kaggle
-when the Fabric binaries are bundled).
-
-v2 contract changes:
-  - Reports are keyed by a caller-supplied report_id.
-  - SubmitReport takes report_id + off_chain_uri (raw text never sent).
-  - Suspended reports have a voting_deadline and can expire (EXPIRED).
-  - Org membership is two-tier: genesis RegisterOrg, then admission voting.
-
-Contract: `blockchain/chaincode/misinformation/go/misinformation.go`
-Data model: `blockchain/chaincode/misinformation/DATA_MODEL.md`
-"""
 from __future__ import annotations
-
 import hashlib
 import json
 import os
@@ -26,14 +9,12 @@ from typing import Any, Dict, List, Optional, Sequence
 
 @dataclass
 class Prediction:
-    """One model prediction ready to be anchored on-chain (raw text is NOT sent)."""
-
     report_id: str
-    language: str  # nso | zul | eng
-    label: str  # "0" reliable / "1" misinformation
-    confidence: float  # [0,1]
+    language: str
+    label: str
+    confidence: float
     model_version: str
-    timestamp: str  # RFC3339 UTC
+    timestamp: str
     content_hash: str = field(default="")
 
     def __post_init__(self) -> None:
@@ -45,15 +26,12 @@ class Prediction:
             raise ValueError(f"label must be '0' or '1', got {self.label!r}")
         if self.language not in ("nso", "zul", "eng"):
             raise ValueError(f"language must be nso/zul/eng, got {self.language!r}")
-
     @staticmethod
     def hash_content(text: str) -> str:
-        """sha256 hex digest of the raw text — matches ComputeContentHash on-chain."""
         return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
 class FabricBridge:
-    """Thin wrapper around the `peer` CLI for the misinformation chaincode."""
 
     def __init__(
         self,
@@ -61,15 +39,15 @@ class FabricBridge:
         chaincode: str = "misinformation",
         peer_bin: str = "peer",
         org: str = "org1",
-        test_network: str = os.path.expanduser("~/fabric-samples/test-network"),
+        test_network: str = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            *([".."] * 5),
+            "blockchain",
+            "fabric-samples",
+            "test-network",
+        ),
         endorsers: Optional[Sequence[str]] = None,
     ) -> None:
-        """Bridge to the misinformation chaincode.
-
-        `org` selects the signing identity (org1/org2/org3). `endorsers` selects
-        which orgs' peers must endorse an invoke — with a 2/3 policy you need at
-        least two of them. Defaults to org1 + org2.
-        """
         self.channel = channel
         self.chaincode = chaincode
         self.peer_bin = peer_bin
@@ -134,7 +112,6 @@ class FabricBridge:
                     "--tlsRootCertFiles", self._peer_tls_ca(e)]
         cmd += ["--waitForEvent", "-c", payload]
         return self._run(cmd)
-
     @staticmethod
     def _peer_port(org: str) -> str:
         return {"org1": "7051", "org2": "9051", "org3": "11051"}.get(org, "7051")
@@ -156,37 +133,28 @@ class FabricBridge:
         except json.JSONDecodeError:
             return out
 
-    # ---- Org membership (Tier-2 stakeholder status) --------------------------
-
     def register_org(self) -> str:
-        """Enroll the calling org during the genesis bootstrap window."""
         return self.invoke("RegisterOrg", [])
 
     def list_orgs(self) -> Any:
         return self.query("ListRegisteredOrgs", [])
 
     def request_admission(self, org_name: str, org_type: str) -> str:
-        """Request Tier-2 stakeholder status (PENDING admission request)."""
         return self.invoke("RequestOrgAdmission", [org_name, org_type])
 
     def vote_on_admission(self, candidate_msp: str, verdict: str) -> str:
-        """Vote 'accept'/'reject' on an org's admission request."""
         return self.invoke("VoteOnOrgAdmission", [candidate_msp, verdict])
 
     def finalize_admission(self, candidate_msp: str) -> str:
-        """Finalize an admission once 2/3 of registered orgs have voted."""
         return self.invoke("FinalizeOrgAdmission", [candidate_msp])
 
     def query_admission(self, candidate_msp: str) -> Any:
         return self.query("QueryOrgAdmission", [candidate_msp])
 
-    # ---- Reports -------------------------------------------------------------
-
     def submit_report(
         self, report_id: str, language: str, content_hash: str, label: str,
         confidence: float, model_version: str, timestamp: str, off_chain_uri: str,
     ) -> str:
-        """Submit a report for stakeholder review (PENDING)."""
         return self.invoke(
             "SubmitReport",
             [report_id, language, content_hash, label,
@@ -194,15 +162,12 @@ class FabricBridge:
         )
 
     def cast_vote(self, report_id: str, verdict: str) -> str:
-        """Vote 'accept' or 'reject' on a PENDING report."""
         return self.invoke("CastVote", [report_id, verdict])
 
     def finalize_report(self, report_id: str) -> str:
-        """Finalize a report once >= 2/3 of registered orgs have voted."""
         return self.invoke("FinalizeReport", [report_id])
 
     def expire_report(self, report_id: str) -> str:
-        """Mark a PENDING report EXPIRED once its voting deadline passes."""
         return self.invoke("ExpireReport", [report_id])
 
     def query_report(self, report_id: str) -> Any:
@@ -223,14 +188,9 @@ class FabricBridge:
 
 def submit_pipeline_output(
     rows: List[Dict[str, Any]], *, language: str, model_version: str,
-    bridge: FabricBridge, base_uri: str = "https://server.example/api/reports",
+    bridge: FabricBridge,
+    base_uri: str = "https://server.example/api/reports",
 ) -> List[str]:
-    """Batch-submit pipeline output rows as PENDING reports.
-
-    Rows provide [{report_id, text, label, confidence}]. `content_hash` is the
-    sha256 of the raw text (for a stronger whole-object hash, build the report
-    with `report.build` and pass that hash instead).
-    """
     txids: List[str] = []
     for row in rows:
         report_id = str(row["report_id"])
@@ -246,5 +206,54 @@ def submit_pipeline_output(
 
 def _rfc3339_now() -> str:
     import datetime as _dt
-
     return _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _cli_main(argv: Optional[Sequence[str]] = None) -> int:
+    import argparse
+    import sys
+    parser = argparse.ArgumentParser(
+        prog="python -m blockchain",
+        description="Interact with the misinformation chaincode via the peer CLI.",
+    )
+    sub = parser.add_subparsers(dest="command", required=True)
+    reg = sub.add_parser("register-org", help="self-register org(s) during the genesis bootstrap")
+    reg.add_argument("orgs", nargs="+", help="org1/org2/org3 ...")
+    reg.add_argument("--endorsers", default="org1,org2",
+                     help="comma-separated endorsing peers (default org1,org2)")
+    sub.add_parser("register-all", help="register org1, org2, org3")
+    ls = sub.add_parser("list-orgs", help="list registered stakeholder orgs")
+    ls.add_argument("--org", default="org1")
+    args = parser.parse_args(argv)
+    if args.command == "register-org":
+        endorsers = [e.strip() for e in args.endorsers.split(",") if e.strip()]
+        for org in args.orgs:
+            try:
+                out = FabricBridge(org=org, endorsers=endorsers).register_org()
+                print(f"registered {org}: {out}")
+            except RuntimeError as exc:
+                print(f"register {org} failed: {exc}", file=sys.stderr)
+                return 1
+        return 0
+    if args.command == "register-all":
+        for org in ("org1", "org2", "org3"):
+            try:
+                out = FabricBridge(org=org, endorsers=["org1", "org2"]).register_org()
+                print(f"registered {org}: {out}")
+            except RuntimeError as exc:
+                print(f"register {org} failed: {exc}", file=sys.stderr)
+                return 1
+        return 0
+    if args.command == "list-orgs":
+        try:
+            print(json.dumps(FabricBridge(org=args.org).list_orgs(), indent=2))
+        except RuntimeError as exc:
+            print(f"list-orgs failed: {exc}", file=sys.stderr)
+            return 1
+        return 0
+    parser.print_help()
+    return 2
+
+if __name__ == "__main__":
+    import sys as _sys
+    _sys.exit(_cli_main())

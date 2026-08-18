@@ -1,0 +1,105 @@
+version: '2.1'
+
+volumes:
+
+  pgdata:
+
+  walletstore:
+
+networks:
+
+  explorer-net:
+
+    external:
+
+      name: fabric_test
+
+services:
+
+  explorerdb:
+
+    image: hyperledger/explorer-db:latest
+
+    container_name: explorerdb
+
+    hostname: explorerdb
+
+    environment:
+
+      - DATABASE_DATABASE=fabricexplorer
+
+      - DATABASE_USERNAME=hppoc
+
+      - DATABASE_PASSWORD=password
+
+    healthcheck:
+
+      test: ["CMD", "pg_isready", "-U", "postgres", "-h", "localhost", "-p", "5432", "-q"]
+
+      interval: 10s
+
+      timeout: 5s
+
+      retries: 10
+
+    volumes:
+
+      - pgdata:/var/lib/postgresql/data
+
+    networks:
+
+      - explorer-net
+
+  explorer:
+
+    image: hyperledger/explorer:1.1.1
+
+    container_name: explorer
+
+    hostname: explorer
+
+    environment:
+
+      - DATABASE_HOST=explorerdb
+
+      - DATABASE_DATABASE=fabricexplorer
+
+      - DATABASE_USERNAME=hppoc
+
+      - DATABASE_PASSWORD=password
+
+      - LOG_LEVEL_APP=info
+
+      - LOG_LEVEL_DB=info
+
+      - LOG_LEVEL_CONSOLE=debug
+
+      - LOG_CONSOLE_STDOUT=true
+
+      - DISCOVERY_AS_LOCALHOST=false
+
+      - PORT=8080
+
+    ports:
+
+      - 8080:8080
+
+    volumes:
+
+      - ./config.json:/opt/explorer/app/platform/fabric/config.json
+
+      - ./connection-profile:/opt/explorer/app/platform/fabric/connection-profile
+
+      - ../fabric-samples/test-network/organizations:/tmp/crypto
+
+      - walletstore:/opt/explorer/wallet
+
+    depends_on:
+
+      explorerdb:
+
+        condition: service_healthy
+
+    networks:
+
+      - explorer-net

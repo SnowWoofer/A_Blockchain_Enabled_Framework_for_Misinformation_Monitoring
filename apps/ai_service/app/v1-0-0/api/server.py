@@ -1,14 +1,4 @@
-"""FastAPI gateway wrapping the FabricBridge (v2 §4).
-
-Orgs authenticate with an API key issued at sign-up (mapped to a signing org).
-The server holds each org's crypto material and shells out to the `peer` CLI via
-FabricBridge — orgs never touch the peer CLI directly. Also hosts off-chain
-report storage, the tamper-evidence verify endpoint, and a scheduled expiry job.
-
-Run:  uvicorn server:app --host 0.0.0.0 --port 8000
-"""
 from __future__ import annotations
-
 import asyncio
 import datetime as _dt
 import hashlib
@@ -17,38 +7,26 @@ import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Dict, List, Optional
-
 from fastapi import Depends, FastAPI, HTTPException, Header
 from pydantic import BaseModel, Field
-
-from storage import OffChainStore
-
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-
-# NOTE: bridge must still be importable even if the peer binary is absent, so
-# lazy import inside handlers is avoided; importing is safe (it only builds
-# shell env vars at bridge construction time).
+from storage import OffChainStore
 try:
     from blockchain import FabricBridge
     from report import make_report, content_hash, verify_report_integrity
-except Exception as exc:  # pragma: no cover - import guard for lint/unit import
+except Exception as exc:
     print(f"WARNING: could not import core modules: {exc}")
     FabricBridge = None
-
-
 OFFCHAIN_DB = str(Path(__file__).resolve().parent / "offchain.db")
-STORE = None  # initialised in lifespan
+STORE = None
 
 
-# --------------------------------------------------------------------------- #
-# Pydantic request bodies
-# --------------------------------------------------------------------------- #
 class OrgApply(BaseModel):
-    org: str  # which signing identity (org1/org2/org3) the new stakeholder maps to
+    org: str
 
 
 class AdmissionVote(BaseModel):
-    verdict: str  # "accept" | "reject"
+    verdict: str
 
 
 class ReportCreate(BaseModel):
@@ -68,12 +46,9 @@ class ReportCreate(BaseModel):
 
 
 class ReportVote(BaseModel):
-    verdict: str  # "accept" | "reject"
+    verdict: str
 
 
-# --------------------------------------------------------------------------- #
-# Auth dependency: X-API-Key -> org
-# --------------------------------------------------------------------------- #
 def require_org(x_api_key: str = Header(..., alias="X-API-Key")) -> str:
     org = STORE.org_for_key(x_api_key)
     if not org:
@@ -88,12 +63,9 @@ def bridge_for(org: str, endorsers: Optional[List[str]] = None) -> Any:
 
 
 def _now_rfc3339() -> str:
-    return _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
 
-# --------------------------------------------------------------------------- #
-# Scheduled expiry job
-# --------------------------------------------------------------------------- #
 async def expire_overdue_reports(interval_s: int = 3600) -> None:
     while True:
         try:
@@ -103,7 +75,7 @@ async def expire_overdue_reports(interval_s: int = 3600) -> None:
                     deadline = rec.get("voting_deadline", "")
                     if deadline and _dt.datetime.fromisoformat(deadline.replace("Z", "+00:00")) < _dt.datetime.now(_dt.timezone.utc):
                         bridge.expire_report(rec["report_id"])
-        except Exception as exc:  # network may be down
+        except Exception as exc:
             print(f"[scheduler] expiry pass failed: {exc}")
         await asyncio.sleep(interval_s)
 
@@ -115,17 +87,13 @@ async def lifespan(app: FastAPI):
     task = asyncio.create_task(expire_overdue_reports())
     yield
     task.cancel()
-
-
 app = FastAPI(title="Misinformation Monitoring API", version="2.0", lifespan=lifespan)
 
 
-# --------------------------------------------------------------------------- #
-# Org endpoints
-# --------------------------------------------------------------------------- #
 @app.post("/api/orgs/apply")
 def apply_org(body: OrgApply, _org: str = Depends(require_org)):
-    """Issue an API key for a new stakeholder org (off-chain vetting stub)."""
+    token = hashlib.sha256(f"{body.org}|{time.time_ns()}".encode("utf-8")).digest()
+    STORE.verify_onboarding_token(body.org, token)
     raw = f"{body.org}|{time.time_ns()}|{_org}"
     api_key = hashlib.sha256(raw.encode("utf-8")).hexdigest()
     STORE.upsert_org_key(api_key, body.org)
@@ -157,21 +125,22 @@ def list_orgs(_org: str = Depends(require_org)):
     return bridge_for(_org).list_orgs()
 
 
+@app.get("/api/status")
+def storage_status(_org: str = Depends(require_org)):
+    return STORE.ipfs_status()
+
+
 @app.get("/api/orgs/{msp}/admission")
 def get_admission(msp: str, _org: str = Depends(require_org)):
     return bridge_for(_org).query_admission(msp)
 
 
-# --------------------------------------------------------------------------- #
-# Report endpoints
-# --------------------------------------------------------------------------- #
 @app.post("/api/reports")
 def create_report(body: ReportCreate, _org: str = Depends(require_org)):
-    """Full flow: build report -> store off-chain -> hash -> SubmitReport."""
     if _org not in ("org1", "org2", "org3"):
         raise HTTPException(status_code=400, detail="unknown signing org")
     report = make_report(
-        report_id=body.report_id,
+        report_id="",
         language=body.language,
         label=body.label,
         confidence=body.confidence,
@@ -187,15 +156,14 @@ def create_report(body: ReportCreate, _org: str = Depends(require_org)):
         org_mspid={"org1": "Org1MSP", "org2": "Org2MSP", "org3": "Org3MSP"}[_org],
         submission_type=body.submission_type,
     )
-    STORE.save_report(body.report_id, report)
-
-    uri = f"http://localhost:8000/api/reports/{body.report_id}"
+    uri = STORE.save_report(report)
+    report_id = report["report_id"]
     bridge = bridge_for(_org)
     bridge.submit_report(
-        body.report_id, body.language, report["content_hash"], body.label,
+        report_id, body.language, report["content_hash"], body.label,
         body.confidence, body.model_version, _now_rfc3339(), uri,
     )
-    return {"report_id": body.report_id, "off_chain_uri": uri, "content_hash": report["content_hash"]}
+    return {"report_id": report_id, "off_chain_uri": uri, "content_hash": report["content_hash"]}
 
 
 @app.get("/api/reports/{report_id}")
@@ -213,8 +181,6 @@ def get_chain(report_id: str, _org: str = Depends(require_org)):
 
 @app.get("/api/reports")
 def list_reports(status: Optional[str] = None, language: Optional[str] = None, _org: str = Depends(require_org)):
-    """Filtered list. Backed by in-memory filtering here; with CouchDB the chaincode
-    can serve rich queries directly (v2 §6) via GetQueryResult."""
     records = bridge_for(_org).query_all() or []
     if status:
         records = [r for r in records if r.get("status") == status]
@@ -243,7 +209,6 @@ def expire_report(report_id: str, _org: str = Depends(require_org)):
 
 @app.get("/api/reports/{report_id}/verify")
 def verify_report(report_id: str, _org: str = Depends(require_org)):
-    """Tamper-evidence demo: recompute the off-chain hash and compare to on-chain."""
     report = STORE.get_report(report_id)
     if not report:
         raise HTTPException(status_code=404, detail="report not found off-chain")
