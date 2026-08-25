@@ -24,15 +24,7 @@ on their behalf.
 
 ## Architecture
 
-```
-┌──────────┐   ┌───────────────────────┐   ┌──────────────────────────┐
-│ kubo IPFS │   │  FastAPI gateway :8000 │   │  Hyperledger Fabric       │
-│ (off-chain) │   │  (server.py / storage) │   │  test-network (org1..N)   │
-└────┬─────┘   └──────────┬────────────┘   └────────────┬─────────────┘
-     └── CID (=report_id) │ X-API-Key auth              │ peer CLI + crypto
-                          │  content-hash + URI ────────►│ chaincode (Go)
-                          └──────────────┘               └─────────────┘
-```
+![Architecture Diagram](./architecture.svg)
 
 ## Repository layout
 
