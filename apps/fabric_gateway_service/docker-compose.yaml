@@ -1,0 +1,24 @@
+services:
+  fabric-gateway-service:
+    build: .
+    image: misinfo-gateway-service:latest
+    container_name: fabric-gateway-service
+    environment:
+      - CRYPTO_PATH=/crypto
+      - ORGS=${ORGS:-org1,org2,org3}
+      - CHANNEL=mychannel
+      - CHAINCODE=misinformation
+      - GATEWAY_PEER=peer0.org1.example.com
+      - GATEWAY_TARGET=peer0.org1.example.com:7051
+      - TLS_NAME_OVERRIDE=0
+    ports:
+      - "9100:9100"
+    volumes:
+      - ../../blockchain/fabric-samples/test-network/organizations:/crypto:ro
+    networks:
+      - fabric_test
+    restart: unless-stopped
+
+networks:
+  fabric_test:
+    external: true

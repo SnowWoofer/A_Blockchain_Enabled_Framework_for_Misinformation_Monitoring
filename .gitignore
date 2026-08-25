@@ -82,3 +82,10 @@ blockchain/fabric-samples/.gith*
 TODO*
 !blockchain/explorer/config.json
 apps/ai_service/app/v1-0-0/api/*.db
+
+# Fabric Gateway SDK sidecar + Caliper artifacts
+node_modules/
+benchmarks/caliper/report.html
+benchmarks/results-live*
+# unanchored patterns above (in*, con*, ...) swallow these — re-include:
+!instruction.txt

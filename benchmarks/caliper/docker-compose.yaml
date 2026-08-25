@@ -1,0 +1,29 @@
+services:
+  caliper:
+    build: .
+    image: misinfo-caliper:latest
+    container_name: misinfo-caliper
+    command:
+      [
+        "launch", "manager",
+        "--caliper-workspace", "/caliper/workspace",
+        "--caliper-benchconfig", "benchmarks/misinformation-benchmark.yaml",
+        "--caliper-networkconfig", "networks/fabric/test-network.yaml",
+        "--caliper-fabric-gateway-enabled"
+      ]
+    environment:
+      - CALIPER_BENCHCONFIG=benchmarks/misinformation-benchmark.yaml
+      - CALIPER_NETWORKCONFIG=networks/fabric/test-network.yaml
+      - CALIPER_FABRIC_GATEWAY_ENABLED=true
+      # Publish an HTML report at the end of the run (written to report.html)
+      - CALIPER_REPORTPATH=./report.html
+    volumes:
+      - ./:/caliper/workspace
+      - ../../blockchain/fabric-samples/test-network/organizations:/crypto:ro
+    networks:
+      - fabric_test
+    restart: unless-stopped
+
+networks:
+  fabric_test:
+    external: true

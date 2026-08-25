@@ -12,11 +12,15 @@ on their behalf.
 - **Off-chain**: full report in IPFS (content-addressed; the CID doubles as the
   report id), SQLite fallback.
 - **Gateway** (`:8000`): the only thing users/orgs talk to. API-key auth
-  (`X-API-Key` header), shells out to the `peer` CLI as org1.
+  (`X-API-Key` header). Ledger access goes through the **official Fabric
+  Gateway SDK** (`@hyperledger/fabric-gateway`) via a small Node.js sidecar on
+  `:9100`; falls back to the `peer` CLI bridge when the sidecar is down
+  (`FABRIC_BACKEND=auto|gateway|cli`).
 - **Explorer** (`:8080`): network visualizer over the `fabric_test` network.
 - **One command runs the whole pipeline**: `./startup.sh` deploys the network,
   onboards org3 with a 2-of-3 endorsement policy, registers stakeholder orgs on
-  the ledger, and drives a load phase through the gateway.
+  the ledger, drives a load phase through the gateway, and (by default) runs the
+  Caliper benchmark (`load-http.py` then `run-caliper.sh`).
 
 ## Architecture
 
@@ -36,17 +40,24 @@ on their behalf.
 .
 ├── startup.sh                    # single entry point: deploy + load + hints
 ├── benchmarks/
-│   └── load-http.py              # synthetic load driver -> gateway
+│   ├── load-http.py              # synthetic load driver -> gateway
+│   └── caliper/                  # Hyperledger Caliper benchmark suite (official
+│                                 #   Fabric Gateway binding; run-caliper.sh)
 ├── blockchain/
 │   ├── scripts/                  # deploy.sh, onboard-org3.sh, register-orgs.sh,
 │   │                             # add-orgs.sh, bootstrap-keys.sh,
-│   │                             # gen-explorer-config.sh, start-ipfs.sh
+│   │                             # gen-explorer-config.sh, start-ipfs.sh,
+│   │                             # start-gateway-service.sh
 │   ├── chaincode/misinformation/ # Go chaincode (go.mod + vendor/)
 │   ├── fabric-samples/           # git-ignored runtime (PROVISIONS BELOW)
 │   └── explorer/                 # Hyperledger Explorer UI compose + profile
-└── apps/ai_service/app/v1-0-0/
-    ├── api/                      # FastAPI gateway (server.py, storage.py)
-    └── src/                      # blockchain.py (FabricBridge), report.py ...
+└── apps/
+    ├── ai_service/app/v1-0-0/
+    │   ├── api/                  # FastAPI gateway (server.py, storage.py)
+    │   └── src/                  # blockchain.py (FabricGatewayBridge /
+    │                             #   FabricBridge), report.py ...
+    └── fabric_gateway_service/   # Node.js sidecar wrapping the official
+                                  #   @hyperledger/fabric-gateway SDK (:9100)
 ```
 
 > Git-ignored runtime you must provision once (see below): the Python
@@ -157,6 +168,23 @@ curl -s -H "X-API-Key: stress-key" http://localhost:8000/api/status
 # -> {"backend":"ipfs","ipfs_available":true,...}
 ```
 
+### Step 2b — Official Fabric Gateway SDK service (optional but recommended)
+
+The API prefers the official `@hyperledger/fabric-gateway` SDK over the legacy
+`peer` CLI. The SDK runs in a small Node.js sidecar that joins the `fabric_test`
+docker network (so discovered peer hostnames resolve natively — same trick as
+the Explorer):
+
+```bash
+blockchain/scripts/start-gateway-service.sh     # build + start + health check
+```
+
+With the sidecar up, the gateway logs `[bridge] using official Fabric Gateway
+SDK service at http://localhost:9100`. Transport selection is controlled by
+`FABRIC_BACKEND` on the uvicorn process: `auto` (default; sidecar if healthy,
+else CLI), `gateway` (require sidecar), `cli` (always peer CLI). No change is
+needed when running behind `./startup.sh`.
+
 ### Step 3 — Deploy network + chaincode + load (the whole pipeline)
 
 ```bash
@@ -172,12 +200,24 @@ curl -s -H "X-API-Key: stress-key" http://localhost:8000/api/status
    ledger (`RegisterOrg`), and regenerates the Explorer connection profile.
 2. **Pre-flight** — asserts the gateway answers `200` on `/api/status`
    (aborts loudly with the start command if not).
-3. **Load** — `benchmarks/load-http.py` POSTs `--samples` synthetic reports
-   through the gateway; each lands in IPFS and its hash + URI is anchored on the
-   ledger.
+3a. **Quick validation load** — `benchmarks/load-http.py` POSTs `--samples` synthetic
+    reports through the gateway; each lands in IPFS and its hash + URI is anchored on
+    the ledger (validates gateway auth and IPFS in ~5s).
+3b. **Caliper benchmark** — scales the official Hyperledger Caliper suite:
+    regenerates the Fabric connection profile and benchmark config (writes=`N*10`,
+    reads=`N*20`), then runs the benchmark suite inside Docker (`~60-90s`). Results
+    land in `benchmarks/caliper/report.html`.
+4. **Explorer** — recreate containers so Explorer picks up the regenerated profile.
 
 `--orgs N` defaults to 3 (max 20); `--samples N` defaults to 50 (max 100000).
 Use `./startup.sh --help` for the quick flag reference.
+
+### Quick skip
+
+```bash
+# Run only load-http.py, skip Caliper
+./startup.sh --orgs 3 --samples 50 --skip-caliper
+```
 
 ### Step 4 — Hyperledger Explorer (network visualizer)
 
@@ -209,6 +249,34 @@ committed on the ledger. Expected close-out:
 {"report_id":"Qm...","off_chain_intact":true,"matches_on_chain":true,"verified":true,"explanation":"The off-chain copy is unmodified AND its hash matches the immutable, consortium-voted hash stored on the ledger."}
 ```
 
+## Benchmarking
+
+The pipeline now runs **both** a quick HTTP load test and the Caliper benchmark
+suite by default. This validates gateway connectivity before the more expensive
+Caliper run.
+
+### Default flow (`./startup.sh --orgs 3 --samples 50`)
+
+| Step | Command | Purpose | Approx. time |
+|------|---------|---------|--------------|
+| 3a | `load-http.py` | Quick validation (POST `--samples` reports via gateway) | ~5s |
+| 3b | `gen-caliper-config.sh --orgs 3 --samples 50` | Scale benchmark config (writes=N×10, reads=N×20) | <1s |
+| 3c | `run-caliper.sh` | Full benchmark suite in Docker (500/1000 tx) | 60-90s |
+
+**Results:** `benchmarks/caliper/report.html` (throughput/latency percentiles).
+
+### Custom scaling
+
+The `--samples N` argument controls both load-http request count and Caliper txNumbers:
+- `load-http.py`: N requests
+- Caliper: writes = N × 10, reads = N × 20 (e.g. `--samples 100` → 1000 writes @ 25 TPS / 2000 reads @ 50 TPS)
+
+### Skip Caliper (load-http only)
+
+```bash
+./startup.sh --orgs 3 --samples 50 --skip-caliper
+```
+
 ## API quick reference
 
 All endpoints require `-H "X-API-Key: <key>"` (keys from `bootstrap-keys.sh`;
@@ -234,6 +302,7 @@ All endpoints require `-H "X-API-Key: <key>"` (keys from `bootstrap-keys.sh`;
 ```bash
 blockchain/scripts/deploy.sh down          # stop Fabric (as startup.sh [4/4] reminds you)
 blockchain/scripts/start-ipfs.sh down      # stop IPFS container
+blockchain/scripts/start-gateway-service.sh down   # stop the Gateway SDK sidecar
 # stop the gateway in its terminal (Ctrl-C)
 docker compose -f blockchain/explorer/docker-compose.yaml down -v   # optional: stop Explorer
 ```
@@ -242,7 +311,7 @@ docker compose -f blockchain/explorer/docker-compose.yaml down -v   # optional: 
 
 | Symptom | Cause / fix |
 |---|---|
-| `ERROR: unknown flag` from `startup.sh` | Only `--orgs` and `--samples` exist now (the old stress-test flags were removed). Re-check `./startup.sh --help`. |
+| `ERROR: unknown flag` from `startup.sh` | Only `--orgs`, `--samples`, `--skip-caliper` and `--help` exist now. Re-check `./startup.sh --help`. |
 | `ERROR: API gateway unreachable (HTTP 000)` | Gateway not running. Start it (Step 2) before running `startup.sh`. |
 | Gateway returns `401` on `/api/status` | API keys never seeded (gateway started before Step 4) — run `blockchain/scripts/bootstrap-keys.sh org1 org2 org3` and restart the gateway. |
 | `docker-compose` legacy v1 errors / peers vanish mid-deploy | Use Compose v2 (`docker compose`). Remove stale `fabric_test` docker network (`docker network rm fabric_test`) if blocked. |

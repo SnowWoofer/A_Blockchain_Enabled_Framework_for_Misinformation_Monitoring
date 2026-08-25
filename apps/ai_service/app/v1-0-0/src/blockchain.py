@@ -3,6 +3,8 @@ import hashlib
 import json
 import os
 import subprocess
+import urllib.error
+import urllib.request
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Sequence
 
@@ -132,6 +134,149 @@ class FabricBridge:
             return json.loads(out)
         except json.JSONDecodeError:
             return out
+
+    def register_org(self) -> str:
+        return self.invoke("RegisterOrg", [])
+
+    def list_orgs(self) -> Any:
+        return self.query("ListRegisteredOrgs", [])
+
+    def request_admission(self, org_name: str, org_type: str) -> str:
+        return self.invoke("RequestOrgAdmission", [org_name, org_type])
+
+    def vote_on_admission(self, candidate_msp: str, verdict: str) -> str:
+        return self.invoke("VoteOnOrgAdmission", [candidate_msp, verdict])
+
+    def finalize_admission(self, candidate_msp: str) -> str:
+        return self.invoke("FinalizeOrgAdmission", [candidate_msp])
+
+    def query_admission(self, candidate_msp: str) -> Any:
+        return self.query("QueryOrgAdmission", [candidate_msp])
+
+    def submit_report(
+        self, report_id: str, language: str, content_hash: str, label: str,
+        confidence: float, model_version: str, timestamp: str, off_chain_uri: str,
+    ) -> str:
+        return self.invoke(
+            "SubmitReport",
+            [report_id, language, content_hash, label,
+             f"{confidence:.6f}", model_version, timestamp, off_chain_uri],
+        )
+
+    def cast_vote(self, report_id: str, verdict: str) -> str:
+        return self.invoke("CastVote", [report_id, verdict])
+
+    def finalize_report(self, report_id: str) -> str:
+        return self.invoke("FinalizeReport", [report_id])
+
+    def expire_report(self, report_id: str) -> str:
+        return self.invoke("ExpireReport", [report_id])
+
+    def query_report(self, report_id: str) -> Any:
+        return self.query("QueryReport", [report_id])
+
+    def query_all(self) -> Any:
+        return self.query("QueryAllReports", [])
+
+    def count(self) -> Any:
+        return self.query("GetReportCount", [])
+
+    def votes(self, report_id: str) -> Any:
+        return self.query("QueryVotes", [report_id])
+
+    def history(self, report_id: str) -> Any:
+        return self.query("QueryReportHistory", [report_id])
+
+
+class FabricGatewayBridge:
+
+    def __init__(
+        self,
+        gateway_url: str = "http://localhost:9100",
+        channel: str = "mychannel",
+        chaincode: str = "misinformation",
+        org: str = "org1",
+        endorsers: Optional[Sequence[str]] = None,
+        timeout_invoke: float = 60.0,
+        timeout_query: float = 30.0,
+    ) -> None:
+        self.gateway_url = gateway_url.rstrip("/")
+        self.channel = channel
+        self.chaincode = chaincode
+        self.org = org
+        self.endorsers = endorsers or ["org1", "org2"]
+        self.timeout_invoke = timeout_invoke
+        self.timeout_query = timeout_query
+
+    @staticmethod
+    def healthy(gateway_url: str = "http://localhost:9100", timeout: float = 2.0) -> bool:
+        try:
+            with urllib.request.urlopen(
+                f"{gateway_url.rstrip('/')}/health", timeout=timeout
+            ) as resp:
+                return resp.status == 200
+        except (urllib.error.URLError, OSError):
+            return False
+
+    def _post(self, path: str, body: Dict[str, Any], timeout: float) -> Any:
+        data = json.dumps(body).encode("utf-8")
+        req = urllib.request.Request(
+            f"{self.gateway_url}{path}",
+            data=data,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                raw = resp.read().decode("utf-8")
+        except urllib.error.HTTPError as exc:
+            detail = exc.read().decode("utf-8", errors="replace").strip()
+            raise RuntimeError(f"gateway service error ({exc.code}): {detail}") from exc
+        except urllib.error.URLError as exc:
+            raise RuntimeError(
+                f"cannot reach Fabric Gateway SDK service at {self.gateway_url} "
+                f"(start it with blockchain/scripts/start-gateway-service.sh): {exc.reason}"
+            ) from exc
+        if not raw:
+            return None
+        try:
+            return json.loads(raw)
+        except json.JSONDecodeError:
+            return raw
+
+    def invoke(self, function: str, args: List[str]) -> str:
+        result = self._post(
+            "/invoke",
+            {
+                "org": self.org,
+                "channel": self.channel,
+                "chaincode": self.chaincode,
+                "function": function,
+                "args": args,
+            },
+            self.timeout_invoke,
+        )
+        if isinstance(result, dict):
+            if not result.get("ok") or result.get("status") != "SUCCESS":
+                raise RuntimeError(f"invoke {function} failed: {result}")
+            return str(result.get("tx_id", ""))
+        return str(result)
+
+    def query(self, function: str, args: List[str]) -> Any:
+        result = self._post(
+            "/query",
+            {
+                "org": self.org,
+                "channel": self.channel,
+                "chaincode": self.chaincode,
+                "function": function,
+                "args": args,
+            },
+            self.timeout_query,
+        )
+        if isinstance(result, dict) and "ok" in result and "result" in result:
+            return result["result"]
+        return result
 
     def register_org(self) -> str:
         return self.invoke("RegisterOrg", [])
