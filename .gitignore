@@ -90,3 +90,4 @@ benchmarks/results-live*
 # unanchored patterns above (in*, con*, ...) swallow these — re-include:
 !instruction.txt
 scripts
+*.xlsx

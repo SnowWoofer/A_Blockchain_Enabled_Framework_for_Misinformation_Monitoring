@@ -58,6 +58,9 @@ if [ "${ORGS}" -ne 3 ]; then
 fi
 "${SCRIPT_DIR}/blockchain/scripts/deploy.sh" "${DEPLOY_ARGS[@]:-up}"
 
+echo ">> Restarting Fabric Gateway SDK sidecar..."
+"${SCRIPT_DIR}/blockchain/scripts/start-gateway-service.sh" up
+
 echo ">> [2/5] Checking API gateway reachability..."
 API_BASE_URL="${API_BASE_URL:-http://localhost:8000}"
 GW_STATUS="$(curl -s -m 5 -o /dev/null -w "%{http_code}" "${API_BASE_URL}/api/status" -H "X-API-Key: stress-key")"
