@@ -20,7 +20,7 @@ on their behalf.
 - **One command runs the whole pipeline**: `./startup.sh` deploys the network,
   onboards org3 with a 2-of-3 endorsement policy, registers stakeholder orgs on
   the ledger, drives a load phase through the gateway, and (by default) runs the
-  Caliper benchmark (`load-http.py` then `run-caliper.sh`).
+  Caliper benchmark (`load-http.py` then `run-caliper.sh`). Run `scripts/run_benchmarks.sh` for parameter sweeps varying samples and org count.
 
 ## Architecture
 
@@ -33,8 +33,9 @@ on their behalf.
 ├── startup.sh                    # single entry point: deploy + load + hints
 ├── benchmarks/
 │   ├── load-http.py              # synthetic load driver -> gateway
-│   └── caliper/                  # Hyperledger Caliper benchmark suite (official
+│   ├── caliper/                  # Hyperledger Caliper benchmark suite (official
 │                                 #   Fabric Gateway binding; run-caliper.sh)
+│   └── run_benchmarks.sh         # iterative benchmark runner varying samples/orgs
 ├── blockchain/
 │   ├── scripts/                  # deploy.sh, onboard-org3.sh, register-orgs.sh,
 │   │                             # add-orgs.sh, bootstrap-keys.sh,
@@ -43,13 +44,14 @@ on their behalf.
 │   ├── chaincode/misinformation/ # Go chaincode (go.mod + vendor/)
 │   ├── fabric-samples/           # git-ignored runtime (PROVISIONS BELOW)
 │   └── explorer/                 # Hyperledger Explorer UI compose + profile
-└── apps/
-    ├── ai_service/app/v1-0-0/
-    │   ├── api/                  # FastAPI gateway (server.py, storage.py)
-    │   └── src/                  # blockchain.py (FabricGatewayBridge /
-    │                             #   FabricBridge), report.py ...
-    └── fabric_gateway_service/   # Node.js sidecar wrapping the official
-                                  #   @hyperledger/fabric-gateway SDK (:9100)
+├── apps/
+│   ├── ai_service/app/v1-0-0/
+│   │   ├── api/                  # FastAPI gateway (server.py, storage.py)
+│   │   └── src/                  # blockchain.py (FabricGatewayBridge /
+│   │                             #   FabricBridge), report.py ...
+│   └── fabric_gateway_service/   # Node.js sidecar wrapping the official
+│                                   #   @hyperledger/fabric-gateway SDK (:9100)
+└── summary.txt                   # full execution trace + code reference map
 ```
 
 > Git-ignored runtime you must provision once (see below): the Python
@@ -245,7 +247,9 @@ committed on the ledger. Expected close-out:
 
 The pipeline now runs **both** a quick HTTP load test and the Caliper benchmark
 suite by default. This validates gateway connectivity before the more expensive
-Caliper run.
+Caliper run. An iterative runner is provided in `scripts/run_benchmarks.sh` for
+varying samples and org count with automatic network efficiency (skips redeploy
+when org count unchanged).
 
 ### Default flow (`./startup.sh --orgs 3 --samples 50`)
 
@@ -268,6 +272,16 @@ The `--samples N` argument controls both load-http request count and Caliper txN
 ```bash
 ./startup.sh --orgs 3 --samples 50 --skip-caliper
 ```
+
+### Iterative benchmark runner
+
+```bash
+scripts/run_benchmarks.sh --start-samples 1 --end-samples 10 --start-orgs 3 --max-orgs 5 --incrementor 1
+```
+
+Configuration: samples 1~10 (step 1), orgs 3~5 (step 1). Output dir:
+`/tmp/benchmarks/results/orgs_3/samples_1/`, etc. First org count full
+deploy; subsequent org counts skip redeploy.
 
 ## API quick reference
 
