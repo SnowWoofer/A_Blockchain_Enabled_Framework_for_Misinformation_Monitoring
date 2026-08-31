@@ -66,7 +66,7 @@ on their behalf.
 |---|---|---|
 | **Docker + Compose v2** | Runs peers/orderers/CouchDB/IPFS/Explorer | `docker compose version` |
 | **Python 3.10+** | Gateway + `bootstrap-keys.sh` seed script | `python3 --version` |
-| **Go 1.22** | Chaincode vendoring during deploy | `go version` |
+| **Go 1.22+** | Chaincode vendoring during deploy (tested with 1.24.0) | `go version` |
 | **`curl`** | Pre-flight / verification | `curl --version` |
 | **`jq`** | Chaincode lifecycle tooling | `jq --version` |
 | **`git`** | Clone (this repo used during setup) | `git --version` |
@@ -260,6 +260,10 @@ committed on the ledger. Expected close-out:
 {"report_id":"Qm...","off_chain_intact":true,"matches_on_chain":true,"verified":true,"explanation":"The off-chain copy is unmodified AND its hash matches the immutable, consortium-voted hash stored on the ledger."}
 ```
 
+> The `/verify` endpoint previously returned HTTP 500 because the on-chain query
+> result arrives as an ASCII-encoded string rather than a dict. This was fixed in
+> `apps/ai_service/app/v1-0-0/api/server.py` via the `_on_chain_record()` helper.
+
 ## Benchmarking
 
 The pipeline now runs **both** a quick HTTP load test and the Caliper benchmark
@@ -322,7 +326,7 @@ All endpoints require `-H "X-API-Key: <key>"` (keys from `bootstrap-keys.sh`;
 | `GET /api/reports/{id}` | Report + off-chain payload |
 | `GET /api/reports/{id}/chain` | On-chain record (hash, uri, status, votes) |
 | `GET /api/reports/{id}/verify` | Tamper-evidence check (off-chain vs on-chain hash) |
-| `GET /api/reports/{id}/history` | Full tx/history trail |
+| `GET /api/reports/{id}/history` | Full tx/history trail — **not yet implemented** (returns 500; chaincode `QueryReportHistory` not added yet, see `info/later_client_imp.txt`) |
 | `POST /api/reports/{id}/vote` | Org vote on a report |
 | `POST /api/reports/{id}/finalize` | Finalize a verdict (consortium quorum) |
 | `POST /api/reports/{id}/expire` | Expire a report past its voting deadline |
