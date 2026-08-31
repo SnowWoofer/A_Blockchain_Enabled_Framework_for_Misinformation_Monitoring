@@ -2,6 +2,7 @@ from __future__ import annotations
 import asyncio
 import datetime as _dt
 import hashlib
+import json
 import os
 import sys
 import time
@@ -97,6 +98,27 @@ def bridge_for(org: str, endorsers: Optional[List[str]] = None) -> Any:
 
 def _now_rfc3339() -> str:
     return _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+
+
+def _on_chain_record(value: Any) -> Dict[str, Any]:
+    if isinstance(value, dict):
+        return value
+    if isinstance(value, str):
+        text = value.strip().strip('"')
+        if not text:
+            return {}
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError:
+            pass
+        numbers = [int(tok) for tok in text.split(",") if tok.strip().lstrip("-").isdigit()]
+        if numbers:
+            try:
+                return json.loads("".join(chr(n) for n in numbers))
+            except json.JSONDecodeError:
+                pass
+    return {}
+
 
 
 async def expire_overdue_reports(interval_s: int = 3600) -> None:
@@ -251,7 +273,7 @@ def verify_report(report_id: str, _org: str = Depends(require_org)):
     report = STORE.get_report(report_id)
     if not report:
         raise HTTPException(status_code=404, detail="report not found off-chain")
-    on_chain = bridge_for(_org).query_report(report_id) or {}
+    on_chain = _on_chain_record(bridge_for(_org).query_report(report_id))
     off_chain_hash = content_hash({k: v for k, v in report.items() if k != "content_hash"})
     intact = off_chain_hash == report.get("content_hash")
     matches_on_chain = report.get("content_hash") == on_chain.get("content_hash")
