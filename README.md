@@ -82,6 +82,23 @@ needed.
 > peers while the script reports success). If you see the symptom, remove the
 > stale `fabric_test` docker network and re-run startup.
 
+## Platform compatibility
+
+The **hosting/deployment stack is Linux-first**: the Fabric CLI orchestration
+(`peer`, `cryptogen`, `configtxgen`, ... under `blockchain/fabric-samples/bin/`)
+are **Linux x86-64 ELF binaries** driven by bash scripts (`startup.sh`, all of
+`blockchain/scripts/*.sh`). They cannot execute directly on a native Windows or
+macOS host.
+
+| Platform | Hosting the network | As an HTTP client |
+|---|---|---|
+| **Linux** | ✅ fully supported (bare metal, VM, or container) | ✅ |
+| **Windows** | ✅ via **WSL2** (run the Linux scripts inside WSL); not natively | ✅ |
+| **macOS** | ⚠️ via a Linux VM (UTM / Lima / Colima / Docker Desktop backend); Apple Silicon cannot run the Linux ELF CLIs on the host | ✅ |
+
+Windows and macOS work fine as **HTTP clients** against a Linux-hosted gateway
+— no local installation is needed; just call `:8000` with your `X-API-Key`.
+
 ### 1. Clone the repo (once)
 
 ```bash
@@ -282,6 +299,15 @@ scripts/run_benchmarks.sh --start-samples 1 --end-samples 10 --start-orgs 3 --ma
 Configuration: samples 1~10 (step 1), orgs 3~5 (step 1). Output dir:
 `/tmp/benchmarks/results/orgs_3/samples_1/`, etc. First org count full
 deploy; subsequent org counts skip redeploy.
+
+### Local model-evaluation results
+
+Local (non-blockchain) model-evaluation spreadsheets live in
+`results/local/` and are **git-untracked** by default (tracked/committed as
+desired):
+
+- `results/local/best.xlsx` — best-model evaluation summary
+- `results/local/full.xlsx` — full evaluation results
 
 ## API quick reference
 
