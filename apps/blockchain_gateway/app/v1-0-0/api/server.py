@@ -40,26 +40,30 @@ class AdmissionVote(BaseModel):
 
 
 class ReportCreate(BaseModel):
-    report_id: str
+    # msg_id is the claim's identity from claims.raw and is carried through
+    # unchanged. It is NOT the report's identifier — that is the IPFS CID,
+    # assigned once the document is sealed.
+    msg_id: str
     label: str
     confidence: float = Field(ge=0.0, le=1.0)
     model_version: str
-    raw_text: str
-    # Required, with no default: the caller knows where the claim came from and
-    # how it was judged. Defaulting these silently attributed every claim to
-    # twitter/ai_model regardless of its real origin.
+    content: str
+    # Required, with no default: the caller knows where the claim came from.
+    # Defaulting it silently attributed every claim to twitter.
     source_platform: str
-    submission_type: str
-    row_id: str = ""
-    source_url: str = ""
     published_at: str = ""
     inference_timestamp: str = ""
 
 
+# final_label / outcome are the binary label domain ("0"/"1"); the off-chain
+# document spells the finalised result out for readers.
+VERIFIED_STATUS = {"0": "Verified_Non_Misinformation", "1": "Verified_Misinformation"}
+
+
 class FactCheckSubmission(BaseModel):
-    verdict: str  # one of: factual / opinion / misinformation
+    outcome: str  # one of: factual / opinion / misinformation
     reasoning: str = ""
-    evidence: List[str] = Field(default_factory=list)
+    support: List[str] = Field(default_factory=list)
 
 
 def require_org(x_api_key: str = Header(..., alias="X-API-Key")) -> str:
@@ -114,7 +118,16 @@ def _now_rfc3339() -> str:
     return _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
 
-ORG_MSPID = {"org1": "Org1MSP", "org2": "Org2MSP", "org3": "Org3MSP"}
+# Consortium membership is not fixed at three. Orgs join by channel config
+# update plus an on-chain admission vote, and some of them run no peer at all
+# (see blockchain/scripts/add-client-org.sh) — a client-only member signs its
+# own transactions and is endorsed by the orgs that do run peers. Derive the
+# map from ORGS so adding a member is configuration, not a code change.
+ORG_MSPID = {
+    o.strip(): f"Org{o.strip().removeprefix('org')}MSP"
+    for o in os.environ.get("ORGS", "org1,org2,org3").split(",")
+    if o.strip()
+}
 
 
 def _decode_chain_value(value: Any) -> Any:
@@ -163,7 +176,7 @@ async def expire_overdue_reports(interval_s: int = 3600) -> None:
                 if rec.get("status") == "PENDING":
                     deadline = rec.get("fact_check_deadline", "")
                     if deadline and _dt.datetime.fromisoformat(deadline.replace("Z", "+00:00")) < _dt.datetime.now(_dt.timezone.utc):
-                        bridge.expire_report(rec["report_id"])
+                        bridge.expire_report(rec["id"])
         except Exception as exc:
             print(f"[scheduler] expiry pass failed: {exc}")
         await asyncio.sleep(interval_s)
@@ -232,18 +245,15 @@ def get_admission(msp: str, _org: str = Depends(require_org)):
 
 @app.post("/api/reports")
 def create_report(body: ReportCreate, _org: str = Depends(require_org)):
-    if _org not in ("org1", "org2", "org3"):
+    if _org not in ORG_MSPID:
         raise HTTPException(status_code=400, detail="unknown signing org")
     report = make_report(
-        report_id="",
+        msg_id=body.msg_id,
         label=body.label,
         confidence=body.confidence,
         model_version=body.model_version,
-        raw_text=body.raw_text,
+        content=body.content,
         source_platform=body.source_platform,
-        submission_type=body.submission_type,
-        row_id=body.row_id,
-        source_url=body.source_url,
         published_at=body.published_at,
         inference_timestamp=body.inference_timestamp or _now_rfc3339(),
         submitted_at=_now_rfc3339(),
@@ -255,9 +265,9 @@ def create_report(body: ReportCreate, _org: str = Depends(require_org)):
     chain_call(
         bridge.submit_report,
         report_id, report["content_hash"], body.label,
-        body.confidence, body.model_version, _now_rfc3339(), uri,
+        body.confidence, body.model_version, _now_rfc3339(),
     )
-    return {"report_id": report_id, "off_chain_uri": uri, "content_hash": report["content_hash"]}
+    return {"id": report_id, "content_hash": report["content_hash"]}
 
 
 @app.get("/api/reports/{report_id}")
@@ -288,29 +298,33 @@ def submit_fact_check(report_id: str, body: FactCheckSubmission, _org: str = Dep
     report = STORE.get_report(report_id)
     if not report:
         raise HTTPException(status_code=404, detail="report not found off-chain")
-    # Re-publish the full document as a new, immutable version (new CID)
-    # with this fact-check appended — old versions stay resolvable in IPFS,
-    # nothing is mutated in place. The on-chain SubmitFactCheck call below
-    # advances the ledger's off_chain_uri pointer to this new CID.
+    # Chain FIRST. The ledger owns the guards that can reject this — one
+    # fact-check per org, and only on a PENDING/UNDER_REVIEW report. Writing
+    # the off-chain document before the invoke meant a rejected submission
+    # still appended an entry to IPFS that the ledger never accepted, leaving
+    # the document permanently showing more fact-checks than the chain.
+    # Only the outcome goes on-chain — reasoning/support stay off-chain.
+    chain_call(bridge_for(_org).submit_fact_check, report_id, body.outcome)
+    # Accepted: re-publish the full document as a new, immutable version (new
+    # CID) with this fact-check appended — old versions stay resolvable in
+    # IPFS, nothing is mutated in place. The ledger stores no pointer to the
+    # new version: the claim's id is itself the off-chain address.
     report = {
         **report,
         "fact_check_status": "Under_Review",
         "fact_checks": [
             *report.get("fact_checks", []),
             {
-                "checker": ORG_MSPID[_org],
-                "verdict": body.verdict,
+                "checker_msp": ORG_MSPID[_org],
+                "outcome": body.outcome,
                 "reasoning": body.reasoning,
-                "evidence": body.evidence,
+                "support": body.support,
                 "timestamp": _now_rfc3339(),
             },
         ],
     }
-    new_uri = STORE.save_report_version(report_id, report)
-    # Only the verdict + new CID go on-chain — reasoning/evidence already
-    # live in the off-chain document just published above.
-    chain_call(bridge_for(_org).submit_fact_check, report_id, body.verdict, new_uri)
-    return {"ok": True, "off_chain_uri": new_uri}
+    STORE.save_report_version(report_id, report)
+    return {"ok": True}
 
 
 @app.post("/api/reports/{report_id}/finalize")
@@ -320,7 +334,7 @@ def finalize_report(report_id: str, _org: str = Depends(require_org)):
     final_label = chain_record.get("final_label", "")
     report = STORE.get_report(report_id)
     if report and final_label:
-        report = {**report, "fact_check_status": f"Verified_{final_label.capitalize()}"}
+        report = {**report, "fact_check_status": VERIFIED_STATUS.get(final_label, "Verified")}
         STORE.save_report_version(report_id, report)
     return {"ok": True}
 

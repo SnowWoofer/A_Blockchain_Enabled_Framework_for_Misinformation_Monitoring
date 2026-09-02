@@ -6,14 +6,13 @@ import httpx
 
 from .config import settings
 
-ORG_MSPID = {"org1": "Org1MSP", "org2": "Org2MSP", "org3": "Org3MSP"}
+# Derived from the configured org keys so a newly admitted member — including
+# a client-only one with no peer — needs no code change here.
+ORG_MSPID = {
+    org: f"Org{org.removeprefix('org')}MSP" for org in settings.org_api_keys
+}
 
 OPEN_STATUSES = ("PENDING", "UNDER_REVIEW")
-
-# Matches flagging-engine's id2label (config.json: {"0": "non-misinformation",
-# "1": "misinformation"}) — the on-chain record only ever carries the raw "0"/
-# "1" (that's the actual chaincode-validated value), never a human label.
-AI_LABEL = {"0": "not misinformation", "1": "misinformation"}
 
 
 class BlockchainError(Exception):
@@ -51,13 +50,38 @@ class BlockchainClient:
             raise BlockchainError(resp.status_code, str(detail))
         return resp.json()
 
+    @staticmethod
+    def _project(record: Dict[str, Any], doc: Dict[str, Any]) -> Dict[str, Any]:
+        """The claim as a fact-checker sees it: the on-chain record joined with
+        the readable content from its off-chain document. GET /claims/{id} and
+        GET /claims/pending both return exactly this shape — the single-claim
+        view only adds the fact_checks[] detail on top."""
+        source = doc.get("source", {})
+        return {
+            "id": record.get("id"),
+            "content": source.get("content", "(off-chain content unavailable)"),
+            "source_platform": source.get("platform"),
+            "published_at": source.get("published_at"),
+            "inference_label": record.get("inference_label"),
+            "confidence": record.get("confidence"),
+            "model_version": record.get("model_version"),
+            "submitted_by": record.get("submitted_by"),
+            "status": record.get("status"),
+            "fact_checks_so_far": len(record.get("fact_checks", [])),
+            "fact_check_deadline": record.get("fact_check_deadline"),
+        }
+
+    async def _document(self, org: str, report_id: str) -> Dict[str, Any]:
+        """The raw off-chain IPFS document."""
+        return await self._request("GET", org, f"/api/reports/{report_id}")
+
     async def list_pending_for_org(self, org: str) -> List[Dict[str, Any]]:
         """Claims still open (PENDING/UNDER_REVIEW) that this org hasn't
         already fact-checked. Membership/status filtering uses the on-chain
         record (it carries the fact_checks[] list needed to check that) — but
         a fact-checker can't fact-check a content_hash, so each candidate is
         enriched with its off-chain document's actual readable content
-        (raw_text, source) before being returned."""
+        (content, source) before being returned."""
         mspid = ORG_MSPID.get(org)
         candidates: List[Dict[str, Any]] = []
         for status in OPEN_STATUSES:
@@ -69,39 +93,30 @@ class BlockchainClient:
 
         async def _enrich(record: Dict[str, Any]) -> Dict[str, Any]:
             try:
-                doc = await self.get_claim(org, record["report_id"])
+                doc = await self._document(org, record["id"])
             except BlockchainError:
                 doc = {}
-            source = doc.get("source", {})
-            return {
-                "report_id": record.get("report_id"),
-                "raw_text": source.get("raw_text", "(off-chain content unavailable)"),
-                "source_platform": source.get("platform"),
-                "published_at": source.get("published_at"),
-                "ai_verdict": AI_LABEL.get(record.get("proposed_label"), record.get("proposed_label")),
-                "ai_confidence": record.get("confidence"),
-                "model_version": record.get("model_version"),
-                "submitted_by": record.get("submitted_by"),
-                "status": record.get("status"),
-                "fact_checks_so_far": len(record.get("fact_checks", [])),
-                "fact_check_deadline": record.get("fact_check_deadline"),
-                "off_chain_uri": record.get("off_chain_uri"),
-            }
+            return self._project(record, doc)
 
         return list(await asyncio.gather(*(_enrich(r) for r in candidates)))
 
     async def get_claim(self, org: str, report_id: str) -> Dict[str, Any]:
-        """The off-chain document — includes raw claim text and every prior
-        fact-check's full reasoning/evidence, which the on-chain record alone
-        doesn't carry in as convenient a shape for a reviewer to read."""
-        return await self._request("GET", org, f"/api/reports/{report_id}")
+        """One claim in the same shape as /claims/pending, plus fact_checks[] —
+        each prior fact-check's full reasoning/support, which the on-chain
+        record doesn't carry."""
+        record = await self._request("GET", org, f"/api/reports/{report_id}/chain")
+        try:
+            doc = await self._document(org, report_id)
+        except BlockchainError:
+            doc = {}
+        return {**self._project(record, doc), "fact_checks": doc.get("fact_checks", [])}
 
-    async def submit_report(
-        self, org: str, report_id: str, verdict: str, reasoning: str, evidence: List[str],
+    async def submit_fact_check(
+        self, org: str, report_id: str, outcome: str, reasoning: str, support: List[str],
     ) -> Dict[str, Any]:
         return await self._request(
             "POST", org, f"/api/reports/{report_id}/fact-check",
-            json={"verdict": verdict, "reasoning": reasoning, "evidence": evidence},
+            json={"outcome": outcome, "reasoning": reasoning, "support": support},
         )
 
     async def finalize(self, org: str, report_id: str) -> Dict[str, Any]:

@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .blockchain_client import CLIENT, BlockchainError
 from .config import settings
-from .schemas import ReportSubmit, VALID_VERDICTS
+from .schemas import FactCheckSubmit, VALID_OUTCOMES
 
 logging.basicConfig(level=settings.log_level)
 logger = logging.getLogger(__name__)
@@ -57,14 +57,14 @@ async def get_claim(report_id: str, org: str = Depends(require_org)):
     return await _chain_call(CLIENT.get_claim(org, report_id))
 
 
-@app.post("/claims/{report_id}/report")
-async def submit_report(report_id: str, body: ReportSubmit, org: str = Depends(require_org)):
-    if body.verdict not in VALID_VERDICTS:
-        raise HTTPException(status_code=400, detail=f"verdict must be one of {VALID_VERDICTS}")
+@app.post("/claims/{report_id}/fact-check")
+async def submit_fact_check(report_id: str, body: FactCheckSubmit, org: str = Depends(require_org)):
+    if body.outcome not in VALID_OUTCOMES:
+        raise HTTPException(status_code=400, detail=f"outcome must be one of {VALID_OUTCOMES}")
     result = await _chain_call(
-        CLIENT.submit_report(org, report_id, body.verdict, body.reasoning, body.evidence)
+        CLIENT.submit_fact_check(org, report_id, body.outcome, body.reasoning, body.support)
     )
-    logger.info("Report submitted: org=%s report_id=%s verdict=%s", org, report_id, body.verdict)
+    logger.info("Fact-check submitted: org=%s id=%s outcome=%s", org, report_id, body.outcome)
     return result
 
 

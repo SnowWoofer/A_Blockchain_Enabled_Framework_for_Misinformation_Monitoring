@@ -30,18 +30,29 @@ function readPrivateKey(dir) {
   return fs.readFileSync(path.join(dir, file));
 }
 
+// Which identity an org signs with. Defaults to Admin for backwards
+// compatibility, but submitting claims and fact-checks only needs a *client*
+// identity: the channel's Writers policy is OR('OrgNMSP.admin',
+// 'OrgNMSP.client'), while OR('OrgNMSP.admin') alone gates channel-config
+// changes. A member that only ever fact-checks should therefore sign as
+// User1 (OU=client) and keep its admin key offline — set IDENTITY_ORG4=User1.
+function identityNameFor(num) {
+  return process.env[`IDENTITY_ORG${num}`] || 'Admin';
+}
+
 function loadIdentity(org) {
   const num = org.replace(/^org/, '');
+  const user = `${identityNameFor(num)}@org${num}.example.com`;
   const mspDir = path.join(
     PEER_ORG_PREFIX,
     `org${num}.example.com`,
     'users',
-    `Admin@org${num}.example.com`,
+    user,
     'msp'
   );
   return {
     mspId: `Org${num}MSP`,
-    cert: fs.readFileSync(path.join(mspDir, 'signcerts', `Admin@org${num}.example.com-cert.pem`)),
+    cert: fs.readFileSync(path.join(mspDir, 'signcerts', `${user}-cert.pem`)),
     key: readPrivateKey(path.join(mspDir, 'keystore')),
   };
 }

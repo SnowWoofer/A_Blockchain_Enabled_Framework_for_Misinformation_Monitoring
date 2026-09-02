@@ -7,7 +7,6 @@ the shape flagging-engine expects, so the rest of the pipeline (flagging ->
 submission-worker -> blockchain_gateway -> fact-checking-service) can be
 exercised end to end without a real ingestion source."""
 import datetime as dt
-import hashlib
 import json
 import logging
 import uuid
@@ -60,11 +59,8 @@ async def ingest(body: IngestRequest):
         message = {
             "msg_id": msg_id,
             "source_platform": settings.source_platform,
-            "post_text": text,
+            "content": text,
             "ingest_timestamp": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-            # No real user exists for a dummy test claim — hash the message
-            # ID itself as a structurally-valid placeholder.
-            "masked_user_hash": hashlib.sha256(msg_id.encode("utf-8")).hexdigest(),
         }
         await producer.send_and_wait(settings.kafka_output_topic, message)
         msg_ids.append(msg_id)

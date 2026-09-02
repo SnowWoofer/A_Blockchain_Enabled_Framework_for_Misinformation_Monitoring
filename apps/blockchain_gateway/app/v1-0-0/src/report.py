@@ -20,40 +20,36 @@ def _core_content(report: Dict[str, Any]) -> Dict[str, Any]:
     report_id/CID, submitter) are deliberately excluded."""
     return {
         "source": report.get("source"),
-        "verdict": report.get("verdict"),
+        "inference": report.get("inference"),
     }
 
 
 def make_report(
     *,
-    report_id: str,
+    msg_id: str,
     label: str,
     confidence: float,
     model_version: str,
-    raw_text: str,
+    content: str,
     source_platform: str,
-    submission_type: str,
-    row_id: str = "",
-    source_url: str = "",
     published_at: str = "",
     inference_timestamp: str = "",
     submitted_at: str = "",
     org_mspid: str = "",
-    schema_version: str = "1.0",
 ) -> Dict[str, Any]:
     report: Dict[str, Any] = {
-        "report_id": report_id,
-        "schema_version": schema_version,
+        # The claim's identity all the way from claims.raw. The document has no
+        # id of its own: its identifier is the CID it hashes to, assigned by
+        # storage.save_report once the bytes are sealed.
+        "msg_id": msg_id,
         "source": {
             "platform": source_platform,
-            "original_url": source_url or None,
-            "raw_text": raw_text,
+            "content": content,
             "published_at": published_at,
         },
-        "verdict": {
+        "inference": {
             "label": label,
             "confidence": float(confidence),
-            "submission_type": submission_type,
             "model_version": model_version,
             "inference_timestamp": inference_timestamp,
         },
@@ -63,15 +59,13 @@ def make_report(
         },
         # fact_checks accumulates as fact-checkers report; each entry mirrors
         # the corresponding on-chain FactCheck (verdict/reasoning/evidence).
-        # The document is re-published (new CID) on every fact-check rather than
-        # mutated in place — old CIDs stay resolvable in IPFS, and the chain
-        # of off_chain_uri values anchored on-chain over time (retrievable
-        # via GET /api/reports/{id}/history) is this claim's version history.
+        # The document is re-published (new CID) on every fact-check rather
+        # than mutated in place — old CIDs stay resolvable in IPFS, and the
+        # ledger's own transaction history (GET /api/reports/{id}/history)
+        # is this claim's version history.
         "fact_check_status": "Pending",
         "fact_checks": [],
     }
-    if row_id:
-        report["row_id"] = row_id
     report["content_hash"] = content_hash(_core_content(report))
     return report
 

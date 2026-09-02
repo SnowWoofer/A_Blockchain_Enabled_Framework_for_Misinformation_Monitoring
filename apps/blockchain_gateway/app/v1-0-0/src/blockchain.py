@@ -129,16 +129,16 @@ class FabricBridge:
 
     def submit_report(
         self, report_id: str, content_hash: str, label: str,
-        confidence: float, model_version: str, timestamp: str, off_chain_uri: str,
+        confidence: float, model_version: str, timestamp: str,
     ) -> str:
         return self.invoke(
-            "SubmitReport",
+            "Submit",
             [report_id, content_hash, label,
-             f"{confidence:.6f}", model_version, timestamp, off_chain_uri],
+             f"{confidence:.6f}", model_version, timestamp],
         )
 
-    def submit_fact_check(self, report_id: str, verdict: str, new_off_chain_uri: str = "") -> str:
-        return self.invoke("SubmitFactCheck", [report_id, verdict, new_off_chain_uri])
+    def submit_fact_check(self, report_id: str, outcome: str) -> str:
+        return self.invoke("SubmitFactCheck", [report_id, outcome])
 
     def finalize_report(self, report_id: str) -> str:
         return self.invoke("FinalizeReport", [report_id])
@@ -266,16 +266,16 @@ class FabricGatewayBridge:
 
     def submit_report(
         self, report_id: str, content_hash: str, label: str,
-        confidence: float, model_version: str, timestamp: str, off_chain_uri: str,
+        confidence: float, model_version: str, timestamp: str,
     ) -> str:
         return self.invoke(
-            "SubmitReport",
+            "Submit",
             [report_id, content_hash, label,
-             f"{confidence:.6f}", model_version, timestamp, off_chain_uri],
+             f"{confidence:.6f}", model_version, timestamp],
         )
 
-    def submit_fact_check(self, report_id: str, verdict: str, new_off_chain_uri: str = "") -> str:
-        return self.invoke("SubmitFactCheck", [report_id, verdict, new_off_chain_uri])
+    def submit_fact_check(self, report_id: str, outcome: str) -> str:
+        return self.invoke("SubmitFactCheck", [report_id, outcome])
 
     def finalize_report(self, report_id: str) -> str:
         return self.invoke("FinalizeReport", [report_id])

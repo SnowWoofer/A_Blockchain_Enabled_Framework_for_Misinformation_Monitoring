@@ -208,7 +208,7 @@ class OffChainStore:
 
     def save_report(self, report: Dict[str, Any]) -> str:
         # content_hash is set by report.make_report() over the claim's fixed
-        # core fields (language/source/verdict) and must not be touched here
+        # core fields (source/inference) and must not be touched here
         # — it has to stay identical across every later version of this
         # claim's document (see report._core_content).
         created_at = report.get("submitter", {}).get("submitted_at", "")
@@ -245,10 +245,9 @@ class OffChainStore:
         """Publishes `report` (the current full snapshot — claim content plus
         every fact_check so far) as a new, immutable off-chain object without
         changing the claim's stable report_id/on-chain ledger key. The old
-        CID stays resolvable in IPFS; the chain of off_chain_uri values this
-        claim has pointed to over time is recoverable from the ledger's own
-        transaction history (GET /api/reports/{id}/history), which is this
-        claim's version history — nothing extra needs to be tracked here."""
+        CID stays resolvable in IPFS; this claim's version history is
+        recoverable from the ledger's own transaction history
+        (GET /api/reports/{id}/history) — nothing extra is tracked here."""
         report = {**report, "report_id": report_id}
         content = report["content_hash"]
         created_at = report.get("submitter", {}).get("submitted_at", "")

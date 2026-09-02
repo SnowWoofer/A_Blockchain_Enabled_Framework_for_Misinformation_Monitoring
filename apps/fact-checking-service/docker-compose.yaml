@@ -9,7 +9,7 @@ services:
       # blockchain/scripts/bootstrap-keys.sh). An org authenticates directly
       # with its own key as X-API-Key; there's no separate account/login
       # layer — user management within an org is that org's own concern.
-      ORG_API_KEYS: ${FACT_CHECKING_ORG_API_KEYS:-{"org1":"key-org1","org2":"key-org2","org3":"key-org3"}}
+      ORG_API_KEYS: ${FACT_CHECKING_ORG_API_KEYS:-{"org1":"key-org1","org2":"key-org2","org3":"key-org3","org4":"key-org4"}}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:

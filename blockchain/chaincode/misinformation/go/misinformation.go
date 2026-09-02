@@ -21,17 +21,19 @@ const (
 	defaultFoundingOrgLimit = 3
 	factCheckWindow         = 72 * time.Hour
 
-	// Fact-check verdict taxonomy. Deliberately small: the finalisation rule
+	// Fact-check outcome domain — the same binary label domain the model
+	// predicts into (ReportRecord.InferenceLabel), so a finalised
+	// FinalLabel can be compared directly against what the model proposed.
+	// Deliberately small: the finalisation rule
 	// needs independent fact-checkers to land on the exact same value for
 	// consensus to mean anything, and a large taxonomy makes that
 	// vanishingly unlikely even when checkers substantively agree.
-	verdictFactual        = "factual"
-	verdictOpinion        = "opinion"
-	verdictMisinformation = "misinformation"
+	outcomeNonMisinformation = "0"
+	outcomeMisinformation    = "1"
 )
 
-func isValidVerdict(v string) bool {
-	return v == verdictFactual || v == verdictOpinion || v == verdictMisinformation
+func isValidOutcome(v string) bool {
+	return v == outcomeNonMisinformation || v == outcomeMisinformation
 }
 
 // FactCheck deliberately carries only what the on-chain consensus tally
@@ -40,23 +42,22 @@ func isValidVerdict(v string) bool {
 // "vote"/election framing belongs to genuine governance decisions like org
 // admission (see Vote/OrgAdmissionRequest below), not to fact-finding. The
 // fact-checker's actual reasoning/evidence live off-chain, in the versioned
-// IPFS document — only its CID is anchored here (ReportRecord.OffChainURI),
+// IPFS document — only its CID is anchored here (ReportRecord.ReportID),
 // never the content itself.
 type FactCheck struct {
 	CheckerMSP string `json:"checker_msp"`
-	Verdict    string `json:"verdict"`
+	Outcome    string `json:"outcome"`
 	TxID       string `json:"txid"`
 }
 
 type ReportRecord struct {
-	ReportID          string      `json:"report_id"`
+	ReportID          string      `json:"id"`
 	ContentHash       string      `json:"content_hash"`
-	ProposedLabel     string      `json:"proposed_label"`
+	ProposedLabel     string      `json:"inference_label"`
 	Confidence        float64     `json:"confidence"`
 	ModelVersion      string      `json:"model_version"`
 	Timestamp         string      `json:"timestamp"`
 	SubmittedBy       string      `json:"submitted_by"`
-	OffChainURI       string      `json:"off_chain_uri"`
 	FactCheckDeadline string      `json:"fact_check_deadline"`
 	Status            string      `json:"status"`
 	FactChecks        []FactCheck `json:"fact_checks"`
@@ -485,17 +486,14 @@ func (c *MisinformationContract) QueryOrgAdmission(
 	return &req, nil
 }
 
-func (c *MisinformationContract) SubmitReport(
+func (c *MisinformationContract) Submit(
 	ctx contractapi.TransactionContextInterface,
 	reportID, contentHash, label string,
 	confidence float64,
-	modelVersion, timestamp, offChainURI string,
+	modelVersion, timestamp string,
 ) error {
 	if err := validateReportInput(reportID, contentHash, label, modelVersion, timestamp, confidence); err != nil {
 		return err
-	}
-	if strings.TrimSpace(offChainURI) == "" {
-		return fmt.Errorf("off_chain_uri must not be empty")
 	}
 	submittedBy, err := ctx.GetClientIdentity().GetMSPID()
 	if err != nil {
@@ -525,7 +523,6 @@ func (c *MisinformationContract) SubmitReport(
 		ModelVersion:      modelVersion,
 		Timestamp:         timestamp,
 		SubmittedBy:       submittedBy,
-		OffChainURI:       offChainURI,
 		FactCheckDeadline: deadline,
 		Status:            statusPending,
 		FactChecks:        []FactCheck{},
@@ -540,14 +537,13 @@ func (c *MisinformationContract) SubmitReport(
 	return nil
 }
 
-// SubmitFactCheck records a fact-checker's verdict on a claim — only what the
-// on-chain consensus tally needs. The actual reasoning/evidence behind the
-// verdict live off-chain, in a freshly re-published, versioned IPFS
-// document; newOffChainURI is that document's CID, advancing the on-chain
-// pointer. Pass "" to leave the existing off_chain_uri unchanged.
+// SubmitFactCheck records a fact-checker's outcome on a claim — only what the
+// on-chain consensus tally needs. The reasoning/support behind the outcome
+// live off-chain, in a re-published IPFS document; the ledger stores no
+// pointer to it, since the claim's id is itself the off-chain address.
 func (c *MisinformationContract) SubmitFactCheck(
 	ctx contractapi.TransactionContextInterface,
-	reportID, verdict, newOffChainURI string,
+	reportID, outcome string,
 ) error {
 	checkerMSP, err := ctx.GetClientIdentity().GetMSPID()
 	if err != nil {
@@ -558,8 +554,8 @@ func (c *MisinformationContract) SubmitFactCheck(
 	} else if !ok {
 		return fmt.Errorf("org %s is not a registered stakeholder; call RegisterOrg first", checkerMSP)
 	}
-	if !isValidVerdict(verdict) {
-		return fmt.Errorf("verdict must be one of factual/opinion/misinformation, got %q", verdict)
+	if !isValidOutcome(outcome) {
+		return fmt.Errorf("outcome must be \"0\" or \"1\", got %q", outcome)
 	}
 	key, err := newReportKey(ctx, reportID)
 	if err != nil {
@@ -586,13 +582,10 @@ func (c *MisinformationContract) SubmitFactCheck(
 	}
 	record.FactChecks = append(record.FactChecks, FactCheck{
 		CheckerMSP: checkerMSP,
-		Verdict:    verdict,
+		Outcome:    outcome,
 		TxID:       ctx.GetStub().GetTxID(),
 	})
 	record.Status = statusUnderReview
-	if strings.TrimSpace(newOffChainURI) != "" {
-		record.OffChainURI = newOffChainURI
-	}
 	recordBytes, err = json.Marshal(record)
 	if err != nil {
 		return fmt.Errorf("failed to marshal record: %v", err)
@@ -603,20 +596,19 @@ func (c *MisinformationContract) SubmitFactCheck(
 	return nil
 }
 
-// tallyFactChecks counts fact-checks per verdict. With a binary label domain
-// ("0"/"1"), at most two keys ever exist, so map iteration order cannot
-// affect which verdict is reported as the winner or whether a tie is
-// detected.
+// tallyFactChecks counts fact-checks per outcome. The outcome domain is
+// binary ("0"/"1"), so at most two keys ever exist and map iteration order
+// cannot affect which outcome wins or whether a tie is detected.
 func tallyFactChecks(checks []FactCheck) map[string]int {
 	tally := make(map[string]int)
 	for _, v := range checks {
-		tally[v.Verdict]++
+		tally[v.Outcome]++
 	}
 	return tally
 }
 
 // FinalizeReport closes a report once at least 2 fact-checks exist and
-// one verdict has a strict majority: 2 agreeing fact-checks finalise
+// one outcome has a strict majority: 2 agreeing fact-checks finalise
 // immediately; 2 disagreeing fact-checks stay PENDING until a 3rd
 // fact-check breaks the tie.
 func (c *MisinformationContract) FinalizeReport(
@@ -655,10 +647,10 @@ func (c *MisinformationContract) FinalizeReport(
 	}
 	tally := tallyFactChecks(record.FactChecks)
 	winner, winnerCount, tied := "", 0, false
-	for verdict, count := range tally {
+	for outcome, count := range tally {
 		switch {
 		case count > winnerCount:
-			winner, winnerCount, tied = verdict, count, false
+			winner, winnerCount, tied = outcome, count, false
 		case count == winnerCount && winnerCount > 0:
 			tied = true
 		}

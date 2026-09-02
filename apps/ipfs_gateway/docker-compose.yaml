@@ -1,16 +1,91 @@
+# Three-node IPFS swarm plus the gateway that fronts it.
+#
+# Why three and not one: a single node proves nothing about IPFS that a
+# directory on disk wouldn't. With three, the properties the design actually
+# relies on become observable — a claim document added to ONE node is
+# retrievable from the others without anyone copying it there, and the CID the
+# ledger anchored resolves identically on every node because the CID *is* the
+# hash of the bytes. See blockchain/scripts/ipfs-demo.sh.
+#
+# Node 0 keeps the container name `ipfs-node`, the published ports (5001 RPC,
+# 8081 gateway, 4001 swarm) and — critically — the pre-existing `ipfs-data`
+# volume, so every CID already anchored on the ledger stays resolvable. Nodes
+# 1 and 2 are new and start empty; they fetch blocks peer-to-peer on demand,
+# which is exactly the behaviour worth demonstrating.
+
 services:
+  ipfs-node:
+    image: ipfs/kubo:latest
+    container_name: ipfs-node
+    volumes:
+      - ipfs-data:/data/ipfs
+    ports:
+      - "4001:4001"
+      - "4001:4001/udp"
+      - "5001:5001"
+      - "8081:8080"
+    networks:
+      - ipfs_net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "ipfs", "id"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  ipfs-node-1:
+    image: ipfs/kubo:latest
+    container_name: ipfs-node-1
+    volumes:
+      - ipfs-data-1:/data/ipfs
+    ports:
+      - "4101:4001"
+      - "5101:5001"
+      - "8181:8080"
+    networks:
+      - ipfs_net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "ipfs", "id"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  ipfs-node-2:
+    image: ipfs/kubo:latest
+    container_name: ipfs-node-2
+    volumes:
+      - ipfs-data-2:/data/ipfs
+    ports:
+      - "4201:4001"
+      - "5201:5001"
+      - "8281:8080"
+    networks:
+      - ipfs_net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "ipfs", "id"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
   ipfs-gateway:
     build: .
     image: misinfo-ipfs-gateway:latest
     container_name: ipfs-gateway
+    depends_on:
+      ipfs-node:
+        condition: service_healthy
     environment:
-      # ipfs-node (kubo) is a plain `docker run` container (blockchain/scripts/
-      # start-ipfs.sh), not on any named compose network — reach its
-      # host-published port via host.docker.internal, same as every other
-      # container in this project reaches blockchain_gateway/fabric_gateway.
-      - IPFS_API_URL=http://host.docker.internal:5001/api/v0
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      # Now that the nodes are compose-managed and share ipfs_net, the gateway
+      # reaches node 0 by service name instead of bouncing off the host's
+      # published port. Any of the three would serve the same bytes.
+      - IPFS_API_URL=http://ipfs-node:5001/api/v0
+    networks:
+      - ipfs_net
     ports:
       - "9101:9101"
     restart: unless-stopped
@@ -21,3 +96,15 @@ services:
       timeout: 5s
       retries: 10
       start_period: 10s
+
+volumes:
+  # Pre-existing, created outside compose — declared external so node 0
+  # re-attaches the real datastore instead of getting a fresh empty one.
+  ipfs-data:
+    external: true
+  ipfs-data-1:
+  ipfs-data-2:
+
+networks:
+  ipfs_net:
+    name: ipfs_net

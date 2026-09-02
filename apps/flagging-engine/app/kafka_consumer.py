@@ -68,13 +68,12 @@ class FlaggingConsumer:
 
     async def _handle(self, payload: dict):
         claim = ClaimMessage.model_validate(payload)
-        result = await self.batcher.submit(claim.post_text)
+        result = await self.batcher.submit(claim.content)
         out = {
             **claim.model_dump(),
             "flagged": result["flagged"],
             "label": result["label"],
             "confidence": result["confidence"],
-            "misinformation_probability": result["misinformation_probability"],
             "flag_threshold": settings.flag_threshold,
             "model_version": self.model_version,
             "inference_timestamp": dt.datetime.now(dt.timezone.utc).isoformat(),

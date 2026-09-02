@@ -1,9 +1,10 @@
 from pydantic import BaseModel, Field
 
-VALID_VERDICTS = ("factual", "opinion", "misinformation")
+# Binary label domain, same as the model's inference_label.
+VALID_OUTCOMES = ("0", "1")
 
 
-class ReportSubmit(BaseModel):
-    verdict: str  # factual / opinion / misinformation
+class FactCheckSubmit(BaseModel):
+    outcome: str  # "0" = non-misinformation, "1" = misinformation
     reasoning: str = Field(..., min_length=1)
-    evidence: list[str] = Field(default_factory=list)
+    support: list[str] = Field(default_factory=list)

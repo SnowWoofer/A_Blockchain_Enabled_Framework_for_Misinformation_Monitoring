@@ -10,6 +10,8 @@ services:
       - FABRIC_GATEWAY_URL=http://host.docker.internal:9100
       - IPFS_GATEWAY_URL=http://host.docker.internal:9101
       - OFFCHAIN_DB=/app/data/offchain.db
+      # org4 is a client-only member: channel identity, no peer.
+      - ORGS=org1,org2,org3,org4,org5
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:

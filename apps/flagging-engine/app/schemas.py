@@ -2,14 +2,13 @@ from pydantic import BaseModel, Field
 
 
 class ClaimMessage(BaseModel):
-    """Matches flagging-engine/source-format.json — the Kafka input contract
-    produced by the Claim-Ingest-workers."""
+    """The claims.raw Kafka input contract, produced by the Claim-Ingest-workers.
+    This model is the contract — there is no separate schema file."""
 
     msg_id: str
     source_platform: str
-    post_text: str
+    content: str
     ingest_timestamp: str
-    masked_user_hash: str
 
 
 class PredictRequest(BaseModel):
