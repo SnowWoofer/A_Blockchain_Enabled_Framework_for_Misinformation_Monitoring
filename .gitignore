@@ -75,7 +75,7 @@ blockchain/fabric-samples/.gith*
 TODO*
 !blockchain/explorer/config.json
 apps/submission-worker/data/
-
+apps/ai_service/app/v1-0-0/api/offchain.db
 node_modules/
 benchmarks/caliper/report.html
 benchmarks/results-live*
