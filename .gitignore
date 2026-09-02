@@ -60,18 +60,11 @@ blockchain/exp*
 !blockchain/explorer/config.json
 !blockchain/explorer/docker-compose.yaml
 !blockchain/explorer/connection-profile/
-com*
 blockchain/chaincode/misinformation/D*
 venv*
 blockchain/fabric-samples/*
 !blockchain/fabric-samples/L*
-con* 
-in* 
-hel*
-po*
-dep*
-up*
-info
+info/
 !blockchain/fabric-samples/CHANGELOG.md
 !blockchain/fabric-samples/CO*
 !blockchain/fabric-samples/RE*
@@ -87,5 +80,4 @@ node_modules/
 benchmarks/caliper/report.html
 benchmarks/results-live*
 !instruction.txt
-scripts
 apps/flagging-engine/model/model.safetensors
