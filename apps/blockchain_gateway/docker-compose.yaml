@@ -1,0 +1,23 @@
+services:
+  blockchain-gateway:
+    build: .
+    image: misinfo-blockchain-gateway:latest
+    container_name: blockchain-gateway
+    environment:
+      # Force the official Gateway SDK sidecar — see the Dockerfile note on
+      # why the CLI fallback isn't available in the containerized build.
+      - FABRIC_BACKEND=gateway
+      - FABRIC_GATEWAY_URL=http://host.docker.internal:9100
+      - IPFS_GATEWAY_URL=http://host.docker.internal:9101
+      - OFFCHAIN_DB=/app/data/offchain.db
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      # Bind mount (not a named volume) — bootstrap-keys.sh writes API keys
+      # directly into app/v1-0-0/api/offchain.db on the host; this keeps the
+      # containerized service reading/writing that exact same file rather
+      # than a separate, out-of-sync copy inside a Docker volume.
+      - ./app/v1-0-0/api:/app/data
+    ports:
+      - "8000:8000"
+    restart: unless-stopped

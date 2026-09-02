@@ -3,13 +3,13 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SERVICE_DIR="${SCRIPT_DIR}/../../apps/fabric_gateway_service"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 COMPOSE="docker compose"
 docker compose version >/dev/null 2>&1 || COMPOSE="docker-compose"
 
 if [[ "${1:-up}" == "down" ]]; then
   echo ">> Stopping Fabric Gateway SDK service..."
-  (cd "${SERVICE_DIR}" && ${COMPOSE} down) >/dev/null 2>&1 || true
+  (cd "${PROJECT_ROOT}" && ${COMPOSE} rm -sf fabric-gateway) >/dev/null 2>&1 || true
   exit 0
 fi
 
@@ -20,7 +20,13 @@ if ! docker network ls --format '{{.Name}}' | grep -qx 'fabric_test'; then
 fi
 
 echo ">> Building + starting Fabric Gateway SDK service (official @hyperledger/fabric-gateway)..."
-(cd "${SERVICE_DIR}" && ${COMPOSE} up -d --build) | tail -2
+# --force-recreate: the container's crypto material is a bind mount that gets
+# regenerated on every network deploy, but compose only recreates a container
+# when its own config changes — not when files under a mount change on disk.
+# Without this, a sidecar left running across a redeploy keeps stale TLS certs
+# in memory (server.js reads them once at startup) and every call fails with
+# "unable to verify the first certificate" even though /health reports ok.
+(cd "${PROJECT_ROOT}" && ${COMPOSE} up -d --build --force-recreate fabric-gateway) | tail -2
 
 echo ">> Waiting for health on :9100..."
 for _ in $(seq 1 60); do
@@ -36,5 +42,5 @@ for _ in $(seq 1 60); do
 done
 
 echo "ERROR: gateway service did not become healthy on :9100" >&2
-(cd "${SERVICE_DIR}" && ${COMPOSE} logs --tail 30)
+(cd "${PROJECT_ROOT}" && ${COMPOSE} logs --tail 30 fabric-gateway)
 exit 1

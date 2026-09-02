@@ -45,18 +45,20 @@ on their behalf.
 │   ├── fabric-samples/           # git-ignored runtime (PROVISIONS BELOW)
 │   └── explorer/                 # Hyperledger Explorer UI compose + profile
 ├── apps/
-│   ├── ai_service/app/v1-0-0/
+│   ├── blockchain_gateway/app/v1-0-0/
 │   │   ├── api/                  # FastAPI gateway (server.py, storage.py)
 │   │   └── src/                  # blockchain.py (FabricGatewayBridge /
 │   │                             #   FabricBridge), report.py ...
-│   └── fabric_gateway_service/   # Node.js sidecar wrapping the official
+│   ├── ipfs_gateway/              # generic IPFS add/cat bridge over kubo,
+│   │                             #   independently reachable (:9101)
+│   └── fabric_gateway/           # Node.js sidecar wrapping the official
 │                                   #   @hyperledger/fabric-gateway SDK (:9100)
 └── summary.txt                   # full execution trace + code reference map
 ```
 
 > Git-ignored runtime you must provision once (see below): the Python
 > virtualenv, `blockchain/fabric-samples/` (Fabric binaries + test network),
-> and `apps/ai_service/app/v1-0-0/api/offchain.db` (API keys).
+> and `apps/blockchain_gateway/app/v1-0-0/api/offchain.db` (API keys).
 
 ## Prerequisites
 
@@ -139,7 +141,7 @@ rm -rf fabric-samples
 ```bash
 python3 -m venv venv_A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring
 venv_A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/bin/pip install \
-  -r apps/ai_service/app/v1-0-0/api/requirements.txt
+  -r apps/blockchain_gateway/app/v1-0-0/api/requirements.txt
 ```
 
 ### 4. Mint API keys (one-time per clean clone)
@@ -154,6 +156,15 @@ blockchain/scripts/bootstrap-keys.sh org1 org2 org3
 
 ## Run it end to end
 
+**The short version:** `./startup.sh --orgs 3 --samples 50` now does Steps 1, 1b, 2,
+2b, and API-key bootstrapping for you automatically, every run (all idempotent —
+safe to re-run any time). The step-by-step breakdown below is what it's actually
+doing internally, useful for running/debugging one piece at a time, or just
+understanding the pieces. Application-pipeline services (Kafka, flagging-engine,
+submission-worker, fact-checking-service, monitoring) are separate — bring those
+up with `docker compose up -d --build` (see `docker-compose.yml`) once the
+blockchain layer from `./startup.sh` is up.
+
 Run the following **from the repo root** each time you start a session.
 
 ### Step 1 — Off-chain content store (IPFS)
@@ -164,15 +175,45 @@ blockchain/scripts/start-ipfs.sh        # starts kubo in the "ipfs-node" contain
 
 Ready when it prints `IPFS ready: http://localhost:5001`.
 
+### Step 1b — IPFS Gateway (read/write bridge)
+
+```bash
+blockchain/scripts/start-ipfs-gateway.sh   # generic add/cat bridge over kubo, on :9101
+```
+
+A thin, independently-reachable HTTP bridge in front of kubo (`apps/ipfs_gateway`) —
+`blockchain_gateway` talks to it instead of kubo directly, the same relationship
+`blockchain_gateway` has with the Fabric Gateway SDK sidecar (Step 2b). Any other
+downstream consumer that just needs to fetch a report by CID can also call
+`GET :9101/cat/{cid}` directly, without going through `blockchain_gateway`'s
+API-key-authenticated endpoints at all — the CID itself is the access grant,
+same trust model any public IPFS gateway uses.
+
 ### Step 2 — API gateway
+
+```bash
+blockchain/scripts/start-blockchain-gateway.sh   # builds + starts, waits for health, on :8000
+```
+
+Runs `FABRIC_BACKEND=gateway` (requires Step 2b below to already be up) and reads/writes
+API keys in the same `offchain.db` `bootstrap-keys.sh` writes to (bind-mounted, not copied
+into the image), so bootstrapping keys before or after starting it both work.
+
+<details>
+<summary>Alternative: run it directly on the host (needed for the legacy <code>peer</code> CLI fallback path)</summary>
 
 ```bash
 export PATH="$PWD/blockchain/fabric-samples/bin:$PATH"   # gateway shells out to `peer`
 venv_A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/bin/uvicorn \
-  --app-dir apps/ai_service/app/v1-0-0/api/ server:app --host 0.0.0.0 --port 8000
+  --app-dir apps/blockchain_gateway/app/v1-0-0/api/ server:app --host 0.0.0.0 --port 8000
 ```
 
-Leave it running in a terminal. Sanity check (needs keys from step 4):
+The Docker image deliberately doesn't bundle Fabric's `peer` binary, so it only ever uses
+the SDK sidecar (Step 2b). Run it this way instead if you need `FABRIC_BACKEND=auto`'s
+fallback to the `peer` CLI when the sidecar is down.
+</details>
+
+Sanity check (needs keys from step 4):
 
 ```bash
 curl -s -H "X-API-Key: stress-key" http://localhost:8000/api/status
@@ -209,16 +250,21 @@ needed when running behind `./startup.sh`.
    via `addOrg3/addOrg3.sh up` + `onboard-org3.sh` (2-of-3 endorsement policy),
    adds extra orgs when `--orgs > 3`, registers stakeholder orgs 1..N on the
    ledger (`RegisterOrg`), and regenerates the Explorer connection profile.
-2. **Pre-flight** — asserts the gateway answers `200` on `/api/status`
-   (aborts loudly with the start command if not).
-3a. **Quick validation load** — `benchmarks/load-http.py` POSTs `--samples` synthetic
-    reports through the gateway; each lands in IPFS and its hash + URI is anchored on
-    the ledger (validates gateway auth and IPFS in ~5s).
-3b. **Caliper benchmark** — scales the official Hyperledger Caliper suite:
-    regenerates the Fabric connection profile and benchmark config (writes=`N*10`,
-    reads=`N*20`), then runs the benchmark suite inside Docker (`~60-90s`). Results
-    land in `benchmarks/caliper/report.html`.
-4. **Explorer** — recreate containers so Explorer picks up the regenerated profile.
+2. **IPFS + IPFS Gateway** — `start-ipfs.sh` then `start-ipfs-gateway.sh`.
+3. **API keys** — `bootstrap-keys.sh org1 org2 org3` (idempotent).
+4. **Fabric Gateway SDK sidecar + blockchain gateway** — `start-gateway-service.sh`
+   (force-recreated, since the sidecar's crypto material just changed) then
+   `start-blockchain-gateway.sh`.
+5. **Pre-flight** — asserts the gateway answers `200` on `/api/status`
+   (aborts loudly if not), then **quick validation load** —
+   `benchmarks/load-http.py` POSTs `--samples` synthetic reports through the
+   gateway; each lands in IPFS and its hash + URI is anchored on the ledger.
+6. **Caliper benchmark** (skip with `--skip-caliper`) — scales the official
+   Hyperledger Caliper suite: regenerates the Fabric connection profile and
+   benchmark config (writes=`N*10`, reads=`N*20`), then runs the benchmark
+   suite inside Docker (`~60-90s`). Results land in `benchmarks/caliper/report.html`.
+
+Explorer isn't started automatically — see Step 4 below if you want it.
 
 `--orgs N` defaults to 3 (max 20); `--samples N` defaults to 50 (max 100000).
 Use `./startup.sh --help` for the quick flag reference.
@@ -262,7 +308,7 @@ committed on the ledger. Expected close-out:
 
 > The `/verify` endpoint previously returned HTTP 500 because the on-chain query
 > result arrives as an ASCII-encoded string rather than a dict. This was fixed in
-> `apps/ai_service/app/v1-0-0/api/server.py` via the `_on_chain_record()` helper.
+> `apps/blockchain_gateway/app/v1-0-0/api/server.py` via the `_on_chain_record()` helper.
 
 ## Benchmarking
 
@@ -326,7 +372,7 @@ All endpoints require `-H "X-API-Key: <key>"` (keys from `bootstrap-keys.sh`;
 | `GET /api/reports/{id}` | Report + off-chain payload |
 | `GET /api/reports/{id}/chain` | On-chain record (hash, uri, status, votes) |
 | `GET /api/reports/{id}/verify` | Tamper-evidence check (off-chain vs on-chain hash) |
-| `GET /api/reports/{id}/history` | Full tx/history trail — **not yet implemented** (returns 500; chaincode `QueryReportHistory` not added yet, see `info/later_client_imp.txt`) |
+| `GET /api/reports/{id}/history` | Full tx/history trail via Fabric's native `GetHistoryForKey` — every version this claim's `off_chain_uri` has pointed to, oldest first |
 | `POST /api/reports/{id}/vote` | Org vote on a report |
 | `POST /api/reports/{id}/finalize` | Finalize a verdict (consortium quorum) |
 | `POST /api/reports/{id}/expire` | Expire a report past its voting deadline |
@@ -338,8 +384,10 @@ All endpoints require `-H "X-API-Key: <key>"` (keys from `bootstrap-keys.sh`;
 ```bash
 blockchain/scripts/deploy.sh down          # stop Fabric (as startup.sh [4/4] reminds you)
 blockchain/scripts/start-ipfs.sh down      # stop IPFS container
+blockchain/scripts/start-ipfs-gateway.sh down      # stop the IPFS Gateway bridge
 blockchain/scripts/start-gateway-service.sh down   # stop the Gateway SDK sidecar
-# stop the gateway in its terminal (Ctrl-C)
+blockchain/scripts/start-blockchain-gateway.sh down   # stop the API gateway
+# (or Ctrl-C if you ran it directly on the host instead)
 docker compose -f blockchain/explorer/docker-compose.yaml down -v   # optional: stop Explorer
 ```
 

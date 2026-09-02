@@ -1,0 +1,23 @@
+services:
+  ipfs-gateway:
+    build: .
+    image: misinfo-ipfs-gateway:latest
+    container_name: ipfs-gateway
+    environment:
+      # ipfs-node (kubo) is a plain `docker run` container (blockchain/scripts/
+      # start-ipfs.sh), not on any named compose network — reach its
+      # host-published port via host.docker.internal, same as every other
+      # container in this project reaches blockchain_gateway/fabric_gateway.
+      - IPFS_API_URL=http://host.docker.internal:5001/api/v0
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "9101:9101"
+    restart: unless-stopped
+    healthcheck:
+      # No curl in the python:3.11-slim base image — use Python itself.
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:9101/health', timeout=3)"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s

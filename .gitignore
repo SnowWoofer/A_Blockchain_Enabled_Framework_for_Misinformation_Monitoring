@@ -52,7 +52,7 @@ blockchain/.tern-port
 blockchain/.vscode-test
 rs_prop.pdf
 benchmarks/results.csv
-apps/ai_service/v1-0-0/app/api/*.db
+apps/blockchain_gateway/app/v1-0-0/api/*.db
 blockchain/chaincode/misinformation/go/vendor/
 blockchain/chaincode/misinformation/go/misinformation
 blockchain/exp*
@@ -81,10 +81,11 @@ info
 blockchain/fabric-samples/.gith*
 TODO*
 !blockchain/explorer/config.json
-apps/ai_service/app/v1-0-0/api/*.db
+apps/submission-worker/data/
 
 node_modules/
 benchmarks/caliper/report.html
 benchmarks/results-live*
 !instruction.txt
 scripts
+apps/flagging-engine/model/model.safetensors

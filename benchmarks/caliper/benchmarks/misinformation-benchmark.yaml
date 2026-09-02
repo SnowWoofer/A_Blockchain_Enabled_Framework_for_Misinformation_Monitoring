@@ -1,7 +1,7 @@
 {
   "test": {
     "name": "misinformation-contract-benchmark",
-    "description": "Write + read benchmark for the misinformation chaincode on mychannel.\n    Round 1 anchors synthetic reports on-chain (SubmitReport, endorsed 2-of-3).\n    Round 2 hammers the read path (QueryAllReports via CouchDB world state).\n    Configured: 100 writes @ 25 TPS, 200 reads @ 50 TPS.",
+    "description": "Write + read benchmark for the misinformation chaincode on mychannel.\n    Round 1 anchors synthetic reports on-chain (SubmitReport, endorsed 2-of-3).\n    Round 2 hammers the read path (QueryAllReports via CouchDB world state).\n    Configured: 10 writes @ 25 TPS, 20 reads @ 50 TPS.",
     "workers": {
       "number": 2
     },
@@ -9,7 +9,7 @@
       {
         "label": "submit-report-write",
         "description": "Anchor synthetic misinformation reports on-chain",
-        "txNumber": 100,
+        "txNumber": 10,
         "rateControl": {
           "type": "fixed-rate",
           "opts": {
@@ -19,15 +19,14 @@
         "workload": {
           "module": "workload/submitReport.js",
           "arguments": {
-            "contractId": "misinformation",
-            "language": "eng"
+            "contractId": "misinformation"
           }
         }
       },
       {
         "label": "query-all-reports-read",
         "description": "Range-scan the ledger through the gateway peer",
-        "txNumber": 200,
+        "txNumber": 20,
         "rateControl": {
           "type": "fixed-rate",
           "opts": {

@@ -107,7 +107,7 @@ config = {
                 "description": "Anchor synthetic misinformation reports on-chain",
                 "txNumber": writes,
                 "rateControl": {"type": "fixed-rate", "opts": {"tps": 25}},
-                "workload": {"module": "workload/submitReport.js", "arguments": {"contractId": "misinformation", "language": "eng"}},
+                "workload": {"module": "workload/submitReport.js", "arguments": {"contractId": "misinformation"}},
             },
             {
                 "label": "query-all-reports-read",

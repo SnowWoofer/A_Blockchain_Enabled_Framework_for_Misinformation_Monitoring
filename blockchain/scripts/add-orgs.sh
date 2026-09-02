@@ -9,7 +9,7 @@ ADD_ORG3="${TEST_NETWORK}/addOrg3"
 CHAINCODE_PATH="${PROJECT_ROOT}/chaincode/misinformation/go"
 
 CC_NAME="misinformation"
-CC_VERSION="2.1"
+CC_VERSION="2.2"
 CHANNEL_NAME="mychannel"
 TARGET=3
 

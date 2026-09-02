@@ -1,0 +1,65 @@
+# Local-dev convenience ONLY: `docker compose up -d --build` brings every
+# service up together in one shot. Each service is independently
+# deployable on its own — see apps/*/docker-compose.yaml — this file just
+# includes all of them (so this repo has exactly one place that knows how to
+# run everything at once) plus the environment-level infra that isn't one of
+# "our" services (Prometheus/Grafana, no Dockerfile of their own).
+#
+# The Fabric network + blockchain layer (peers/orderer/channel/chaincode,
+# fabric_gateway, ipfs_gateway, blockchain_gateway) is NOT part of this file
+# and is not brought up by it — that's `./startup.sh`, run separately.
+# Deploying Fabric is inherently a sequence of CLI commands (generate
+# crypto, create channel, install/approve/commit chaincode), not something
+# `docker compose up` can express. Run `./startup.sh` first if the
+# blockchain layer isn't up yet — submission-worker/fact-checking-service
+# will just dead-letter/error until blockchain_gateway is reachable, they
+# won't block this file from starting.
+#
+# Prerequisite before running this file: `blockchain/scripts/ensure-networks.sh`
+# (idempotent — safe to re-run). kafka_net is shared by several
+# independently-deployable services and none of their individual compose
+# files can safely "own" creating it once any of them marks it external, so
+# it has to already exist before `docker compose up` runs.
+include:
+  - apps/kafka/docker-compose.yml
+  - apps/claim-ingest-worker/docker-compose.yaml
+  - apps/flagging-engine/docker-compose.yaml
+  - apps/submission-worker/docker-compose.yaml
+  - apps/fact-checking-service/docker-compose.yaml
+  - apps/fabric_gateway/docker-compose.yaml
+  - apps/ipfs_gateway/docker-compose.yaml
+  - apps/blockchain_gateway/docker-compose.yaml
+
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - kafka_net
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    depends_on:
+      - prometheus
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    networks:
+      - kafka_net
+    restart: unless-stopped
+
+volumes:
+  prometheus-data:
+  grafana-data:

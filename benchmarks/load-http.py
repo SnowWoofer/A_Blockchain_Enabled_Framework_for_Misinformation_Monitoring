@@ -97,11 +97,12 @@ def worker(
         if rw_mix >= 100 or (i % 100) < rw_mix:
             body = {
                 "report_id": f"{tag}-{worker_id}-{i}",
-                "language": "nso",
                 "label": "1",
                 "confidence": 0.9,
                 "model_version": "stress-v1",
                 "raw_text": "stress test payload",
+                "source_platform": "loadtest",
+                "submission_type": "ai_model",
             }
             status, ms = _post(base, "/api/reports", body, api_key)
         else:

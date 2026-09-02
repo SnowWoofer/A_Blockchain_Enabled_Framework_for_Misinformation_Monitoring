@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-API_DIR="${SCRIPT_DIR}/../../apps/ai_service/app/v1-0-0/api"
+API_DIR="${SCRIPT_DIR}/../../apps/blockchain_gateway/app/v1-0-0/api"
 DB="${API_DIR}/offchain.db"
 VENV="${SCRIPT_DIR}/../../../venv_A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring"
 REGISTER_ORGS=""

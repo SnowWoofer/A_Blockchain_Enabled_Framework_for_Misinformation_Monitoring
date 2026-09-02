@@ -1,0 +1,39 @@
+services:
+  kafka:
+    build: .
+    container_name: kafka
+    environment:
+      KAFKA_TOPICS: claims.raw,claims.flagged
+      KAFKA_TOPIC_PARTITIONS: 3
+    ports:
+      - "9094:9094"
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    networks:
+      - kafka_net
+    healthcheck:
+      test: ["CMD", "/opt/kafka/bin/kafka-broker-api-versions.sh", "--bootstrap-server", "localhost:9092"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+networks:
+  # `external: true` here too, deliberately — same treatment as fabric_test:
+  # no single compose file "owns" creating this network (an `include`-based
+  # aggregator can't un-external a network once any included file marks it
+  # external — Compose merges that flag as sticky). It's created once,
+  # idempotently, by `blockchain/scripts/ensure-networks.sh` (also called
+  # from startup.sh) before any compose file needs it. Kafka's advertised
+  # listener for container clients is `kafka:9092` (see server.properties),
+  # which only resolves correctly for containers actually on this network —
+  # reaching it via host.docker.internal + the external :9094 listener does
+  # NOT work for containerized clients, only genuine host-machine ones (the
+  # EXTERNAL listener advertises "localhost", which inside another container
+  # means itself, not the Kafka host).
+  kafka_net:
+    name: kafka_net
+    external: true
+
+volumes:
+  kafka-data:
