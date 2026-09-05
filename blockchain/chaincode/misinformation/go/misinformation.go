@@ -4,9 +4,11 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/hyperledger/fabric-contract-api-go/v2/contractapi"
+	"math"
 	"strings"
 	"time"
+
+	"github.com/hyperledger/fabric-contract-api-go/v2/contractapi"
 )
 
 const (
@@ -21,13 +23,7 @@ const (
 	defaultFoundingOrgLimit = 3
 	factCheckWindow         = 72 * time.Hour
 
-	// Fact-check outcome domain — the same binary label domain the model
-	// predicts into (ReportRecord.InferenceLabel), so a finalised
-	// FinalLabel can be compared directly against what the model proposed.
-	// Deliberately small: the finalisation rule
-	// needs independent fact-checkers to land on the exact same value for
-	// consensus to mean anything, and a large taxonomy makes that
-	// vanishingly unlikely even when checkers substantively agree.
+	// Fact-check outcome domain
 	outcomeNonMisinformation = "0"
 	outcomeMisinformation    = "1"
 )
@@ -36,14 +32,7 @@ func isValidOutcome(v string) bool {
 	return v == outcomeNonMisinformation || v == outcomeMisinformation
 }
 
-// FactCheck deliberately carries only what the on-chain consensus tally
-// needs. This is not a vote — a fact-checker isn't expressing a preference,
-// they're independently verifying a claim and reporting what they found;
-// "vote"/election framing belongs to genuine governance decisions like org
-// admission (see Vote/OrgAdmissionRequest below), not to fact-finding. The
-// fact-checker's actual reasoning/evidence live off-chain, in the versioned
-// IPFS document — only its CID is anchored here (ReportRecord.ReportID),
-// never the content itself.
+// FactCheck deliberately carries only what the on-chain consensus tally needs.
 type FactCheck struct {
 	CheckerMSP string `json:"checker_msp"`
 	Outcome    string `json:"outcome"`
@@ -71,10 +60,7 @@ type RegisteredOrg struct {
 	RegisteredAt string `json:"registered_at"`
 }
 
-// Vote is for genuine governance decisions — admitting a new org to the
-// consortium is a preference/majority decision among existing members, not
-// a fact to be checked, so "vote" is the right word here (unlike FactCheck
-// above).
+// Vote is for genuine governance decisions
 type Vote struct {
 	VoterMSP string `json:"voter_msp"`
 	Verdict  string `json:"verdict"`
@@ -385,12 +371,7 @@ func (c *MisinformationContract) VoteOnOrgAdmission(
 	return nil
 }
 
-// FinalizeOrgAdmission admits the candidate once at least quorumFor(current
-// registered org count) of its votes are "1" (admit) — a supermajority that
-// scales with consortium size, deliberately a higher and different bar than
-// the fixed 2-vote/tiebreak rule FinalizeReport uses for fact-checking a
-// single claim: admitting a new permanent member is a governance decision,
-// not a per-claim verdict.
+// FinalizeOrgAdmission admits the candidate once at least quorumFor(current registered org count) of its votes are "1" (admit)
 func (c *MisinformationContract) FinalizeOrgAdmission(
 	ctx contractapi.TransactionContextInterface,
 	candidateMSP string,
@@ -537,10 +518,7 @@ func (c *MisinformationContract) Submit(
 	return nil
 }
 
-// SubmitFactCheck records a fact-checker's outcome on a claim — only what the
-// on-chain consensus tally needs. The reasoning/support behind the outcome
-// live off-chain, in a re-published IPFS document; the ledger stores no
-// pointer to it, since the claim's id is itself the off-chain address.
+// SubmitFactCheck records a fact-checker's outcome on a claim 
 func (c *MisinformationContract) SubmitFactCheck(
 	ctx contractapi.TransactionContextInterface,
 	reportID, outcome string,
@@ -586,6 +564,29 @@ func (c *MisinformationContract) SubmitFactCheck(
 		TxID:       ctx.GetStub().GetTxID(),
 	})
 	record.Status = statusUnderReview
+
+	//early acceptance/early rejection
+	totalOrgs, err := c.getRegisteredOrgs(ctx)
+	if err == nil && len(totalOrgs) > 0 {
+		required := int(math.Ceil(2.0 / 3.0 * float64(len(totalOrgs))))
+		tally := tallyFactChecks(record.FactChecks)
+		remaining := len(totalOrgs) - len(record.FactChecks)
+
+		//early acceptance
+		if tally["1"] >= required {
+			record.Status = statusFinal
+			record.FinalLabel = "1"
+			record.FinalizedBy = checkerMSP
+			record.FinalizedAt = deterministicTimestamp(ctx)
+		}
+
+		// early rejection
+		// even if ALL remaining orgs vote YES, can't reach threshold
+		if record.Status == statusUnderReview && tally["1"]+remaining < required {
+			record.Status = statusRejected
+		}
+	}
+
 	recordBytes, err = json.Marshal(record)
 	if err != nil {
 		return fmt.Errorf("failed to marshal record: %v", err)
@@ -596,9 +597,7 @@ func (c *MisinformationContract) SubmitFactCheck(
 	return nil
 }
 
-// tallyFactChecks counts fact-checks per outcome. The outcome domain is
-// binary ("0"/"1"), so at most two keys ever exist and map iteration order
-// cannot affect which outcome wins or whether a tie is detected.
+// tallyFactChecks counts fact-checks per outcome.
 func tallyFactChecks(checks []FactCheck) map[string]int {
 	tally := make(map[string]int)
 	for _, v := range checks {
@@ -607,10 +606,7 @@ func tallyFactChecks(checks []FactCheck) map[string]int {
 	return tally
 }
 
-// FinalizeReport closes a report once at least 2 fact-checks exist and
-// one outcome has a strict majority: 2 agreeing fact-checks finalise
-// immediately; 2 disagreeing fact-checks stay PENDING until a 3rd
-// fact-check breaks the tie.
+// FinalizeReport closes a report once at least 2 ouyt of 3 fact-checks exist and one outcome has a strict majority
 func (c *MisinformationContract) FinalizeReport(
 	ctx contractapi.TransactionContextInterface,
 	reportID string,
@@ -760,10 +756,7 @@ type ReportHistoryEntry struct {
 	Record    *ReportRecord `json:"record,omitempty" metadata:",optional"`
 }
 
-// QueryReportHistory returns every transaction that ever wrote this report's
-// ledger key (submission, each fact-check, finalize/expire), oldest first, using
-// Fabric's own block history rather than any bespoke version-tracking —
-// the blockchain already is that history, this just exposes it.
+// QueryReportHistory returns every transaction that ever wrote this report's ledger key (submission, each fact-check, finalize/expire)
 func (c *MisinformationContract) QueryReportHistory(
 	ctx contractapi.TransactionContextInterface,
 	reportID string,

@@ -1,26 +1,87 @@
 # A Blockchain Enabled Framework For Misinformation Monitoring
 
-Consortium blockchain framework for monitoring misinformation: a Hyperledger
-Fabric network anchors only a SHA-256 hash + off-chain URI of each report on the
-ledger, while the full report object (including raw text) lives off-chain in
-IPFS (SQLite fallback). A FastAPI gateway authenticates orgs by API key and signs
-on their behalf.
+Consortium blockchain framework for monitoring misinformation. An AI model
+(AfroXLM-R / Mistral) acts as a data scout — flagging potential misinformation
+and escalating flagged reports to a consortium of organizations who fact-check
+and vote on them via Hyperledger Fabric. The chain anchors only a SHA-256 hash +
+off-chain URI per report; full content lives in IPFS.
+
+The system is benchmarkable **without the AI model running**: the benchmarks
+measure blockchain throughput *per report*, and reports carry their AI verdict
+(label + confidence) as precomputed data. Live inference is optional.
 
 ## How it works
 
-- **On-chain** (Go chaincode): hash + `off_chain_uri` + metadata only. Never raw text.
-- **Off-chain**: full report in IPFS (content-addressed; the CID doubles as the
-  report id), SQLite fallback.
-- **Gateway** (`:8000`): the only thing users/orgs talk to. API-key auth
-  (`X-API-Key` header). Ledger access goes through the **official Fabric
-  Gateway SDK** (`@hyperledger/fabric-gateway`) via a small Node.js sidecar on
-  `:9100`; falls back to the `peer` CLI bridge when the sidecar is down
-  (`FABRIC_BACKEND=auto|gateway|cli`).
-- **Explorer** (`:8080`): network visualizer over the `fabric_test` network.
-- **One command runs the whole pipeline**: `./startup.sh` deploys the network,
-  onboards org3 with a 2-of-3 endorsement policy, registers stakeholder orgs on
-  the ledger, drives a load phase through the gateway, and (by default) runs the
-  Caliper benchmark (`load-http.py` then `run-caliper.sh`). Run `scripts/run_benchmarks.sh` for parameter sweeps varying samples and org count.
+The system has **two layers** that run independently:
+
+### Blockchain layer (`./startup.sh`)
+
+- **Fabric network**: peers/orderers/CouchDB on the `fabric_test` docker network
+- **Chaincode** (Go, `blockchain/chaincode/misinformation/`): fact-check consensus model
+  - `SubmitReport` — an org submits a report (PENDING, 72h fact-check window)
+  - `SubmitFactCheck` — another org records a verdict (`"0"`=non-misinfo, `"1"`=misinfo). After each vote the chaincode applies the consensus rule with
+    `required = ceil(2/3 × registered_orgs)`:
+    - **Early acceptance → FINAL**: once `tally["1"] >= required` (a 2/3 supermajority of YES).
+    - **Early rejection → REJECTED**: once `tally["1"] + remaining_unvoted < required` — even if every remaining org later votes YES, the threshold is mathematically unreachable, so the report is finalised immediately without waiting for the rest.
+  - `FinalizeReport` — closes an UNDER_REVIEW report (≥2 fact-checks, no tie)
+  - `ExpireReport` — expires PENDING reports past their deadline
+  - `RegisterOrg` / `RequestOrgAdmission` / `VoteOnOrgAdmission` / `FinalizeOrgAdmission` — org governance (admission needs 2/3 of registered orgs)
+- **Fabric Gateway SDK sidecar** (`:9100`): Node.js wrapper around `@hyperledger/fabric-gateway`
+- **IPFS Gateway** (`:9101`): thin add/cat bridge over kubo
+- **Blockchain Gateway** (`:8000`): FastAPI, the only thing orgs talk to. API-key auth, IPFS storage, chaincode invocation
+
+### Application pipeline (`docker compose up -d --build`)
+
+- **Kafka** (KRaft, single-node): topics `claims.raw`, `claims.flagged`
+- **Claim Ingest Worker** (`:8003`): accepts raw claim texts, publishes to `claims.raw`
+- **Flagging Engine** (`:8004`): AI model, Kafka consumer/producer + dynamic batching + Prometheus metrics
+- **Submission Worker** (`:8001`): consumes flagged claims, submits to blockchain gateway
+- **Fact-Checking Service** (`:8002`): lets orgs review/interact with pending claims
+- **Prometheus** (`:9090`) + **Grafana** (`:3000`): monitoring
+
+> The application pipeline is optional for benchmarking. The gateway layer
+> (`:8000`, `:9100`, `:9101`) plus the Fabric network is all the benchmark
+> harnesses require. The flagging-engine also needs **~16 GB RAM** while the
+> model is loaded — the rest of the stack runs comfortably in ~4 GB. See
+> [Benchmarking without the AI model](#benchmarking-without-the-ai-model).
+
+### Message flow
+
+```
+User/Script
+   │
+   ▼  POST /ingest {"claims":["text1",...]}
+Claim Ingest Worker (:8003)
+   │
+   ▼  Kafka: topic=claims.raw
+Flagging Engine (AI model)
+   │
+   ▼  Kafka: topic=claims.flagged (label + confidence)
+Submission Worker (:8001)
+   │
+   ▼  POST /api/reports
+Blockchain Gateway (:8000)
+   │
+   ▼  IPFS (off-chain) + Chaincode Submit (on-chain)
+Fact-Checking Service → orgs fact-check → FINAL (2/3 YES) or REJECTED (impossible)
+```
+
+The benchmark harnesses (`feed_samples.py`) bypass this pipeline entirely and
+submit reports directly to the gateway — that is the quantity being measured.
+
+### AI as data scout
+
+The AI model processes incoming claims and flags potential misinformation.
+Flagged reports are escalated to consortium organizations who independently
+fact-check them. Two submission modes:
+
+- **Direct mode (default)** — org1 is the **AI stakeholder org**. It submits
+  `--ai-pct%` of reports (the ones the AI processed); the remaining reports are
+  submitted by a random `org2..orgN`. Every org except the report's submitter
+  votes, so org1 votes on reports it did not submit. With `--ai-pct 100` org1
+  submits everything.
+- **Indirect mode** — a random org is chosen to submit every report — simulates
+  a human-in-the-loop workflow where every org is a normal stakeholder.
 
 ## Architecture
 
@@ -30,35 +91,38 @@ on their behalf.
 
 ```
 .
-├── startup.sh                    # single entry point: deploy + load + hints
+├── startup.sh                         # blockchain layer: deploy + load + gateways
+├── docker-compose.yml                 # application pipeline: Kafka + services + monitoring
 ├── benchmarks/
-│   ├── load-http.py              # synthetic load driver -> gateway
-│   ├── caliper/                  # Hyperledger Caliper benchmark suite (official
-│                                 #   Fabric Gateway binding; run-caliper.sh)
-│   └── run_benchmarks.sh         # iterative benchmark runner varying samples/orgs
+│   ├── feed_samples.py                # feed JSON samples through pipeline + consensus sim
+│   ├── load-http.py                   # synthetic load driver -> gateway
+│   └── caliper/                       # Hyperledger Caliper benchmark suite
 ├── blockchain/
-│   ├── scripts/                  # deploy.sh, onboard-org3.sh, register-orgs.sh,
-│   │                             # add-orgs.sh, bootstrap-keys.sh,
-│   │                             # gen-explorer-config.sh, start-ipfs.sh,
-│   │                             # start-gateway-service.sh
-│   ├── chaincode/misinformation/ # Go chaincode (go.mod + vendor/)
-│   ├── fabric-samples/           # git-ignored runtime (PROVISIONS BELOW)
-│   └── explorer/                 # Hyperledger Explorer UI compose + profile
+│   ├── scripts/                       # deploy, bootstrap, gateway launchers, etc.
+│   ├── chaincode/misinformation/      # Go chaincode (fact-check consensus model)
+│   ├── fabric-samples/                # git-ignored runtime (provisioned once)
+│   └── explorer/                      # Hyperledger Explorer UI
 ├── apps/
-│   ├── blockchain_gateway/app/v1-0-0/
-│   │   ├── api/                  # FastAPI gateway (server.py, storage.py)
-│   │   └── src/                  # blockchain.py (FabricGatewayBridge /
-│   │                             #   FabricBridge), report.py ...
-│   ├── ipfs_gateway/              # generic IPFS add/cat bridge over kubo,
-│   │                             #   independently reachable (:9101)
-│   └── fabric_gateway/           # Node.js sidecar wrapping the official
-│                                   #   @hyperledger/fabric-gateway SDK (:9100)
-└── summary.txt                   # full execution trace + code reference map
+│   ├── ai_service/                    # AI service app (skeleton)
+│   ├── blockchain_gateway/            # FastAPI gateway (:8000) — IPFS + chaincode
+│   ├── fabric_gateway/                # Node.js SDK sidecar (:9100)
+│   ├── ipfs_gateway/                  # IPFS add/cat bridge (:9101)
+│   ├── claim-ingest-worker/           # Kafka producer — raw claims
+│   ├── flagging-engine/               # AI model + Kafka consumer/producer
+│   │   └── model/                     # model weights + tokenizer + config.json
+│   ├── submission-worker/             # Kafka consumer — submits to blockchain
+│   ├── fact-checking-service/         # org review/interaction proxy
+│   └── kafka/                         # Kafka broker (KRaft)
+├── monitoring/                        # Prometheus + Grafana provisioning
+├── documentation/                     # architecture diagrams, source formats
+├── data/                              # test samples (git-ignored)
+│   └── translated_masked_samples_test.json
+├── results/local/                     # benchmark CSVs (http.csv, caliper.csv, real_loads.csv)
+└── info/                              # development notes
 ```
 
-> Git-ignored runtime you must provision once (see below): the Python
-> virtualenv, `blockchain/fabric-samples/` (Fabric binaries + test network),
-> and `apps/blockchain_gateway/app/v1-0-0/api/offchain.db` (API keys).
+> Git-ignored: Python virtualenv, `blockchain/fabric-samples/`, `offchain.db`,
+> `apps/flagging-engine/model/model.safetensors`, `data/`.
 
 ## Prerequisites
 
@@ -66,42 +130,36 @@ on their behalf.
 
 | Tool | Why | Check |
 |---|---|---|
-| **Docker + Compose v2** | Runs peers/orderers/CouchDB/IPFS/Explorer | `docker compose version` |
-| **Python 3.10+** | Gateway + `bootstrap-keys.sh` seed script | `python3 --version` |
+| **Docker + Compose v2** | Runs peers/orderers/CouchDB/IPFS/Kafka/services | `docker compose version` |
+| **Python 3.10+** | Gateway, bootstrap, loader script | `python3 --version` |
 | **Go 1.22+** | Chaincode vendoring during deploy (tested with 1.24.0) | `go version` |
 | **`curl`** | Pre-flight / verification | `curl --version` |
 | **`jq`** | Chaincode lifecycle tooling | `jq --version` |
-| **`git`** | Clone (this repo used during setup) | `git --version` |
+| **`git`** | Clone | `git --version` |
 
-Docker images (`hyperledger/fabric-peer`, `hyperledger/fabric-orderer`,
-`hyperledger/fabric-ca`, `hyperledger/fabric-tools`, `hyperledger/fabric-ccenv`,
-`couchdb`, `ipfs/kubo`, `hyperledger/explorer`, `hyperledger/explorer-db`) are
-pulled automatically by the scripts on first run — no manual `docker pull`
-needed.
+Docker images are pulled automatically on first run.
 
 > **WARNING — Compose version:** use the modern Compose **v2** plugin. Legacy
-> `docker-compose` v1.29.2 breaks the test network (containers come up with zero
-> peers while the script reports success). If you see the symptom, remove the
-> stale `fabric_test` docker network and re-run startup.
+> `docker-compose` v1.29.2 breaks the test network.
+
+### Minimum RAM
+
+| What | Notes |
+|---|---|
+| Full stack minus model | ~4 GB — chain + Kafka + workers + IPFS + monitoring |
+| flagging-engine loaded (24B int8 on CPU) | **~16 GB headroom** (see [Benchmarking without the AI model](#benchmarking-without-the-ai-model)) |
 
 ## Platform compatibility
 
-The **hosting/deployment stack is Linux-first**: the Fabric CLI orchestration
-(`peer`, `cryptogen`, `configtxgen`, ... under `blockchain/fabric-samples/bin/`)
-are **Linux x86-64 ELF binaries** driven by bash scripts (`startup.sh`, all of
-`blockchain/scripts/*.sh`). They cannot execute directly on a native Windows or
-macOS host.
-
 | Platform | Hosting the network | As an HTTP client |
 |---|---|---|
-| **Linux** | ✅ fully supported (bare metal, VM, or container) | ✅ |
-| **Windows** | ✅ via **WSL2** (run the Linux scripts inside WSL); not natively | ✅ |
-| **macOS** | ⚠️ via a Linux VM (UTM / Lima / Colima / Docker Desktop backend); Apple Silicon cannot run the Linux ELF CLIs on the host | ✅ |
+| **Linux** | ✅ fully supported | ✅ |
+| **Windows** | ✅ via **WSL2** | ✅ |
+| **macOS** | ⚠️ via a Linux VM (UTM/Lima/Colima/Docker Desktop) | ✅ |
 
-Windows and macOS work fine as **HTTP clients** against a Linux-hosted gateway
-— no local installation is needed; just call `:8000` with your `X-API-Key`.
+## Setup
 
-### 1. Clone the repo (once)
+### 1. Clone the repo
 
 ```bash
 git clone <your-repo-url> A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring
@@ -110,31 +168,14 @@ cd A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring
 
 ### 2. Provision `blockchain/fabric-samples/` (one-time)
 
-`deploy.sh`, the gateway bridge and the Explorer profile all expect the Fabric
-test network and CLI binaries under `blockchain/fabric-samples/`:
-
-- `bin/`   — Fabric CLI binaries: `peer`, `orderer`, `configtxgen`,
-  `cryptogen`, `configtxlator`, `fabric-ca-*`, `osnadmin`, `discover`,
-  `ledgerutil`
-- `config/` — CLI config (core.yaml, orderer.yaml, configtx.yaml dir)
-- `test-network/` — the fabric-samples test network (`network.sh`, `addOrg3/`,
-  `scripts/`, `organizations/`, compose files)
-
-Get a fabric-samples 2.5.x tree and the matching binaries, then place them here:
-
 ```bash
 cd blockchain/fabric-samples
 curl -sSL https://raw.githubusercontent.com/hyperledger/fabric/main/scripts/bootstrap.sh \
   | bash -s -- 2.5.9 1.5.9
-# bootstrap.sh leaves: ./fabric-samples (repo clone), ./bin, ./config
 mv fabric-samples/test-network .
 rm -rf fabric-samples
-# Result required:
-#   blockchain/fabric-samples/{bin,config,test-network}
+# Result: blockchain/fabric-samples/{bin,config,test-network}
 ```
-
-> The chaincode Go modules are vendored in `blockchain/chaincode/misinformation/go/vendor/`,
-> so no `go mod download` is needed.
 
 ### 3. Create the Python virtualenv (one-time)
 
@@ -144,263 +185,326 @@ venv_A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/bin/pip instal
   -r apps/blockchain_gateway/app/v1-0-0/api/requirements.txt
 ```
 
-### 4. Mint API keys (one-time per clean clone)
-
-The gateway authenticates every request against a SQLite table. The bootstrap
-script writes keys for org1/org2/org3 plus `stress-key` (used by the load
-driver) directly into `offchain.db`, breaking the chicken-and-egg of key-via-API:
+### 4. Mint API keys (idempotent)
 
 ```bash
-blockchain/scripts/bootstrap-keys.sh org1 org2 org3
+blockchain/scripts/bootstrap-keys.sh org1 org2 org3 ... orgN
+# Creates: key-org1 -> org1 ... key-orgN -> orgN, stress-key -> org1
 ```
+
+`startup.sh` bootstraps keys for every org automatically; this is only needed
+for a clean manual setup.
 
 ## Run it end to end
 
-**The short version:** `./startup.sh --orgs 3 --samples 50` now does Steps 1, 1b, 2,
-2b, and API-key bootstrapping for you automatically, every run (all idempotent —
-safe to re-run any time). The step-by-step breakdown below is what it's actually
-doing internally, useful for running/debugging one piece at a time, or just
-understanding the pieces. Application-pipeline services (Kafka, flagging-engine,
-submission-worker, fact-checking-service, monitoring) are separate — bring those
-up with `docker compose up -d --build` (see `docker-compose.yml`) once the
-blockchain layer from `./startup.sh` is up.
+The system has **two layers** that start independently. Start the blockchain
+layer first — the app layer depends on it being reachable.
 
-Run the following **from the repo root** each time you start a session.
-
-### Step 1 — Off-chain content store (IPFS)
+### Step 1: Start the blockchain layer
 
 ```bash
-blockchain/scripts/start-ipfs.sh        # starts kubo in the "ipfs-node" container
+./startup.sh --orgs 3 --test-samples 50 --skip-caliper
 ```
 
-Ready when it prints `IPFS ready: http://localhost:5001`.
+This runs 7 steps automatically:
 
-### Step 1b — IPFS Gateway (read/write bridge)
+1. Ensures Docker networks exist (`ensure-networks.sh`)
+2. Provisions the Fabric network (peers, orderer, channel, chaincode)
+3. Starts IPFS + IPFS Gateway
+4. Bootstraps API keys for org1..orgN (idempotent — safe to re-run)
+5. Starts Fabric Gateway SDK sidecar + blockchain gateway
+6. Runs a validation load (50 synthetic requests to confirm the gateway works)
+7. Optionally runs a Caliper benchmark (skip with `--skip-caliper`)
+
+After this, the blockchain gateway is live at `:8000`. Scale the consortium
+with `--orgs N` (default 3, max 20) — gateway keys, peers, orderer, and the
+connection profile all follow automatically. Benchmark harnesses **auto-detect
+the on-chain org count** via `GET /api/orgs`, so they always match the live
+consortium regardless of what `--orgs` you provisioned.
+
+### Step 2: Start the application pipeline (optional)
 
 ```bash
-blockchain/scripts/start-ipfs-gateway.sh   # generic add/cat bridge over kubo, on :9101
+docker compose up -d --build
 ```
 
-A thin, independently-reachable HTTP bridge in front of kubo (`apps/ipfs_gateway`) —
-`blockchain_gateway` talks to it instead of kubo directly, the same relationship
-`blockchain_gateway` has with the Fabric Gateway SDK sidecar (Step 2b). Any other
-downstream consumer that just needs to fetch a report by CID can also call
-`GET :9101/cat/{cid}` directly, without going through `blockchain_gateway`'s
-API-key-authenticated endpoints at all — the CID itself is the access grant,
-same trust model any public IPFS gateway uses.
+Brings up Kafka, claim-ingest-worker, flagging-engine, submission-worker,
+fact-checking-service, Prometheus, and Grafana. The gateway services (`:9100`,
+`:9101`, `:8000`) are also included here for convenience — running both
+`startup.sh` and `docker compose up` is safe and idempotent (same containers,
+no duplicates).
 
-### Step 2 — API gateway
+To run everything **except** the resource-hungry AI engine (recommended for
+small hosts, see [Benchmarking without the AI model](#benchmarking-without-the-ai-model)):
 
 ```bash
-blockchain/scripts/start-blockchain-gateway.sh   # builds + starts, waits for health, on :8000
+docker compose up -d --build && docker stop flagging-engine
 ```
 
-Runs `FABRIC_BACKEND=gateway` (requires Step 2b below to already be up) and reads/writes
-API keys in the same `offchain.db` `bootstrap-keys.sh` writes to (bind-mounted, not copied
-into the image), so bootstrapping keys before or after starting it both work.
+> Kafka should stay up — `claim-ingest-worker`, `submission-worker` and the
+> flagging-engine all depend on `kafka:9092`. A running flagging-engine that is
+> loading the model will swap-thrash a small host and can stall Kafka's KRaft
+> controller heartbeats, crashing it (see Troubleshooting).
 
-<details>
-<summary>Alternative: run it directly on the host (needed for the legacy <code>peer</code> CLI fallback path)</summary>
+### Step 3: Feed data through the pipeline
 
 ```bash
-export PATH="$PWD/blockchain/fabric-samples/bin:$PATH"   # gateway shells out to `peer`
-venv_A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/bin/uvicorn \
-  --app-dir apps/blockchain_gateway/app/v1-0-0/api/ server:app --host 0.0.0.0 --port 8000
+python3 benchmarks/feed_samples.py \
+  --data data/translated_masked_samples_test.json \
+  --samples 200 \
+  --ai-pct 70 \
+  --mode direct \
+  --reject-pct 20 \
+  --seed 42
 ```
 
-The Docker image deliberately doesn't bundle Fabric's `peer` binary, so it only ever uses
-the SDK sidecar (Step 2b). Run it this way instead if you need `FABRIC_BACKEND=auto`'s
-fallback to the `peer` CLI when the sidecar is down.
-</details>
+Results are appended to `results/local/real_loads.csv`.
 
-Sanity check (needs keys from step 4):
+| Flag | Purpose | Default |
+|---|---|---|
+| `--data` | JSON file with statements | `data/translated_masked_samples_test.json` |
+| `--samples N` | Randomly select N samples | all |
+| `--ai-pct P` | % of reports the AI processed (submitted by org1 in direct mode) | 100 |
+| `--num-orgs N` | Override on-chain org count | **auto-detected** from `/api/orgs` |
+| `--mode` | `direct` (org1 = AI stakeholder, submits ai_pct%, random orgs submit the rest, everyone-except-submitter votes) or `indirect` (random org submits each report) | direct |
+| `--reject-pct P` | % of reports with sub-2/3 consensus (REJECTED) | 0 |
+| `--fact-check` | Simulate fact-checking (consensus voting) after submission | **on** |
+| `--no-fact-check` | Disable fact-checking | — |
+| `--seed N` | Random seed for reproducibility | **100** |
+| `--output` | Output path (`.csv` for CSV, `.jsonl` for JSONL) | `results/local/real_loads.csv` |
+
+**How it works:**
+
+1. Loads JSON, randomly selects N samples
+2. AI-verdict: if the model engine is reachable, `/predict` provides the label
+   + confidence; otherwise the harness falls back to deterministic seeded draws
+   (see [AI verdicts & confidence](#ai-verdicts--confidence))
+3. Submission split — direct mode: `ai_pct%` submitted by org1, the rest by a
+   random `org2..orgN`
+4. Fact-checks one vote at a time from the non-submitting orgs — stops as soon
+   as the chain reports `FINAL` or `REJECTED`
+5. Outputs per-sample results to CSV + console summary
+
+**Accepted vs Rejected:**
+
+- **Accepted** (`FINAL`): fact-checkers reached `>= ceil(2/3 × registered_orgs)`
+  YES votes — the report is finalised with label "1".
+- **Rejected** (`REJECTED`): even if every remaining org voted YES the 2/3
+  threshold is unreachable — e.g. 13 orgs (required 9): after 7 votes of which
+  2 are YES, `tally[1] + remaining = 2 + 6 = 8 < 9`, so the maximum possible
+  YES is 8 and the chain finalises rejection immediately; the remaining orgs
+  never need to vote.
+
+Both are on-chain with a `report_id` = **the IPFS CID** of the report blob.
+Rejected reports are permanent evidence that consensus was attempted but failed.
+
+### AI verdicts & confidence
+
+- **With the engine up**: label/confidence come straight from
+  `POST /predict` (`flagged`, `confidence`/`misinformation_probability`).
+- **Without the engine** (it's down or you don't run it): the harness falls
+  back to **deterministic seeded draws** — `label = rng.random() < 0.5`,
+  `confidence = rng.uniform(0.5, 1.0)` from `--seed` (default 100). The
+  `model_label` CSV column records `fallback_random` for AI-pool rows and
+  `random` for non-AI-pool rows. These values are reproducible but **not**
+  model output or ground truth — the consensus/throughput results are
+  unaffected either way.
+
+### Sanity check
 
 ```bash
 curl -s -H "X-API-Key: stress-key" http://localhost:8000/api/status
 # -> {"backend":"ipfs","ipfs_available":true,...}
 ```
 
-### Step 2b — Official Fabric Gateway SDK service (optional but recommended)
-
-The API prefers the official `@hyperledger/fabric-gateway` SDK over the legacy
-`peer` CLI. The SDK runs in a small Node.js sidecar that joins the `fabric_test`
-docker network (so discovered peer hostnames resolve natively — same trick as
-the Explorer):
-
-```bash
-blockchain/scripts/start-gateway-service.sh     # build + start + health check
-```
-
-With the sidecar up, the gateway logs `[bridge] using official Fabric Gateway
-SDK service at http://localhost:9100`. Transport selection is controlled by
-`FABRIC_BACKEND` on the uvicorn process: `auto` (default; sidecar if healthy,
-else CLI), `gateway` (require sidecar), `cli` (always peer CLI). No change is
-needed when running behind `./startup.sh`.
-
-### Step 3 — Deploy network + chaincode + load (the whole pipeline)
-
-```bash
-./startup.sh --orgs 3 --samples 50
-```
-
-`startup.sh` runs:
-
-1. `blockchain/scripts/deploy.sh` — resets any old network, brings up the Fabric
-   test network (`mychannel`, chaincode `misinformation` v2.1), onboards **org3**
-   via `addOrg3/addOrg3.sh up` + `onboard-org3.sh` (2-of-3 endorsement policy),
-   adds extra orgs when `--orgs > 3`, registers stakeholder orgs 1..N on the
-   ledger (`RegisterOrg`), and regenerates the Explorer connection profile.
-2. **IPFS + IPFS Gateway** — `start-ipfs.sh` then `start-ipfs-gateway.sh`.
-3. **API keys** — `bootstrap-keys.sh org1 org2 org3` (idempotent).
-4. **Fabric Gateway SDK sidecar + blockchain gateway** — `start-gateway-service.sh`
-   (force-recreated, since the sidecar's crypto material just changed) then
-   `start-blockchain-gateway.sh`.
-5. **Pre-flight** — asserts the gateway answers `200` on `/api/status`
-   (aborts loudly if not), then **quick validation load** —
-   `benchmarks/load-http.py` POSTs `--samples` synthetic reports through the
-   gateway; each lands in IPFS and its hash + URI is anchored on the ledger.
-6. **Caliper benchmark** (skip with `--skip-caliper`) — scales the official
-   Hyperledger Caliper suite: regenerates the Fabric connection profile and
-   benchmark config (writes=`N*10`, reads=`N*20`), then runs the benchmark
-   suite inside Docker (`~60-90s`). Results land in `benchmarks/caliper/report.html`.
-
-Explorer isn't started automatically — see Step 4 below if you want it.
-
-`--orgs N` defaults to 3 (max 20); `--samples N` defaults to 50 (max 100000).
-Use `./startup.sh --help` for the quick flag reference.
-
-### Quick skip
-
-```bash
-# Run only load-http.py, skip Caliper
-./startup.sh --orgs 3 --samples 50 --skip-caliper
-```
-
-### Step 4 — Hyperledger Explorer (network visualizer)
-
-The deploy just regenerated `blockchain/explorer/connection-profile/networkConfig.json`,
-so recreate the containers so Explorer picks it up:
-
-```bash
-docker compose -f blockchain/explorer/docker-compose.yaml down -v
-docker compose -f blockchain/explorer/docker-compose.yaml up -d
-```
-
-UI: http://localhost:8080 — login `exploreradmin` / `exploreradminpw`.
-
-### Step 5 — Verify tamper-evidence for a report CID
-
-Grab any CID from the load phase, then check the on-chain/off-chain link:
-
-```bash
-curl -s -H "X-API-Key: stress-key" http://localhost:8000/api/reports           # list, first report_id is a CID
-CID=<paste-your-report_id-here>
-curl -s -H "X-API-Key: stress-key" "http://localhost:8000/api/reports/$CID"     # full report from IPFS
-curl -s -H "X-API-Key: stress-key" "http://localhost:8000/api/reports/$CID/verify"
-```
-
-`/verify` recomputes the off-chain content hash and compares it to the hash
-committed on the ledger. Expected close-out:
-
-```json
-{"report_id":"Qm...","off_chain_intact":true,"matches_on_chain":true,"verified":true,"explanation":"The off-chain copy is unmodified AND its hash matches the immutable, consortium-voted hash stored on the ledger."}
-```
-
-> The `/verify` endpoint previously returned HTTP 500 because the on-chain query
-> result arrives as an ASCII-encoded string rather than a dict. This was fixed in
-> `apps/blockchain_gateway/app/v1-0-0/api/server.py` via the `_on_chain_record()` helper.
-
 ## Benchmarking
 
-The pipeline now runs **both** a quick HTTP load test and the Caliper benchmark
-suite by default. This validates gateway connectivity before the more expensive
-Caliper run. An iterative runner is provided in `scripts/run_benchmarks.sh` for
-varying samples and org count with automatic network efficiency (skips redeploy
-when org count unchanged).
+All benchmarks save results as CSV files to `results/local/` automatically
+(no extra flags needed). Timestamps are embedded as a column; runs **append**
+rather than overwrite.
 
-### Default flow (`./startup.sh --orgs 3 --samples 50`)
-
-| Step | Command | Purpose | Approx. time |
-|------|---------|---------|--------------|
-| 3a | `load-http.py` | Quick validation (POST `--samples` reports via gateway) | ~5s |
-| 3b | `gen-caliper-config.sh --orgs 3 --samples 50` | Scale benchmark config (writes=N×10, reads=N×20) | <1s |
-| 3c | `run-caliper.sh` | Full benchmark suite in Docker (500/1000 tx) | 60-90s |
-
-**Results:** `benchmarks/caliper/report.html` (throughput/latency percentiles).
-
-### Custom scaling
-
-The `--samples N` argument controls both load-http request count and Caliper txNumbers:
-- `load-http.py`: N requests
-- Caliper: writes = N × 10, reads = N × 20 (e.g. `--samples 100` → 1000 writes @ 25 TPS / 2000 reads @ 50 TPS)
-
-### Skip Caliper (load-http only)
-
-```bash
-./startup.sh --orgs 3 --samples 50 --skip-caliper
+```
+results/local/
+├── http.csv        # load-http.py results
+├── caliper.csv     # Caliper benchmark results (one row per round)
+└── real_loads.csv  # feed_samples.py results
 ```
 
-### Iterative benchmark runner
+### `feed_samples.py` (realistic pipeline + consensus)
+
+Feeds real sample data through the pipeline with predetermined
+acceptance/rejection rates — exercises the full submit + vote consensus path:
 
 ```bash
-scripts/run_benchmarks.sh --start-samples 1 --end-samples 10 --start-orgs 3 --max-orgs 5 --incrementor 1
+python3 benchmarks/feed_samples.py \
+  --samples 500 --ai-pct 80 --mode direct --reject-pct 15 --seed 100
+# -> results/local/real_loads.csv
 ```
 
-Configuration: samples 1~10 (step 1), orgs 3~5 (step 1). Output dir:
-`/tmp/benchmarks/results/orgs_3/samples_1/`, etc. First org count full
-deploy; subsequent org counts skip redeploy.
+### `load-http.py` (synthetic stress test)
 
-### Local model-evaluation results
+Bypasses the AI pipeline entirely — sends synthetic reports directly to the
+blockchain gateway:
 
-Local (non-blockchain) model-evaluation spreadsheets live in
-`results/local/` and are **git-untracked** by default (tracked/committed as
-desired):
+```bash
+python3 benchmarks/load-http.py --samples 200 --rw-mix 100
+# -> results/local/http.csv
+```
 
-- `results/local/best.xlsx` — best-model evaluation summary
-- `results/local/full.xlsx` — full evaluation results
+| Flag | Purpose | Default |
+|---|---|---|
+| `--base` | Gateway base URL | `http://localhost:8000` |
+| `--samples N` | Total requests (fixed mode) | 200 |
+| `--rw-mix P` | % writes vs reads | 100 (all writes) |
+| `--concurrency C` | Parallel workers | 24 |
+| `--rate R` | Per-worker pacing (fixed mode) | 25 |
+| `--rps R` | Stream mode: global target rate | off |
+| `--duration S` | Stream mode: run for S seconds | off |
+| `--label` | report_id prefix | `stress` |
+
+### Caliper benchmark
+
+```bash
+# 1. (re)generate the connection profile + round sizes to match the LIVE consortium
+benchmarks/caliper/gen-caliper-config.sh --orgs 13 --samples 100
+#    (orgs MUST match the on-chain count; writes = samples*10 @25 TPS, reads = samples*20 @50 TPS)
+
+# 2. run it
+benchmarks/caliper/run-caliper.sh
+```
+
+Results: `benchmarks/caliper/report.html` + `results/local/caliper.csv`
+(one row per round — write *and* read are both captured).
+
+### Hyperledger Explorer
+
+```bash
+docker compose -f blockchain/explorer/docker-compose.yaml up -d
+# open http://localhost:8080 — login exploreradmin / exploreradminpw
+# (connection profile is regenerated by deploy.sh / gen-explorer-config.sh for the current org count)
+```
+
+Stop with the same compose file `down` (use `down -v` only to wipe Explorer's
+own postgres/wallet data).
+
+### Benchmarking without the AI model
+
+The benchmarks measure **blockchain throughput per report** and never call the
+model for that purpose — reports simply carry their AI verdict as data. To run
+everything on a small host:
+
+1. `./startup.sh --orgs N ...` — chain + gateways + IPFS
+2. `docker compose up -d` then `docker stop flagging-engine` — Kafka + workers
+   up, 24B model not loaded, host RAM stays healthy
+3. Run any/all of the three benchmarks above
+
+On a GPU box (e.g. 5090), bring inference back with:
+
+```bash
+docker compose -f apps/flagging-engine/docker-compose.yaml build \
+  --build-arg TORCH_INDEX_URL=https://download.pytorch.org/whl/cu124
+TORCH_DEVICE=cuda MODEL_QUANTIZATION=fp16 MAX_BATCH_SIZE=64 MAX_QUEUE_DELAY_MS=5 \
+  docker compose -f apps/flagging-engine/docker-compose.yaml up -d
+```
+
+## Verifying a report end-to-end
+
+```bash
+CID=<report_id_from_csv>                       # CSV column report_id == IPFS CID
+
+# on-chain record (status, consensus, votes)   — the ledger
+curl -s -H "X-API-Key: key-org1" "http://localhost:8000/api/reports/$CID/chain"
+
+# the report blob itself                       — the IPFS gateway (kubo :8081)
+curl -s "http://localhost:8081/ipfs/$CID"
+
+# tamper-evidence check                        — hash + URI consistency
+curl -s -H "X-API-Key: key-org1" "http://localhost:8000/api/reports/$CID/verify"
+
+# full transaction history                     — Fabric GetHistoryForKey
+curl -s -H "X-API-Key: key-org1" "http://localhost:8000/api/reports/$CID/history"
+```
 
 ## API quick reference
 
-All endpoints require `-H "X-API-Key: <key>"` (keys from `bootstrap-keys.sh`;
-`stress-key` → org1).
+All endpoints require `-H "X-API-Key: <key>"`.
+
+### Blockchain gateway (`:8000`)
 
 | Method & path | Purpose |
 |---|---|
 | `GET /api/status` | IPFS backend status |
-| `POST /api/reports` | Submit a report (body: `report_id`, `language` nso/zul/eng, `label` 0/1, `confidence`, `model_version`, `raw_text`, ...) |
-| `GET /api/reports` | List reports |
+| `POST /api/reports` | Submit a report (body: `msg_id`, `label` 0/1, `confidence`, `model_version`, `content`, `source_platform`) |
+| `GET /api/reports` | List reports (optional `?status=PENDING`) |
 | `GET /api/reports/{id}` | Report + off-chain payload |
-| `GET /api/reports/{id}/chain` | On-chain record (hash, uri, status, votes) |
-| `GET /api/reports/{id}/verify` | Tamper-evidence check (off-chain vs on-chain hash) |
-| `GET /api/reports/{id}/history` | Full tx/history trail via Fabric's native `GetHistoryForKey` — every version this claim's `off_chain_uri` has pointed to, oldest first |
-| `POST /api/reports/{id}/vote` | Org vote on a report |
-| `POST /api/reports/{id}/finalize` | Finalize a verdict (consortium quorum) |
+| `GET /api/reports/{id}/chain` | On-chain record (hash, uri, status, fact-checks) |
+| `GET /api/reports/{id}/verify` | Tamper-evidence check |
+| `GET /api/reports/{id}/history` | Full tx/history via Fabric's `GetHistoryForKey` |
+| `POST /api/reports/{id}/fact-check` | Org submits a fact-check verdict (body: `outcome` "0"/"1", `reasoning`, `support`) |
+| `POST /api/reports/{id}/finalize` | Finalize a report (consensus reached) |
 | `POST /api/reports/{id}/expire` | Expire a report past its voting deadline |
-| `POST /api/orgs/apply`, `/api/orgs/{msp}/admission`, `/vote`, `/finalize` | New-org admission workflow (pending after founding limit) |
+| `POST /api/orgs/apply`, `/api/orgs/{msp}/admission`, `/vote`, `/finalize` | New-org admission workflow |
 | `GET /api/orgs`, `GET /api/orgs/{msp}/admission` | Registered orgs / admission status |
+
+### Claim Ingest Worker (`:8003`)
+
+| Method & path | Purpose |
+|---|---|
+| `POST /ingest` | Queue claims (body: `{"claims": ["text1", ...]}`) |
+| `GET /health` | Health check |
+
+### Flagging Engine (`:8004`)
+
+| Method & path | Purpose |
+|---|---|
+| `POST /predict` | Direct inference (body: `{"post_text": "..."}`) |
+| `GET /health` | Health check |
+
+### Fact-Checking Service (`:8002`)
+
+| Method & path | Purpose |
+|---|---|
+| `GET /claims/pending` | Pending claims this org hasn't fact-checked |
+| `GET /claims/{id}` | Claim detail + prior fact-checks |
+| `POST /claims/{id}/report` | Submit fact-check (body: `outcome` "0"/"1", `reasoning`, `support`) |
+| `POST /claims/{id}/finalize` | Finalize claim |
 
 ## Teardown
 
 ```bash
-blockchain/scripts/deploy.sh down          # stop Fabric (as startup.sh [4/4] reminds you)
-blockchain/scripts/start-ipfs.sh down      # stop IPFS container
-blockchain/scripts/start-ipfs-gateway.sh down      # stop the IPFS Gateway bridge
-blockchain/scripts/start-gateway-service.sh down   # stop the Gateway SDK sidecar
-blockchain/scripts/start-blockchain-gateway.sh down   # stop the API gateway
-# (or Ctrl-C if you ran it directly on the host instead)
-docker compose -f blockchain/explorer/docker-compose.yaml down -v   # optional: stop Explorer
+# Application pipeline (Kafka, workers, monitoring)
+docker compose down
+
+# Blockchain layer
+blockchain/scripts/deploy.sh down
+blockchain/scripts/start-ipfs.sh down
+blockchain/scripts/start-ipfs-gateway.sh down
+blockchain/scripts/start-gateway-service.sh down
+blockchain/scripts/start-blockchain-gateway.sh down
+
+# Explorer (optional)
+docker compose -f blockchain/explorer/docker-compose.yaml down   # or down -v to wipe its DB/wallet
 ```
 
 ## Troubleshooting
 
 | Symptom | Cause / fix |
 |---|---|
-| `ERROR: unknown flag` from `startup.sh` | Only `--orgs`, `--samples`, `--skip-caliper` and `--help` exist now. Re-check `./startup.sh --help`. |
-| `ERROR: API gateway unreachable (HTTP 000)` | Gateway not running. Start it (Step 2) before running `startup.sh`. |
-| Gateway returns `401` on `/api/status` | API keys never seeded (gateway started before Step 4) — run `blockchain/scripts/bootstrap-keys.sh org1 org2 org3` and restart the gateway. |
-| `docker-compose` legacy v1 errors / peers vanish mid-deploy | Use Compose v2 (`docker compose`). Remove stale `fabric_test` docker network (`docker network rm fabric_test`) if blocked. |
-| `x509: certificate signed by unknown authority` from onboard-org3 | `FABRIC_SAMPLES` not pointing at *this* repo's `blockchain/fabric-samples` (a stale `~/fabric-samples` gets picked up when the repo layout is wrong). `deploy.sh` exports it automatically — make sure fabric-samples is provisioned exactly per Step 2. |
-| `peer` command not found in gateway error responses | `blockchain/fabric-samples/bin` must be on `PATH` when `uvicorn` starts (Step 2 exports it). |
-| `RegisterOrg` / `SubmitReport` rejected: "not a registered stakeholder" | Registration is part of `deploy.sh` (`register-orgs.sh`), so run it via `./startup.sh` (Step 3) — don't hand-roll the network. |
-| Explorer shows stale topology | The connection profile is regenerated every deploy. Recreate the containers per Step 4. |
-| `"backend":"sqlite"` in `/api/status` | The kubo node isn't reachable on `:5001`. Start it (Step 1) and restart the gateway. |
+| `ERROR: unknown flag` from `startup.sh` | Only `--orgs`, `--test-samples`, `--skip-caliper` and `--help` exist. |
+| `ERROR: API gateway unreachable (HTTP 000)` | Gateway not running. Run `./startup.sh` first. |
+| Gateway returns `401` on `/api/status` | API keys never seeded — run `bootstrap-keys.sh`. |
+| `ERROR: --orgs must be a positive integer (got 'org1,...,orgN')` | A shell exported the CSV org list into the `ORGS` integer variable. The startup scripts use a separate `ORGS_LIST`; don't clobber `ORGS`. |
+| Kafka down / workers stuck `Restarting` | Kafka crashed (see below) or was never started. Restart: `docker compose -f apps/kafka/docker-compose.yml up -d` (data in the `kafka-data` volume survives — the entrypoint only formats storage once). |
+| Kafka keeps crash-looping with `Unable to send a heartbeat ... timed out` | KRaft controller heartbeats stall when the host is memory-starved (e.g. the flagging-engine loading a 24B model on a 7.5 GB host swaps and freezes Kafka). Fix: keep the model off small hosts (`docker stop flagging-engine`), run the model on a GPU box, and give Kafka a restart policy (`restart: unless-stopped` in `apps/kafka/docker-compose.yml`). |
+| `WARNING: /predict returned 0: [Errno 104] Connection reset by peer` | flagging-engine cannot start because Kafka is down, so it resets the connection mid-boot. Start Kafka (above) or run benchmarks without live inference (`feed_samples.py` falls back to seeded verdicts). |
+| `model_label` shows `fallback_random` / `random` | The engine wasn't reachable, so label/confidence were seeded deterministically rather than model output. Not an error. |
+| Caliper CSV only shows the write round | Fixed in `run-caliper.sh` (it now parses the summary table that contains the `query-all-reports-read` row). Re-run to get both rounds per timestamp. |
+| Caliper `networkConfig.json` / `ccp.json` mismatch with the chain | Regenerate for the live consortium: `benchmarks/caliper/gen-caliper-config.sh --orgs <N>` and/or `blockchain/scripts/gen-explorer-config.sh --orgs <N>`. |
+| `ModuleNotFoundError: No module named 'config'` | `.gitignore` `con*` rule hid `config.py`. Fixed in `81ca586`; re-pull the branch. |
+| Flagging engine crashes on startup | Missing `model/config.json` or `model.safetensors`. Ensure both exist in `apps/flagging-engine/model/` — and that the host has enough RAM for the model. |
+| Kafka connection refused from containers | Services must use `kafka:9092` (not `localhost:9094`). Check `config.py` defaults. |
+| `docker-compose` legacy v1 errors | Use Compose v2 (`docker compose`). Remove stale `fabric_test` network. |
+| `x509: certificate signed by unknown authority` | `blockchain/fabric-samples/` not provisioned correctly. Re-run Step 2. |
+| Explorer shows stale topology | Regenerate for the current org count and recreate: `blockchain/scripts/gen-explorer-config.sh --orgs <N>` then `docker compose -f blockchain/explorer/docker-compose.yaml up -d`. |
+| Report stuck in `UNDER_REVIEW` | Fact-checkers haven't reached consensus yet, or deadline hasn't passed. Check `GET /api/reports/{id}/chain`. |
+| Report shows `REJECTED` | Fact-checkers couldn't reach >= 2/3 consensus. This is working as designed — see early rejection logic. |

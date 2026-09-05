@@ -5,7 +5,7 @@ services:
     container_name: fabric-gateway
     environment:
       - CRYPTO_PATH=/crypto
-      - ORGS=${ORGS:-org1,org2,org3,org4,org5}
+      - ORGS=${ORGS_LIST:-org1,org2,org3,org4,org5}
       # org4 is a client-only fact-checking house: it signs with a client
       # identity (OU=client), never an admin one. Least privilege — it has no
       # business changing channel configuration.
