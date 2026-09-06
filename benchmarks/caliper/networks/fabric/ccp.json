@@ -272,6 +272,46 @@
           }
         ]
       }
+    },
+    "Org14MSP": {
+      "mspid": "Org14MSP",
+      "peers": [
+        "peer0.org14.example.com"
+      ],
+      "identities": {
+        "certificates": [
+          {
+            "name": "Admin",
+            "admin": true,
+            "clientPrivateKey": {
+              "path": "/crypto/peerOrganizations/org14.example.com/users/Admin@org14.example.com/msp/keystore/priv_sk"
+            },
+            "clientSignedCert": {
+              "path": "/crypto/peerOrganizations/org14.example.com/users/Admin@org14.example.com/msp/signcerts/Admin@org14.example.com-cert.pem"
+            }
+          }
+        ]
+      }
+    },
+    "Org15MSP": {
+      "mspid": "Org15MSP",
+      "peers": [
+        "peer0.org15.example.com"
+      ],
+      "identities": {
+        "certificates": [
+          {
+            "name": "Admin",
+            "admin": true,
+            "clientPrivateKey": {
+              "path": "/crypto/peerOrganizations/org15.example.com/users/Admin@org15.example.com/msp/keystore/priv_sk"
+            },
+            "clientSignedCert": {
+              "path": "/crypto/peerOrganizations/org15.example.com/users/Admin@org15.example.com/msp/signcerts/Admin@org15.example.com-cert.pem"
+            }
+          }
+        ]
+      }
     }
   },
   "peers": {
@@ -390,6 +430,24 @@
       },
       "grpcOptions": {
         "hostnameOverride": "peer0.org13.example.com"
+      }
+    },
+    "peer0.org14.example.com": {
+      "url": "grpcs://peer0.org14.example.com:33051",
+      "tlsCACerts": {
+        "path": "/crypto/peerOrganizations/org14.example.com/peers/peer0.org14.example.com/tls/ca.crt"
+      },
+      "grpcOptions": {
+        "hostnameOverride": "peer0.org14.example.com"
+      }
+    },
+    "peer0.org15.example.com": {
+      "url": "grpcs://peer0.org15.example.com:35051",
+      "tlsCACerts": {
+        "path": "/crypto/peerOrganizations/org15.example.com/peers/peer0.org15.example.com/tls/ca.crt"
+      },
+      "grpcOptions": {
+        "hostnameOverride": "peer0.org15.example.com"
       }
     }
   }

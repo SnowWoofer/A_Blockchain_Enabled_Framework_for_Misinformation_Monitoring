@@ -2,9 +2,11 @@ services:
   kafka:
     build: .
     container_name: kafka
+    restart: unless-stopped
     environment:
       KAFKA_TOPICS: claims.raw,claims.flagged
       KAFKA_TOPIC_PARTITIONS: 3
+      KAFKA_HEAP_OPTS: "-Xmx512m -Xms256m"
     ports:
       - "9094:9094"
     volumes:

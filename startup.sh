@@ -6,7 +6,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 ORGS=3
 SAMPLES=50
-MAX_ORGS=20
+MAX_ORGS=25
 MAX_SAMPLES=100000
 SKIP_CALIPER=false
 
@@ -20,7 +20,7 @@ For the application pipeline (Kafka, flagging-engine, submission-worker,
 fact-checking-service, monitoring), run `docker compose up -d --build`
 separately — see docker-compose.yml.
 
-  --orgs N            founding org limit [default 3 & max 20]
+  --orgs N            founding org limit [default 3 & max 25]
   --test-samples N    validation requests to drive against gateway,
                       [default 50 & max 100000]
                       (Caliper Scaler: writes=N*10 & reads=N*20)

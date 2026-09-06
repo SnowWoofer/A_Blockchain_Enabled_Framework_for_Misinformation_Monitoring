@@ -1,10 +1,11 @@
 # A Blockchain Enabled Framework For Misinformation Monitoring
 
 Consortium blockchain framework for monitoring misinformation. An AI model
-(AfroXLM-R / Mistral) acts as a data scout — flagging potential misinformation
-and escalating flagged reports to a consortium of organizations who fact-check
-and vote on them via Hyperledger Fabric. The chain anchors only a SHA-256 hash +
-off-chain URI per report; full content lives in IPFS.
+(AfroXLM-R, an `XLMRobertaForSequenceClassification` — ~2.2 GB, FP32) acts as a
+data scout — flagging potential misinformation and escalating flagged reports to
+a consortium of organizations who fact-check and vote on them via Hyperledger
+Fabric. The chain anchors only a SHA-256 hash + off-chain URI per report; full
+content lives in IPFS.
 
 The system is benchmarkable **without the AI model running**: the benchmarks
 measure blockchain throughput *per report*, and reports carry their AI verdict
@@ -41,9 +42,10 @@ The system has **two layers** that run independently:
 
 > The application pipeline is optional for benchmarking. The gateway layer
 > (`:8000`, `:9100`, `:9101`) plus the Fabric network is all the benchmark
-> harnesses require. The flagging-engine also needs **~16 GB RAM** while the
-> model is loaded — the rest of the stack runs comfortably in ~4 GB. See
-> [Benchmarking without the AI model](#benchmarking-without-the-ai-model).
+> harnesses require. The flagging-engine model is ~2.2 GB (AfroXLM-R-large
+> FP32) and runs on small hosts — the whole stack fits in ~5-6 GB. Its only
+> hard dependency is Kafka (`kafka:9092`). See [Benchmarking without the AI
+> model](#benchmarking-without-the-ai-model).
 
 ### Message flow
 
@@ -144,10 +146,16 @@ Docker images are pulled automatically on first run.
 
 ### Minimum RAM
 
+The stack is light: the Fabric network (~100 MiB per peer — ~1 GB at 13 orgs),
+Kafka (~512 MB), gateways/IPFS/monitoring, and the flagging-engine's 2.2 GB FP32
+model all run on a typical laptop. Plan for ~6 GB total with everything
+resident.
+
 | What | Notes |
 |---|---|
-| Full stack minus model | ~4 GB — chain + Kafka + workers + IPFS + monitoring |
-| flagging-engine loaded (24B int8 on CPU) | **~16 GB headroom** (see [Benchmarking without the AI model](#benchmarking-without-the-ai-model)) |
+| Blockchain layer + benchmarks only | ~2-3 GB |
+| Full stack incl. flagging-engine (AfroXLM-R-large 2.2 GB FP32) | ~5-6 GB |
+| Server profile (5090, fp16 CUDA) | Needs the GPU box — see [the flagging-engine compose](apps/flagging-engine/docker-compose.yaml) |
 
 ## Platform compatibility
 
@@ -217,10 +225,22 @@ This runs 7 steps automatically:
 7. Optionally runs a Caliper benchmark (skip with `--skip-caliper`)
 
 After this, the blockchain gateway is live at `:8000`. Scale the consortium
-with `--orgs N` (default 3, max 20) — gateway keys, peers, orderer, and the
+with `--orgs N` (default 3, **max 25**) — gateway keys, peers, orderer, and the
 connection profile all follow automatically. Benchmark harnesses **auto-detect
 the on-chain org count** via `GET /api/orgs`, so they always match the live
-consortium regardless of what `--orgs` you provisioned.
+consortium regardless of what `--orgs` you provisioned. `startup.sh` sets the
+`ORGS_LIST` for the gateways itself, so the gateway org map is always in sync
+on this path (only the incremental path below needs a manual gateway restart).
+
+> **Recommended workflow** — provision the network first with `startup.sh`,
+> then run benchmark variants yourself against the resulting `N`-org
+> consortium:
+>
+> ```bash
+> ./startup.sh --orgs N --test-samples 10 --skip-caliper   # net + keys + gateways only
+> docker compose up -d --build                              # AI pipeline (once; survives restarts)
+> # ...then any of the benchmark variants under "Benchmarking"
+> ```
 
 ### Step 2: Start the application pipeline (optional)
 
@@ -232,19 +252,44 @@ Brings up Kafka, claim-ingest-worker, flagging-engine, submission-worker,
 fact-checking-service, Prometheus, and Grafana. The gateway services (`:9100`,
 `:9101`, `:8000`) are also included here for convenience — running both
 `startup.sh` and `docker compose up` is safe and idempotent (same containers,
-no duplicates).
+no duplicates). The flagging-engine's 2.2 GB model fits comfortably on a laptop.
 
-To run everything **except** the resource-hungry AI engine (recommended for
-small hosts, see [Benchmarking without the AI model](#benchmarking-without-the-ai-model)):
+> Kafka must be reachable at `kafka:9092` — `claim-ingest-worker`,
+> `submission-worker` and the flagging-engine all fail hard at startup if it
+> isn't (see [Troubleshooting](#troubleshooting)).
+
+### Growing the consortium on a live network (no reset)
+
+`startup.sh --orgs N` always **rebuilds from scratch** — its `deploy.sh` tears
+the network down first, so every `startup.sh` run starts a fresh ledger. To add
+orgs to a **running** network without losing state, extend incrementally
+(chain-level: peers, channel config update, chaincode re-commit with the new
+`OutOf(2, Org1..OrgN)` policy):
 
 ```bash
-docker compose up -d --build && docker stop flagging-engine
+export N=15                                # example: grow to 15 orgs
+
+blockchain/scripts/add-orgs.sh --orgs "${N}"          # peers + channel config + chaincode re-commit
+blockchain/scripts/register-orgs.sh --limit "${N}"    # on-chain org registry 1..N → drives /api/orgs + quorum
+blockchain/scripts/bootstrap-keys.sh org1 .. org"${N}" # API keys for every org (idempotent)
+
+# CRITICAL — recreate BOTH gateways with the new org list. Each gateway builds
+# its org→MSP map from the ORGS env at container start (default fallback is
+# org1..org5); extending via add-orgs alone leaves them stale and every
+# submit/vote from an org > the old count fails with "400 unknown signing org".
+export ORGS_LIST=org1,org2,...,org"${N}"
+blockchain/scripts/start-gateway-service.sh up        # fabric-gateway SDK sidecar (:9100)
+blockchain/scripts/start-blockchain-gateway.sh        # blockchain-gateway (:8000)
+
+# refresh derived configs for the new org count
+bash blockchain/scripts/gen-explorer-config.sh --orgs "${N}"
+bash benchmarks/caliper/gen-caliper-config.sh --orgs "${N}" --samples 100
 ```
 
-> Kafka should stay up — `claim-ingest-worker`, `submission-worker` and the
-> flagging-engine all depend on `kafka:9092`. A running flagging-engine that is
-> loading the model will swap-thrash a small host and can stall Kafka's KRaft
-> controller heartbeats, crashing it (see Troubleshooting).
+Quorum is recomputed automatically by the chaincode: `required = ceil(2/3 × N)`
+(15 orgs → 10 YES votes), and `feed_samples.py` re-detects it via `/api/orgs` —
+no manual org count anywhere. Note `add-orgs.sh` requires the org3 baseline
+(org3 crypto) to exist, i.e. a prior `deploy.sh` run.
 
 ### Step 3: Feed data through the pipeline
 
@@ -366,7 +411,7 @@ python3 benchmarks/load-http.py --samples 200 --rw-mix 100
 
 ```bash
 # 1. (re)generate the connection profile + round sizes to match the LIVE consortium
-benchmarks/caliper/gen-caliper-config.sh --orgs 13 --samples 100
+benchmarks/caliper/gen-caliper-config.sh --orgs <N> --samples 100
 #    (orgs MUST match the on-chain count; writes = samples*10 @25 TPS, reads = samples*20 @50 TPS)
 
 # 2. run it
@@ -390,15 +435,17 @@ own postgres/wallet data).
 ### Benchmarking without the AI model
 
 The benchmarks measure **blockchain throughput per report** and never call the
-model for that purpose — reports simply carry their AI verdict as data. To run
-everything on a small host:
+model for that purpose — reports simply carry their AI verdict as data. The
+flagging-engine is small (2.2 GB) and can run on the same host; you only need
+to *skip* it if you'd rather not pay the model-load time or want a truly
+minimal footprint:
 
 1. `./startup.sh --orgs N ...` — chain + gateways + IPFS
-2. `docker compose up -d` then `docker stop flagging-engine` — Kafka + workers
-   up, 24B model not loaded, host RAM stays healthy
+2. `docker compose up -d` — Kafka + workers + flagging-engine all resident
+   (~5-6 GB total)
 3. Run any/all of the three benchmarks above
 
-On a GPU box (e.g. 5090), bring inference back with:
+On a GPU box (e.g. 5090), run the fp16 CUDA server profile for fast inference:
 
 ```bash
 docker compose -f apps/flagging-engine/docker-compose.yaml build \
@@ -494,14 +541,15 @@ docker compose -f blockchain/explorer/docker-compose.yaml down   # or down -v to
 | `ERROR: API gateway unreachable (HTTP 000)` | Gateway not running. Run `./startup.sh` first. |
 | Gateway returns `401` on `/api/status` | API keys never seeded — run `bootstrap-keys.sh`. |
 | `ERROR: --orgs must be a positive integer (got 'org1,...,orgN')` | A shell exported the CSV org list into the `ORGS` integer variable. The startup scripts use a separate `ORGS_LIST`; don't clobber `ORGS`. |
+| Gateway returns `400 unknown signing org` on submit/fact-check | The gateway containers were created when `ORGS` held a smaller org list (`ORG_MSPID` is built from that env at container start, and the compose default falls back to `org1..org5`). Fix: `export ORGS_LIST=org1,...,orgN` then recreate **both** gateways (`blockchain/scripts/start-gateway-service.sh up` + `blockchain/scripts/start-blockchain-gateway.sh`). The shared key DB already holds every org's key — no bootstrap needed. This is the tell-tale symptom of extending the consortium and forgetting the gateway restart. |
 | Kafka down / workers stuck `Restarting` | Kafka crashed (see below) or was never started. Restart: `docker compose -f apps/kafka/docker-compose.yml up -d` (data in the `kafka-data` volume survives — the entrypoint only formats storage once). |
-| Kafka keeps crash-looping with `Unable to send a heartbeat ... timed out` | KRaft controller heartbeats stall when the host is memory-starved (e.g. the flagging-engine loading a 24B model on a 7.5 GB host swaps and freezes Kafka). Fix: keep the model off small hosts (`docker stop flagging-engine`), run the model on a GPU box, and give Kafka a restart policy (`restart: unless-stopped` in `apps/kafka/docker-compose.yml`). |
+| Kafka keeps dying with `Unable to send a heartbeat ... timed out` in the logs | A transient KRaft controller-heartbeat stall fenced the single-node broker (crash under host pressure). The real gap: the compose file has **no restart policy**, so the crash was permanent. Fix: restart (`docker compose -f apps/kafka/docker-compose.yml up -d`), and add `restart: unless-stopped` (already applied) so it self-heals in future. |
 | `WARNING: /predict returned 0: [Errno 104] Connection reset by peer` | flagging-engine cannot start because Kafka is down, so it resets the connection mid-boot. Start Kafka (above) or run benchmarks without live inference (`feed_samples.py` falls back to seeded verdicts). |
 | `model_label` shows `fallback_random` / `random` | The engine wasn't reachable, so label/confidence were seeded deterministically rather than model output. Not an error. |
 | Caliper CSV only shows the write round | Fixed in `run-caliper.sh` (it now parses the summary table that contains the `query-all-reports-read` row). Re-run to get both rounds per timestamp. |
 | Caliper `networkConfig.json` / `ccp.json` mismatch with the chain | Regenerate for the live consortium: `benchmarks/caliper/gen-caliper-config.sh --orgs <N>` and/or `blockchain/scripts/gen-explorer-config.sh --orgs <N>`. |
 | `ModuleNotFoundError: No module named 'config'` | `.gitignore` `con*` rule hid `config.py`. Fixed in `81ca586`; re-pull the branch. |
-| Flagging engine crashes on startup | Missing `model/config.json` or `model.safetensors`. Ensure both exist in `apps/flagging-engine/model/` — and that the host has enough RAM for the model. |
+| Flagging engine crashes on startup | Two common causes: (1) missing `model/config.json` or `model.safetensors` — ensure both exist in `apps/flagging-engine/model/`; (2) Kafka unreachable — the engine hard-fails its lifespan if `kafka:9092` is down ("Unable to bootstrap", `Application startup failed`). Start Kafka first. |
 | Kafka connection refused from containers | Services must use `kafka:9092` (not `localhost:9094`). Check `config.py` defaults. |
 | `docker-compose` legacy v1 errors | Use Compose v2 (`docker compose`). Remove stale `fabric_test` network. |
 | `x509: certificate signed by unknown authority` | `blockchain/fabric-samples/` not provisioned correctly. Re-run Step 2. |
