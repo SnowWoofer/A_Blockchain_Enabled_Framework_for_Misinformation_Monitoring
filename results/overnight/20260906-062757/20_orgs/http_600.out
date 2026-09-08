@@ -1,0 +1,10 @@
+[mode] fixed samples | base=http://localhost:8000 | total~600
+================================================================
+ requests   : 600  (0 ok / 600 failed)
+ elapsed    : 838.02s
+ throughput : 0.72 req/s
+ latency avg: 32978.6 ms
+ p50/p95/p99/max: 32099.9 / 40436.0 / 43991.2 / 44757.6 ms
+ status     : {0: 600}
+================================================================
+  Output: /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/results/overnight/20260906-062757/20_orgs/http_600.csv

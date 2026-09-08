@@ -1,0 +1,9 @@
+2026-09-06 22:28:36 >> Bringing up pipeline services (flagging-engine + kafka)...
+2026-09-06 22:28:37 WARN: gateway not reachable yet (HTTP 400) — the outer loop builds the network via startup.sh before benchmarking
+2026-09-06 22:28:37 >> Dataset=1401 entries | sample steps: 100 | caliper steps: 100
+2026-09-06 22:28:38 >> /predict live on http://localhost:8004 (real AI verdicts)
+2026-09-06 22:28:38 == [outer] building fresh 3-org network ==
+2026-09-06 22:33:24 WARN: startup.sh failed for orgs=3 (see /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/results/overnight/20260906-222836/3_orgs/setup_3.log) — skipping this org size
+2026-09-06 22:33:24 >> Summary table: /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/results/overnight/20260906-222836/summary.csv
+2026-09-06 22:33:24     orgs,samples,feed_submitted,feed_accepted,feed_rejected,feed_avg_latency_ms,feed_p95_ms,feed_wall_s,http_requests,http_ok,http_throughput_rps,caliper_write_tps,caliper_read_tps,status
+2026-09-06 22:33:24 DONE: sweep finished in 288s — results in /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/results/overnight/20260906-222836

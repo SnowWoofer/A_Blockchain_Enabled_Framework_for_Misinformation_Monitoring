@@ -1,0 +1,36 @@
+2026-09-06 23:23:44 >> Bringing up pipeline services (flagging-engine + kafka)...
+2026-09-06 23:23:45 WARN: gateway not reachable yet (HTTP 000) — the outer loop builds the network via startup.sh before benchmarking
+2026-09-06 23:23:45 >> Dataset=1401 entries | sample steps: 100,200,500 | caliper steps: 100,200,500
+2026-09-06 23:23:45 WARN: /predict unreachable on http://localhost:8004 — feed_samples will fall back to seeded random labels
+2026-09-06 23:23:45 == [outer] building fresh 20-org network (attempt 1/3) ==
+2026-09-06 23:50:23 >> gate OK: 20 orgs live on-chain
+2026-09-06 23:50:23       caliper S=100 (writes=1000 @25tps, reads=1000 @50tps)
+2026-09-06 23:57:31       caliper rows (org_count=20) merged into /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/results/local/caliper.csv
+2026-09-06 23:57:31       caliper S=200 (writes=2000 @25tps, reads=2000 @50tps)
+2026-09-07 00:16:47       caliper rows (org_count=20) merged into /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/results/local/caliper.csv
+2026-09-07 00:16:47       caliper S=500 (writes=5000 @25tps, reads=5000 @50tps)
+2026-09-07 01:03:20 >> Bringing up pipeline services (flagging-engine + kafka)...
+2026-09-07 01:03:21 WARN: gateway not reachable yet (HTTP 400) — the outer loop builds the network via startup.sh before benchmarking
+2026-09-07 01:03:21 >> Dataset=1401 entries | sample steps: 100,200,500 | caliper steps: 100,200,500
+2026-09-07 01:03:21 >> /predict live on http://localhost:8004 (real AI verdicts)
+2026-09-07 01:03:21 == [outer] building fresh 20-org network (attempt 1/3) ==
+2026-09-07 01:05:47 >> Bringing up pipeline services (flagging-engine + kafka)...
+2026-09-07 01:05:48 WARN: gateway not reachable yet (HTTP 400) — the outer loop builds the network via startup.sh before benchmarking
+2026-09-07 01:05:48 >> Dataset=1401 entries | sample steps: 100,200,500 | caliper steps: 100,200,500
+2026-09-07 01:05:49 >> /predict live on http://localhost:8004 (real AI verdicts)
+2026-09-07 01:05:49 == [outer] building fresh 20-org network (attempt 1/3) ==
+2026-09-07 01:05:50 WARN: attempt 1 failed for orgs=20 (see /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/results/overnight/20260906-232344/20_orgs/setup_20_a1.log)
+2026-09-07 01:05:50 >> retrying in 30s...
+2026-09-07 01:06:20 == [outer] building fresh 20-org network (attempt 2/3) ==
+2026-09-07 01:06:21 WARN: attempt 1 failed for orgs=20 (see /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/results/overnight/20260906-232344/20_orgs/setup_20_a1.log)
+2026-09-07 01:06:21 >> retrying in 30s...
+2026-09-07 01:06:44 >> Bringing up pipeline services (flagging-engine + kafka)...
+2026-09-07 01:06:45 WARN: gateway not reachable yet (HTTP 400) — the outer loop builds the network via startup.sh before benchmarking
+2026-09-07 01:06:45 >> Dataset=1401 entries | sample steps: 100,200,500 | caliper steps: 100,200,500
+2026-09-07 01:06:45 >> /predict live on http://localhost:8004 (real AI verdicts)
+2026-09-07 01:06:45 == [outer] building fresh 20-org network (attempt 1/3) ==
+2026-09-07 01:24:00 >> gate OK: 20 orgs live on-chain
+2026-09-07 01:24:01       caliper S=100: resume skip (existing /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/results/overnight/20260906-232344/20_orgs/caliper_100/caliper.csv)
+2026-09-07 01:24:01       caliper S=200: resume skip (existing /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/results/overnight/20260906-232344/20_orgs/caliper_200/caliper.csv)
+2026-09-07 01:24:01       caliper S=500 (writes=5000 @25tps, reads=5000 @50tps)
+2026-09-07 01:31:02       caliper rows (org_count=20) merged into /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/results/local/caliper.csv

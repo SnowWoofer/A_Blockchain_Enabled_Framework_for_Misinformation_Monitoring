@@ -1,0 +1,38 @@
+Samples: 10 | AI: 5 | Random: 5 | Reject-pct: 25% (2 reports) | Orgs: 20 (on-chain) | Mode: direct
+
+  [   1/10] REJ za-elec-ink-009       org=org1      label=0  conf=1.00  fc=19  2182ms
+  [   2/10] REJ df6f80_sa-elections-  org=org1      label=0  conf=1.00  fc=18  2160ms
+  [   3/10] OK df6f80_sa-elections-  org=org1      label=1  conf=1.00  fc=19  2181ms
+  [   4/10] OK f2d1c8_gen-samples-v  org=org1      label=0  conf=1.00  fc=18  2154ms
+  [   5/10] OK f2d1c8_gen-samples-v  org=org1      label=0  conf=1.00  fc=19  2148ms
+  [   6/10] OK f2d1c8_gen-samples-v  org=org13     label=0  conf=0.70  fc=19  2153ms
+  [   7/10] OK df6f80_sa-elections-  org=org5      label=0  conf=0.60  fc=17  2151ms
+  [   8/10] OK df6f80_sa-elections-  org=org8      label=1  conf=0.74  fc=19  2145ms
+  [   9/10] OK za-elec-topo-05       org=org20     label=0  conf=0.78  fc=19  2145ms
+  [  10/10] OK kzn-mun-fin-006       org=org18     label=0  conf=0.99  fc=17  2150ms
+
+================================================================
+  total samples:    10
+  AI-processed:     5  (50%)
+  random-pool:      5  (50%)
+  submitted:        10
+  accepted:         8  (80.0%)
+  rejected:         2  (20.0%)
+
+  by org:
+    org1          5 submitted
+    org13         1 submitted
+    org5          1 submitted
+    org8          1 submitted
+    org20         1 submitted
+    org18         1 submitted
+
+  fact-checks:
+    YES votes:  135
+    NO votes:   49
+
+  avg latency:  2156.9ms
+  p50/p95:      2153.4 / 2182.5ms
+================================================================
+  Output: /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/results/overnight/20260907-033054/20_orgs/feed_10.csv
+================================================================

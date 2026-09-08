@@ -9,7 +9,7 @@ docker compose version >/dev/null 2>&1 || COMPOSE="docker-compose"
 
 if [[ "${1:-up}" == "down" ]]; then
   echo ">> Stopping Fabric Gateway SDK service..."
-  (cd "${PROJECT_ROOT}" && ${COMPOSE} rm -sf fabric-gateway) >/dev/null 2>&1 || true
+  (cd "${PROJECT_ROOT}" && ${COMPOSE} -f apps/fabric_gateway/docker-compose.yaml rm -sf fabric-gateway) >/dev/null 2>&1 || true
   exit 0
 fi
 
@@ -26,7 +26,7 @@ echo ">> Building + starting Fabric Gateway SDK service (official @hyperledger/f
 # Without this, a sidecar left running across a redeploy keeps stale TLS certs
 # in memory (server.js reads them once at startup) and every call fails with
 # "unable to verify the first certificate" even though /health reports ok.
-(cd "${PROJECT_ROOT}" && ${COMPOSE} up -d --build --force-recreate fabric-gateway) | tail -2
+(cd "${PROJECT_ROOT}" && ${COMPOSE} -f apps/fabric_gateway/docker-compose.yaml up -d --build --force-recreate fabric-gateway) | tail -2
 
 echo ">> Waiting for health on :9100..."
 for _ in $(seq 1 60); do
@@ -42,5 +42,5 @@ for _ in $(seq 1 60); do
 done
 
 echo "ERROR: gateway service did not become healthy on :9100" >&2
-(cd "${PROJECT_ROOT}" && ${COMPOSE} logs --tail 30 fabric-gateway)
+(cd "${PROJECT_ROOT}" && ${COMPOSE} -f apps/fabric_gateway/docker-compose.yaml logs --tail 30 fabric-gateway)
 exit 1

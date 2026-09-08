@@ -20,12 +20,12 @@ RPC_PORTS=(5001 5101 5201)
 
 if [[ "${1:-up}" == "down" ]]; then
   echo ">> Stopping IPFS nodes..."
-  (cd "${PROJECT_ROOT}" && ${COMPOSE} rm -sf "${NODES[@]}") >/dev/null 2>&1 || true
+  (cd "${PROJECT_ROOT}" && ${COMPOSE} -f apps/ipfs_gateway/docker-compose.yaml rm -sf "${NODES[@]}") >/dev/null 2>&1 || true
   exit 0
 fi
 
 echo ">> Starting IPFS swarm (${NODES[*]})..."
-(cd "${PROJECT_ROOT}" && ${COMPOSE} up -d "${NODES[@]}") | tail -3
+(cd "${PROJECT_ROOT}" && ${COMPOSE} -f apps/ipfs_gateway/docker-compose.yaml up -d "${NODES[@]}") | tail -3
 
 echo ">> Waiting for the RPC APIs..."
 for port in "${RPC_PORTS[@]}"; do

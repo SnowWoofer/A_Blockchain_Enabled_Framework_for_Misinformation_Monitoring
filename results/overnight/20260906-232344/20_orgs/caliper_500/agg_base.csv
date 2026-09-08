@@ -1,0 +1,5 @@
+timestamp,name,succ,fail,send_rate_tps,max_latency_s,min_latency_s,avg_latency_s,throughput_tps,org_count
+2026-09-06T21:57:31+00:00,submit-report-write,76.0,924.0,3.6,165.83,0.47,64.16,2.8,20
+2026-09-06T21:57:31+00:00,query-all-reports-read,1000.0,0.0,50.1,0.28,0.02,0.05,50.0,20
+2026-09-06T22:16:47+00:00,submit-report-write,340.0,1660.0,8.4,124.44,0.14,11.66,6.1,20
+2026-09-06T22:16:47+00:00,query-all-reports-read,414.0,1586.0,10.9,0.77,0.05,0.24,2.9,20

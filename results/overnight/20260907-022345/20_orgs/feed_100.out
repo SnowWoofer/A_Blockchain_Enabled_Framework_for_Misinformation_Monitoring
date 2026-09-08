@@ -1,0 +1,11 @@
+Samples: 100 | AI: 50 | Random: 50 | Reject-pct: 25% (25 reports) | Orgs: 20 (on-chain) | Mode: direct
+
+  [   1/100] FAIL za-elec-ink-009       org=org1      label=0  conf=1.00  fc=13  2172ms
+  [   2/100] FAIL df6f80_sa-elections-  org=org1      label=0  conf=1.00  fc=13  2195ms
+  [   3/100] REJ df6f80_sa-elections-  org=org1      label=1  conf=1.00  fc=13  2157ms
+  [   4/100] FAIL f2d1c8_gen-samples-v  org=org1      label=0  conf=1.00  fc=13  2167ms
+  [   5/100] FAIL f2d1c8_gen-samples-v  org=org1      label=0  conf=1.00  fc=13  2184ms
+  [   6/100] FAIL f2d1c8_gen-samples-v  org=org1      label=0  conf=1.00  fc=13  2170ms
+  [   7/100] FAIL df6f80_sa-elections-  org=org1      label=1  conf=1.00  fc=13  2158ms
+  [   8/100] FAIL df6f80_sa-elections-  org=org1      label=0  conf=1.00  fc=13  2183ms
+  [   9/100] FAIL za-elec-topo-05       org=org1      label=1  conf=1.00  fc=13  2156ms

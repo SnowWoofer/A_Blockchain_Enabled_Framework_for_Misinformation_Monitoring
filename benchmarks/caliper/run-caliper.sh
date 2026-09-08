@@ -26,8 +26,16 @@ if ! docker network ls --format '{{.Name}}' | grep -qx 'fabric_test'; then
   exit 1
 fi
 
-echo ">> Building Caliper image (installs CLI + binds official Fabric Gateway SDK)..."
-(cd "${SCRIPT_DIR}" && ${COMPOSE} build)
+IMAGE="misinfo-caliper:latest"
+if [[ "${FORCE_BUILD:-0}" == "1" ]] || ! docker image inspect "${IMAGE}" >/dev/null 2>&1; then
+  echo ">> Building Caliper image (installs CLI + binds official Fabric Gateway SDK)..."
+  (cd "${SCRIPT_DIR}" && timeout 600 ${COMPOSE} build) || {
+    echo "ERROR: caliper image build failed or timed out" >&2
+    exit 1
+  }
+else
+  echo ">> Using existing Caliper image (${IMAGE}); export FORCE_BUILD=1 to rebuild"
+fi
 
 echo ">> Running benchmark suite: submit-report-write + query-all-reports-read"
 cd "${SCRIPT_DIR}"
@@ -52,7 +60,7 @@ if [[ -f "${REPORT}" ]]; then
   mkdir -p "${CSV_DIR}"
 
   "${PYTHON}" - "${REPORT}" "${CSV_PATH}" <<'PYEOF'
-import sys, re, csv
+import sys, re, csv, os
 from pathlib import Path
 from datetime import datetime, timezone
 
@@ -72,25 +80,37 @@ headers = [re.sub(r'<[^>]+>', '', c).strip().lower().replace(' ', '_').replace('
 fieldnames = ["timestamp"] + headers
 
 csv_path = Path(sys.argv[2])
+single = Path(os.environ.get("CALIPER_RUN_CSV", "")) if os.environ.get("CALIPER_RUN_CSV") else None
 write_header = not csv_path.exists() or csv_path.stat().st_size == 0
 ts = datetime.now(timezone.utc).isoformat(timespec="seconds")
 
-with open(csv_path, "a", newline="", encoding="utf-8") as f:
-    writer = csv.DictWriter(f, fieldnames=fieldnames)
-    if write_header:
-        writer.writeheader()
-    for row in rows[1:]:
-        cells = [re.sub(r'<[^>]+>', '', c).strip() for c in re.findall(r'<td>(.*?)</td>', row, re.S)]
-        if cells:
-            record = {"timestamp": ts}
-            for h, val in zip(headers, cells):
-                try:
-                    record[h] = float(val)
-                except ValueError:
-                    record[h] = val
-            writer.writerow(record)
+extracted = []
+for row in rows[1:]:
+    cells = [re.sub(r'<[^>]+>', '', c).strip() for c in re.findall(r'<td>(.*?)</td>', row, re.S)]
+    if cells:
+        record = {"timestamp": ts}
+        for h, val in zip(headers, cells):
+            try:
+                record[h] = float(val)
+            except ValueError:
+                record[h] = val
+        extracted.append(record)
 
-print(f"  Results: {sys.argv[2]}")
+if single:
+    with open(single, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        for record in extracted:
+            writer.writerow(record)
+    print(f"  Per-run results: {single}")
+else:
+    with open(csv_path, "a", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        if write_header:
+            writer.writeheader()
+        for record in extracted:
+            writer.writerow(record)
+    print(f"  Results: {csv_path}")
 PYEOF
 
 else

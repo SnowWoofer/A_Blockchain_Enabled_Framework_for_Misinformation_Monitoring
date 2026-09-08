@@ -1,0 +1,2 @@
+timestamp,requests,ok,failed,elapsed_s,throughput_rps,latency_avg_ms,latency_p50_ms,latency_p95_ms,latency_p99_ms,latency_max_ms,status_0
+2026-09-06T09:15:27+00:00,600,0,600,838.02,0.72,32978.6,32099.9,40436.0,43991.2,44757.6,600

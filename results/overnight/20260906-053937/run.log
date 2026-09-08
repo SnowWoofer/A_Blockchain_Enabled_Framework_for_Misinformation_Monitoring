@@ -1,0 +1,6 @@
+2026-09-06 05:39:37 >> Bringing up pipeline services (flagging-engine + kafka)...
+2026-09-06 05:39:37 WARN: gateway not reachable yet (HTTP 400) — the outer loop builds the network via startup.sh before benchmarking
+2026-09-06 05:39:37 >> Dataset=1401 entries | sample steps: 100,200,400,800,1200,1400 | caliper steps: 200,800,1400
+2026-09-06 05:39:38 >> /predict live on http://localhost:8004 (real AI verdicts)
+2026-09-06 05:39:38 == [outer] building fresh 25-org network ==
+2026-09-06 05:40:11 FATAL: sweep aborted (exit 130) after 34s — results/logs in /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/results/overnight/20260906-053937

@@ -9,12 +9,12 @@ docker compose version >/dev/null 2>&1 || COMPOSE="docker-compose"
 
 if [[ "${1:-up}" == "down" ]]; then
   echo ">> Stopping IPFS Gateway..."
-  (cd "${PROJECT_ROOT}" && ${COMPOSE} rm -sf ipfs-gateway) >/dev/null 2>&1 || true
+  (cd "${PROJECT_ROOT}" && ${COMPOSE} -f apps/ipfs_gateway/docker-compose.yaml rm -sf ipfs-gateway) >/dev/null 2>&1 || true
   exit 0
 fi
 
 echo ">> Building + starting IPFS Gateway..."
-(cd "${PROJECT_ROOT}" && ${COMPOSE} up -d --build ipfs-gateway) | tail -2
+(cd "${PROJECT_ROOT}" && ${COMPOSE} -f apps/ipfs_gateway/docker-compose.yaml up -d --build ipfs-gateway) | tail -2
 
 echo ">> Waiting for health on :9101..."
 for _ in $(seq 1 30); do
@@ -28,5 +28,5 @@ for _ in $(seq 1 30); do
 done
 
 echo "ERROR: IPFS Gateway did not become healthy on :9101" >&2
-(cd "${PROJECT_ROOT}" && ${COMPOSE} logs --tail 30 ipfs-gateway)
+(cd "${PROJECT_ROOT}" && ${COMPOSE} -f apps/ipfs_gateway/docker-compose.yaml logs --tail 30 ipfs-gateway)
 exit 1

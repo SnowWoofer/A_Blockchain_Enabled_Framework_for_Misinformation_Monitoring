@@ -5,15 +5,18 @@
 # run everything at once) plus the environment-level infra that isn't one of
 # "our" services (Prometheus/Grafana, no Dockerfile of their own).
 #
-# The three gateway services (fabric_gateway, ipfs_gateway,
-# blockchain_gateway) are included here for convenience so they start
-# alongside the app layer. However the Fabric network itself (peers,
-# orderer, channel, chaincode) must be provisioned first via
-# `./startup.sh` — that's a sequence of CLI commands (generate crypto,
-# create channel, install/approve/commit chaincode) that `docker compose`
-# can't express.
+# The gateway services (fabric_gateway, ipfs_gateway, blockchain_gateway) are
+# NOT included here: they are provisioned by `./startup.sh` (which generates
+# crypto, creates the channel, installs/approves/commits chaincode, bootstraps
+# API keys and brings the gateways up with the correct ORGS env for the
+# deployed consortium size). Recreating them from this file would clobber that
+# env with the compose default — the blockchain gateway would then reject
+# fact-check votes from any org beyond the default list (HTTP 400 "unknown
+# signing org"). Bring the app layer up after startup.sh via this file; it
+# shares the same kafka_net.
 #
-# Prerequisite before running this file: `blockchain/scripts/ensure-networks.sh`
+# Prerequisite before running this file: `./startup.sh` (which calls
+# `blockchain/scripts/ensure-networks.sh` automatically).
 # (idempotent — safe to re-run). kafka_net is shared by several
 # independently-deployable services and none of their individual compose
 # files can safely "own" creating it once any of them marks it external, so
@@ -25,9 +28,6 @@ include:
   - apps/flagging-engine/docker-compose.yaml
   - apps/submission-worker/docker-compose.yaml
   - apps/fact-checking-service/docker-compose.yaml
-  - apps/fabric_gateway/docker-compose.yaml
-  - apps/ipfs_gateway/docker-compose.yaml
-  - apps/blockchain_gateway/docker-compose.yaml
 
 services:
   prometheus:

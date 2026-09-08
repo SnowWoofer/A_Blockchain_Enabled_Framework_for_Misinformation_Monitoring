@@ -1,0 +1,6 @@
+2026-09-07 02:23:45 >> Bringing up pipeline services (flagging-engine + kafka)...
+2026-09-07 02:23:45 >> Gateway currently reachable.
+2026-09-07 02:23:45 >> Dataset=1401 entries | sample steps: 100,200,300,500 | caliper steps: 200,800,1400
+2026-09-07 02:23:46 >> /predict live on http://localhost:8004 (real AI verdicts)
+2026-09-07 02:23:46 == [outer] building fresh 20-org network (attempt 1/3) ==
+2026-09-07 02:42:31 >> gate OK: 20 orgs live on-chain

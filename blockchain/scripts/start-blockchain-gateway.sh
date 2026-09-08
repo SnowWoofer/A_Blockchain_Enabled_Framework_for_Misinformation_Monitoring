@@ -9,12 +9,12 @@ docker compose version >/dev/null 2>&1 || COMPOSE="docker-compose"
 
 if [[ "${1:-up}" == "down" ]]; then
   echo ">> Stopping blockchain gateway..."
-  (cd "${PROJECT_ROOT}" && ${COMPOSE} rm -sf blockchain-gateway) >/dev/null 2>&1 || true
+  (cd "${PROJECT_ROOT}" && ${COMPOSE} -f apps/blockchain_gateway/docker-compose.yaml rm -sf blockchain-gateway) >/dev/null 2>&1 || true
   exit 0
 fi
 
 echo ">> Building + starting blockchain gateway..."
-(cd "${PROJECT_ROOT}" && ${COMPOSE} up -d --build blockchain-gateway) | tail -2
+(cd "${PROJECT_ROOT}" && ${COMPOSE} -f apps/blockchain_gateway/docker-compose.yaml up -d --build blockchain-gateway) | tail -2
 
 echo ">> Waiting for health on :8000..."
 for _ in $(seq 1 30); do
@@ -30,5 +30,5 @@ done
 echo "ERROR: blockchain gateway did not become healthy on :8000" >&2
 echo "  (HTTP 401 here usually just means API keys aren't bootstrapped yet — run:" >&2
 echo "   blockchain/scripts/bootstrap-keys.sh org1 org2 org3)" >&2
-(cd "${PROJECT_ROOT}" && ${COMPOSE} logs --tail 30 blockchain-gateway)
+(cd "${PROJECT_ROOT}" && ${COMPOSE} -f apps/blockchain_gateway/docker-compose.yaml logs --tail 30 blockchain-gateway)
 exit 1

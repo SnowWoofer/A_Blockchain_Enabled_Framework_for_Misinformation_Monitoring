@@ -14,9 +14,11 @@ import time
 import urllib.error
 import urllib.request
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
 
+# builds generic POST to base + path
 def _post(base: str, path: str, body: dict, api_key: str = "",
           timeout: float = 30.0) -> tuple[int, dict | str, float]:
     start = time.perf_counter()
@@ -45,6 +47,7 @@ def _post(base: str, path: str, body: dict, api_key: str = "",
         ms = (time.perf_counter() - start) * 1000.0
         return 0, str(exc), ms
 
+# builds generic GET to base + path
 def _get(base: str, path: str, api_key: str = "",
          timeout: float = 30.0) -> tuple[int, dict | str, float]:
     start = time.perf_counter()
@@ -71,15 +74,18 @@ def _get(base: str, path: str, api_key: str = "",
         ms = (time.perf_counter() - start) * 1000.0
         return 0, str(exc), ms
 
+# Returns org's API keys
 def _generate_keys(num_orgs: int, mode: str) -> list[str]:
     return [f"key-org{i}" for i in range(1, num_orgs + 1)]
 
+# Reverse Lookup search for API Key
 def _org_for_key(key: str, num_orgs: int, mode: str) -> str:
     for i in range(1, num_orgs + 1):
         if key == f"key-org{i}":
             return f"org{i}"
     return "unknown"
 
+# Loads test samples from data/ directory
 def _load_samples(path: str) -> list[dict]:
     with open(path, "r", encoding="utf-8") as f:
         data = json.load(f)
@@ -88,6 +94,7 @@ def _load_samples(path: str) -> list[dict]:
         sys.exit(1)
     return data
 
+# Calls POST /predict endpoint given args of text
 def _predict(base_url: str, text: str) -> dict | None:
     status, body, _ = _post(base_url, "/predict", {"post_text": text})
     if status == 200 and isinstance(body, dict):
@@ -95,6 +102,7 @@ def _predict(base_url: str, text: str) -> dict | None:
     print(f"  WARNING: /predict returned {status}: {body}", file=sys.stderr)
     return None
 
+# Builds report payload, And POST to /api/reports on blockchain gateway
 def _submit_report(base_url: str, api_key: str, msg_id: str, label: str,
                    confidence: float, content: str,
                    model_version: str = "afro-xlmr-large-76L-misinfo-v1",
@@ -107,23 +115,36 @@ def _submit_report(base_url: str, api_key: str, msg_id: str, label: str,
         "content": content,
         "source_platform": source_platform,
     }
-    status, resp, ms = _post(base_url, "/api/reports", body, api_key=api_key)
-    if status == 200 and isinstance(resp, dict):
-        return resp.get("id"), ms
-    print(f"  WARNING: /api/reports returned {status}: {resp}", file=sys.stderr)
+    last = (0, None)
+    for attempt in range(1, 7):
+        status, resp, ms = _post(base_url, "/api/reports", body, api_key=api_key)
+        if status == 200 and isinstance(resp, dict) and resp.get("id"):
+            return resp.get("id"), ms
+        last = (status, resp)
+        if attempt < 6:
+            time.sleep(0.5 * attempt)
+    print(f"  WARNING: /api/reports returned {last[0]}: {last[1]}", file=sys.stderr)
     return None, ms
 
+# POST one vote to /api/reports/{report_id}/fact-check with outcome, reasoning, support (all simulated), simulates voting on block on blockchain
 def _fact_check(base_url: str, api_key: str, report_id: str,
-                outcome: str) -> bool:
+                outcome: str, attempts: int = 12) -> bool:
+    # Concurrent votes on the same report can hit Fabric MVCC commit conflicts 
     body = {
         "outcome": outcome,
         "reasoning": f"Automated fact-check: outcome={outcome}",
         "support": [],
     }
-    status, _, _ = _post(base_url, f"/api/reports/{report_id}/fact-check",
-                         body, api_key=api_key)
-    return status == 200
+    for attempt in range(1, attempts + 1):
+        status, _, _ = _post(base_url, f"/api/reports/{report_id}/fact-check",
+                             body, api_key=api_key)
+        if status == 200:
+            return True
+        if attempt < attempts:
+            time.sleep(min(3.0, 0.5 * attempt) + random.uniform(0, 0.4))
+    return False
 
+# Get for endpoint /api/reports/{id}/chain and returns status of report (rejected, submitted, final)
 def _get_report_status(base_url: str, api_key: str,
                        report_id: str) -> str | None:
     status, body, _ = _get(base_url, f"/api/reports/{report_id}/chain",
@@ -132,15 +153,15 @@ def _get_report_status(base_url: str, api_key: str,
         return body.get("status")
     return None
 
+# Calls GET endpoint /api/orgs which return no. of orgs in blockchain
 def _detect_org_count(base_url: str, api_key: str) -> int | None:
-    """Count orgs registered on-chain via GET /api/orgs, so the harness
-    mirrors the actual consortium instead of trusting a manual --num-orgs
-    (the chain's quorum math depends on the real registered count)."""
+    # Count orgs registered on-chain via GET /api/orgs
     status, body, _ = _get(base_url, "/api/orgs", api_key=api_key)
     if status == 200 and isinstance(body, list):
         return len(body)
     return None
 
+# Logic for Mirroring the chaincode's consensus rule (2/3 consensus). Simulates realistic voting outcomes and returns voting outcomes. This decides voting outcomes PER SAMPLE.
 def _decide_voting_outcomes(num_orgs: int, v: int, reject: bool,
                             rng: random.Random) -> list[str]:
     # Mirrors the chaincode's consensus rule (SubmitFactCheck)
@@ -157,6 +178,7 @@ def _decide_voting_outcomes(num_orgs: int, v: int, reject: bool,
     rng.shuffle(votes)
     return votes
 
+# Write results to csv output file
 def _write_csv(path: Path, results: list[dict]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     fieldnames = [
@@ -188,11 +210,11 @@ def _write_csv(path: Path, results: list[dict]) -> None:
 
 def main() -> int:
     ap = argparse.ArgumentParser(
-        description="Feed samples through pipeline")
+        description="Feed samples")
     ap.add_argument("--data", default="data/translated_masked_samples_test.json",
                     help="path samples file")
     ap.add_argument("--samples", type=int, default=0,
-                    help="randomly select N samples")
+                    help="select N samples")
     ap.add_argument("--ai-pct", type=int, default=100,
                     help="%% of samples processed by the AI model, 0 -> 100")
     ap.add_argument("--num-orgs", type=int, default=None,
@@ -200,9 +222,9 @@ def main() -> int:
                          "from /api/orgs; generate keys key-org1..key-orgN)")
     ap.add_argument("--mode", choices=["direct", "indirect"], default="direct",
                     help="direct == org1 is the AI stakeholder: it submits ai_pct%% "
-                         "of reports (the AI-processed ones), random org2..orgN "
-                         "submit the rest; everyone except the submitter votes. "
                          "indirect == random org submits each report")
+    ap.add_argument("--vote-pool", type=int, default=1,
+                    help="max concurrent fact-check votes")
     ap.add_argument("--reject-pct", type=int, default=0,
                     help="%% of reports with non 2/3 consensus (rejected)")
     ap.add_argument("--fact-check", dest="fact_check", action="store_true", default=True,
@@ -210,9 +232,9 @@ def main() -> int:
     ap.add_argument("--no-fact-check", dest="fact_check", action="store_false",
                     help="disable fact-checking")
     ap.add_argument("--concurrency", type=int, default=1,
-                    help="parallel workers (currently 1 only)")
+                    help="parallel workers, currently 1")
     ap.add_argument("--rate", type=float, default=0.0,
-                    help="requests per second (0 = unlimited)")
+                    help="requests per second, 0 = unlimited")
     ap.add_argument("--endpoint", default="http://localhost:8004",
                     help="flagging-engine /predict URL")
     ap.add_argument("--blockchain-api", default="http://localhost:8000",
@@ -250,10 +272,7 @@ def main() -> int:
 
     rng = random.Random(args.seed)
     org_keys = _generate_keys(num_orgs, args.mode)
-    # org1 is the AI stakeholder org: it submits ai_pct% of reports (the ones
-    # the AI processed) and votes on reports it did not submit. voting_org_keys
-    # below is the full pool; the per-report submitter is excluded at
-    # fact-check time by the existing `available_keys` filter.
+    # org1 is the AI stakeholder org, it submits ai_pct% of reports
     submitting_org_key = "key-org1"
     voting_org_keys = list(org_keys)
 
@@ -278,6 +297,10 @@ def main() -> int:
     org_counts: dict[str, int] = {}
     total_fc_yes = 0
     total_fc_no = 0
+
+    pool = ThreadPoolExecutor(max_workers=min(len(voting_org_keys),
+                                              args.vote_pool)) \
+        if args.fact_check else None
 
     print(f"Samples: {n} | AI: {ai_count} | Random: {n - ai_count} | "
           f"Reject-pct: {args.reject_pct}% ({reject_count} reports) | "
@@ -309,8 +332,7 @@ def main() -> int:
 
         # choose submitter org
         if args.mode == "direct":
-            # AI stakeholder: the AI submits the reports it processed (ai_pct%);
-            # the rest go out from a random non-AI org. All orgs are equal.
+            # AI stakeholder, the AI submits the reports it processed for (ai_pct%)
             if i in ai_indices:
                 submit_key = submitting_org_key
             else:
@@ -340,30 +362,32 @@ def main() -> int:
                 votes = _decide_voting_outcomes(
                     num_orgs, len(available_keys), is_rejected, rng)
                 vote_keys = available_keys[:len(votes)]
+                futures = [pool.submit(_fact_check, args.blockchain_api,
+                                       vk, report_id, outcome)
+                           for vk, outcome in zip(vote_keys, votes)]
 
-                for vk, outcome in zip(vote_keys, votes):
-                    ok = _fact_check(args.blockchain_api, vk, report_id,
-                                    outcome)
-                    if not ok:
-                        break
-                    fc_org = _org_for_key(vk, num_orgs, args.mode)
-                    fc_outcomes.append({"org": fc_org, "outcome": outcome})
-                    if outcome == "1":
-                        total_fc_yes += 1
-                    else:
-                        total_fc_no += 1
+                # Collect results in submission order
+                for f, vk, outcome in zip(futures, vote_keys, votes):
+                    ok = f.result()
+                    if ok:
+                        fc_org = _org_for_key(vk, num_orgs, args.mode)
+                        fc_outcomes.append({"org": fc_org, "outcome": outcome})
+                        if outcome == "1":
+                            total_fc_yes += 1
+                        else:
+                            total_fc_no += 1
 
-                    status = _get_report_status(args.blockchain_api,
-                                                voting_org_keys[0],
-                                                report_id)
+                # Poll until consensus settles (FINAL/REJECTED) or give up
+                final_status = "SUBMITTED"
+                for _ in range(8):
+                    status = _get_report_status(
+                        args.blockchain_api, voting_org_keys[0], report_id)
                     if status in ("FINAL", "REJECTED"):
                         final_status = status
                         break
-
-                if final_status == "SUBMITTED":
-                    final_status = _get_report_status(
-                        args.blockchain_api, voting_org_keys[0],
-                        report_id) or "UNKNOWN"
+                    if status:
+                        final_status = status
+                    time.sleep(1.0)
 
             if final_status == "FINAL":
                 accepted += 1
@@ -396,8 +420,10 @@ def main() -> int:
               f"org={submit_org:8s}  label={label}  "
               f"conf={confidence:.2f}  fc={len(fc_outcomes)}  "
               f"{ms:.0f}ms")
+    if pool is not None:
+        pool.shutdown(wait=True)
 
-    # write output 
+    # write output
     out_path = Path(args.output)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     if out_path.suffix == ".csv":

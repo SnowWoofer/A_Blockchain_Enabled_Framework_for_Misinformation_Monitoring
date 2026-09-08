@@ -1,0 +1,3 @@
+2026-09-06 05:33:45 >> Bringing up pipeline services (flagging-engine + kafka)...
+2026-09-06 05:33:46 ERROR: blockchain gateway unreachable (HTTP 400) — run ./startup.sh --orgs N first
+2026-09-06 05:33:46 FATAL: sweep aborted (exit 1) after 1s — results/logs in /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/results/overnight/20260906-053345
