@@ -9,7 +9,9 @@ ADD_ORG3="${TEST_NETWORK}/addOrg3"
 CHAINCODE_PATH="${PROJECT_ROOT}/chaincode/misinformation/go"
 
 CC_NAME="misinformation"
-CC_VERSION="2.2"
+# Inherited from deploy.sh so the three scripts cannot drift; whichever
+# runs last stamps the committed label, and they used to disagree.
+CC_VERSION="${CC_VERSION:-2.5}"
 CHANNEL_NAME="mychannel"
 TARGET=3
 

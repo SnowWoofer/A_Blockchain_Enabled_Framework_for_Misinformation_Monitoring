@@ -52,22 +52,30 @@ async def list_pending(org: str = Depends(require_org)):
     return await _chain_call(CLIENT.list_pending_for_org(org))
 
 
-@app.get("/claims/{report_id}")
-async def get_claim(report_id: str, org: str = Depends(require_org)):
-    return await _chain_call(CLIENT.get_claim(org, report_id))
+@app.get("/claims/{root_cid}")
+async def get_claim(root_cid: str, org: str = Depends(require_org)):
+    return await _chain_call(CLIENT.get_claim(org, root_cid))
 
 
-@app.post("/claims/{report_id}/fact-check")
-async def submit_fact_check(report_id: str, body: FactCheckSubmit, org: str = Depends(require_org)):
+@app.post("/claims/{root_cid}/fact-check")
+async def submit_fact_check(root_cid: str, body: FactCheckSubmit, org: str = Depends(require_org)):
     if body.outcome not in VALID_OUTCOMES:
         raise HTTPException(status_code=400, detail=f"outcome must be one of {VALID_OUTCOMES}")
     result = await _chain_call(
-        CLIENT.submit_fact_check(org, report_id, body.outcome, body.reasoning, body.support)
+        CLIENT.submit_fact_check(org, root_cid, body.outcome, body.reasoning, body.support)
     )
-    logger.info("Fact-check submitted: org=%s id=%s outcome=%s", org, report_id, body.outcome)
+    logger.info("Fact-check submitted: org=%s id=%s outcome=%s", org, root_cid, body.outcome)
     return result
 
 
-@app.post("/claims/{report_id}/finalize")
-async def finalize_claim(report_id: str, org: str = Depends(require_org)):
-    return await _chain_call(CLIENT.finalize(org, report_id))
+@app.post("/claims/{root_cid}/reopen")
+async def reopen_claim(root_cid: str, org: str = Depends(require_org)):
+    """Reopen a finalised claim for re-examination at a larger panel.
+
+    Any registered org may do this — a fast path to close is only defensible
+    if verdicts are correctable, so nobody needs permission to raise a
+    question. The existing verdict stands while the new round runs."""
+    result = await _chain_call(CLIENT.reopen(org, root_cid))
+    logger.info("Claim reopened: org=%s id=%s round=%s panel=%s",
+                org, root_cid, result.get("round"), result.get("required_panel"))
+    return result

@@ -3,8 +3,9 @@ from prometheus_client import Counter, Gauge, Histogram
 REQUESTS_TOTAL = Counter(
     "flagging_engine_requests_total", "Total inference requests processed"
 )
-FLAGGED_TOTAL = Counter(
-    "flagging_engine_flagged_total", "Total requests flagged as misinformation"
+MISINFORMATION_TOTAL = Counter(
+    "flagging_engine_misinformation_total",
+    "Total requests the model predicted as misinformation",
 )
 INFERENCE_LATENCY = Histogram(
     "flagging_engine_inference_latency_seconds",

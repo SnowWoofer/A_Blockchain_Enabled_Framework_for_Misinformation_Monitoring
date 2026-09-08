@@ -143,9 +143,9 @@ class OffChainStore:
             self._conn.execute(
                 """
                 CREATE TABLE IF NOT EXISTS reports (
-                    report_id   TEXT PRIMARY KEY,
+                    root_cid   TEXT PRIMARY KEY,
                     payload     TEXT NOT NULL,
-                    content_hash TEXT NOT NULL,
+                    inference_hash TEXT NOT NULL,
                     created_at  TEXT NOT NULL
                 )
                 """
@@ -153,18 +153,40 @@ class OffChainStore:
             self._conn.execute(
                 """
                 CREATE TABLE IF NOT EXISTS report_index (
-                    report_id    TEXT PRIMARY KEY,
-                    cid          TEXT NOT NULL,
-                    content_hash TEXT NOT NULL DEFAULT '',
+                    root_cid    TEXT PRIMARY KEY,
+                    current_cid  TEXT NOT NULL,
+                    inference_hash TEXT NOT NULL DEFAULT '',
                     created_at   TEXT NOT NULL
                 )
                 """
             )
-            cols = [r[1] for r in self._conn.execute("PRAGMA table_info(report_index)").fetchall()]
-            if "content_hash" not in cols:
-                self._conn.execute(
-                    "ALTER TABLE report_index ADD COLUMN content_hash TEXT NOT NULL DEFAULT ''"
-                )
+            # Migrate pre-existing databases. offchain.db is a persisted
+            # bind mount (it also holds the org API keys), so an older file
+            # has to be carried forward rather than recreated. Renames:
+            #   content_hash -> inference_hash  (covers source+inference only,
+            #                                    never the growing document)
+            #   report_id    -> root_cid        (it *is* the v1 IPFS CID)
+            #   cid          -> current_cid     (the latest version's CID —
+            #                                    diverges from root_cid on the
+            #                                    first fact-check)
+            _renames = (
+                ("content_hash", "inference_hash"),
+                ("report_id", "root_cid"),
+                ("cid", "current_cid"),
+            )
+            for _table in ("reports", "report_index"):
+                _cols = [r[1] for r in self._conn.execute(f"PRAGMA table_info({_table})").fetchall()]
+                for _old, _new in _renames:
+                    if _old in _cols and _new not in _cols:
+                        self._conn.execute(
+                            f"ALTER TABLE {_table} RENAME COLUMN {_old} TO {_new}"
+                        )
+                        _cols = [_new if c == _old else c for c in _cols]
+                if "inference_hash" not in _cols:
+                    self._conn.execute(
+                        f"ALTER TABLE {_table} ADD COLUMN inference_hash TEXT NOT NULL DEFAULT ''"
+                    )
+
     def _ipfs_ready(self) -> bool:
         """`_ipfs_ok` is a cache, not a permanent verdict: if IPFS was down
         (or ipfs_gateway just hadn't finished starting yet — a real race on
@@ -207,21 +229,32 @@ class OffChainStore:
         return row["org"] if row else None
 
     def save_report(self, report: Dict[str, Any]) -> str:
-        # content_hash is set by report.make_report() over the claim's fixed
+        # inference_hash is set by report.make_report() over the claim's fixed
         # core fields (source/inference) and must not be touched here
         # — it has to stay identical across every later version of this
         # claim's document (see report._core_content).
         created_at = report.get("submitter", {}).get("submitted_at", "")
-        content = report["content_hash"]
+        content = report["inference_hash"]
         if self._ipfs_ready():
             try:
-                blob = {k: v for k, v in report.items() if k != "report_id"}
+                # root_cid is omitted from v1's bytes on purpose: it *is*
+                # this document's own CID, so embedding it would be circular
+                # (adding the field changes the hash it is supposed to hold).
+                # previous_cid: None marks this as the head of the chain — a
+                # reader walking backwards stops here.
+                # current_cid is never stored in a document: a document
+                # cannot name its own successor, and the ledger's CurrentCID
+                # is the authority on which version is live. It is stripped
+                # here because get_report() adds it for API callers, so a
+                # round-tripped document arrives carrying a stale one.
+                blob = {k: v for k, v in report.items() if k not in ("root_cid", "current_cid")}
+                blob["previous_cid"] = None
                 cid = self._ipfs.add_bytes(canonical_json(blob).encode("utf-8"))
-                report["report_id"] = cid
+                report["root_cid"] = cid
                 with self._lock:
                     with self._conn:
                         self._conn.execute(
-                            "INSERT OR REPLACE INTO report_index (report_id, cid, content_hash, created_at) "
+                            "INSERT OR REPLACE INTO report_index (root_cid, current_cid, inference_hash, created_at) "
                             "VALUES (?, ?, ?, ?)",
                             (cid, cid, content, created_at),
                         )
@@ -229,76 +262,95 @@ class OffChainStore:
             except StorageError:
                 self._ipfs_ok = False
                 print(f"[storage] IPFS unreachable, falling back to SQLite for {report}")
-        report["report_id"] = report.get("report_id") or uuid.uuid4().hex
+        report["root_cid"] = report.get("root_cid") or uuid.uuid4().hex
         with self._lock:
             with self._conn:
                 self._conn.execute(
                     """
-                    INSERT OR REPLACE INTO reports (report_id, payload, content_hash, created_at)
+                    INSERT OR REPLACE INTO reports (root_cid, payload, inference_hash, created_at)
                     VALUES (?, ?, ?, ?)
                     """,
-                    (report["report_id"], canonical_json(report), content, created_at),
+                    (report["root_cid"], canonical_json(report), content, created_at),
                 )
-        return f"http://localhost:8000/api/reports/{report['report_id']}"
+        return f"http://localhost:8000/api/reports/{report['root_cid']}"
 
-    def save_report_version(self, report_id: str, report: Dict[str, Any]) -> str:
+    def save_report_version(self, root_cid: str, report: Dict[str, Any]) -> Optional[str]:
         """Publishes `report` (the current full snapshot — claim content plus
         every fact_check so far) as a new, immutable off-chain object without
-        changing the claim's stable report_id/on-chain ledger key. The old
-        CID stays resolvable in IPFS; this claim's version history is
-        recoverable from the ledger's own transaction history
-        (GET /api/reports/{id}/history) — nothing extra is tracked here."""
-        report = {**report, "report_id": report_id}
-        content = report["content_hash"]
+        changing the claim's stable root_cid/on-chain ledger key. Old CIDs
+        stay resolvable in IPFS and each version records the one it
+        supersedes as previous_cid, so the full history is walkable backwards
+        from whatever CurrentCID the ledger points at.
+
+        Returns the new CID so the caller can anchor it on-chain, or None if
+        IPFS was unavailable and this fell back to local SQLite (in which
+        case there is no CID to anchor)."""
+        # Whatever the chain currently points at becomes this version's
+        # parent. Falling back to root_cid keeps the chain intact if the
+        # index row is missing (only reachable if v1 fell back to SQLite).
+        with self._lock:
+            _row = self._conn.execute(
+                "SELECT current_cid FROM report_index WHERE root_cid=?", (root_cid,)
+            ).fetchone()
+        previous_cid = _row["current_cid"] if _row else root_cid
+        report = {**report, "root_cid": root_cid, "previous_cid": previous_cid}
+        content = report["inference_hash"]
         created_at = report.get("submitter", {}).get("submitted_at", "")
         if self._ipfs_ready():
             try:
-                blob = {k: v for k, v in report.items() if k != "report_id"}
+                # Unlike v1, root_cid is a *different* value from this
+                # document's own CID, so it is embedded rather than omitted.
+                # current_cid is stripped for the reason given in save_report.
+                blob = {k: v for k, v in report.items() if k != "current_cid"}
                 cid = self._ipfs.add_bytes(canonical_json(blob).encode("utf-8"))
                 with self._lock:
                     with self._conn:
                         self._conn.execute(
-                            "INSERT OR REPLACE INTO report_index (report_id, cid, content_hash, created_at) "
+                            "INSERT OR REPLACE INTO report_index (root_cid, current_cid, inference_hash, created_at) "
                             "VALUES (?, ?, ?, ?)",
-                            (report_id, cid, content, created_at),
+                            (root_cid, cid, content, created_at),
                         )
-                return f"ipfs://{cid}"
+                return cid
             except StorageError:
                 self._ipfs_ok = False
-                print(f"[storage] IPFS unreachable, falling back to SQLite for {report_id}")
+                print(f"[storage] IPFS unreachable, falling back to SQLite for {root_cid}")
         with self._lock:
             with self._conn:
                 self._conn.execute(
                     """
-                    INSERT OR REPLACE INTO reports (report_id, payload, content_hash, created_at)
+                    INSERT OR REPLACE INTO reports (root_cid, payload, inference_hash, created_at)
                     VALUES (?, ?, ?, ?)
                     """,
-                    (report_id, canonical_json(report), content, created_at),
+                    (root_cid, canonical_json(report), content, created_at),
                 )
-        return f"http://localhost:8000/api/reports/{report_id}"
+        # No CID to anchor — the caller must leave CurrentCID untouched
+        # rather than pointing the ledger at something that isn't in IPFS.
+        return None
 
-    def get_report(self, report_id: str) -> Optional[Dict[str, Any]]:
+    def get_report(self, root_cid: str) -> Optional[Dict[str, Any]]:
         with self._lock:
             row = self._conn.execute(
-                "SELECT cid, content_hash FROM report_index WHERE report_id=?", (report_id,)
+                "SELECT current_cid, inference_hash FROM report_index WHERE root_cid=?", (root_cid,)
             ).fetchone()
         if row:
             try:
-                blob = json.loads(self._ipfs.cat_bytes(row["cid"]).decode("utf-8"))
-                blob["report_id"] = report_id
-                blob["content_hash"] = row["content_hash"]
+                blob = json.loads(self._ipfs.cat_bytes(row["current_cid"]).decode("utf-8"))
+                blob["root_cid"] = root_cid
+                blob["current_cid"] = row["current_cid"]
+                blob.setdefault("previous_cid", None)
+                blob["inference_hash"] = row["inference_hash"]
                 return blob
             except StorageError:
                 pass
         with self._lock:
             local = self._conn.execute(
-                "SELECT payload FROM reports WHERE report_id=?", (report_id,)
+                "SELECT payload FROM reports WHERE root_cid=?", (root_cid,)
             ).fetchone()
         return json.loads(local["payload"]) if local else None
 
     def list_report_ids(self) -> List[str]:
         with self._lock:
-            rows = self._conn.execute("SELECT report_id FROM reports").fetchall()
-            ipfs_rows = self._conn.execute("SELECT report_id FROM report_index").fetchall()
-        ids = {r["report_id"] for r in rows} | {r["report_id"] for r in ipfs_rows}
+            rows = self._conn.execute("SELECT root_cid FROM reports").fetchall()
+            ipfs_rows = self._conn.execute("SELECT root_cid FROM report_index").fetchall()
+        ids = {r["root_cid"] for r in rows} | {r["root_cid"] for r in ipfs_rows}
         return sorted(ids)

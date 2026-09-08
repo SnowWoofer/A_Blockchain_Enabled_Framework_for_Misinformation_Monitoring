@@ -6,7 +6,7 @@ class Settings(BaseSettings):
 
     # --- Kafka ---
     kafka_bootstrap_servers: str = "kafka:9092"
-    kafka_input_topic: str = "claims.flagged"
+    kafka_input_topic: str = "claims.inferenced"
     kafka_consumer_group: str = "submission-worker"
 
     # --- Blockchain gateway (apps/blockchain_gateway) ---

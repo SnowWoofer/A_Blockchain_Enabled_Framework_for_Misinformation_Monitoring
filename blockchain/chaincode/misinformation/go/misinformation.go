@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/hyperledger/fabric-contract-api-go/v2/contractapi"
+	"sort"
 	"strings"
 	"time"
 )
@@ -13,6 +14,7 @@ const (
 	statusPending           = "PENDING"
 	statusUnderReview       = "UNDER_REVIEW"
 	statusFinal             = "FINAL"
+	statusReopened          = "REOPENED"
 	statusRejected          = "REJECTED"
 	statusExpired           = "EXPIRED"
 	admissionPending        = "PENDING"
@@ -20,6 +22,19 @@ const (
 	admissionRejected       = "REJECTED"
 	defaultFoundingOrgLimit = 3
 	factCheckWindow         = 72 * time.Hour
+
+	// Panel sizes are the minimum number of fact-checks a round must gather
+	// before it can close. They are deliberately odd and grow by two: with a
+	// binary outcome an odd panel cannot split evenly, so a tie is
+	// structurally impossible at every round and no tie-breaking logic
+	// exists anywhere in this contract.
+	initialPanel = 3
+	panelStep    = 2
+	// A claim may be reopened at most this many times. Escalation alone is
+	// not a bound — at 100 orgs a panel growing by two would allow 32 rounds,
+	// which is churn, not due process. Three reopens is the policy limit;
+	// the panel ceiling below is the physical one.
+	maxReopenRounds = 3
 
 	// Fact-check outcome domain — the same binary label domain the model
 	// predicts into (ReportRecord.InferenceLabel), so a finalised
@@ -42,28 +57,66 @@ func isValidOutcome(v string) bool {
 // "vote"/election framing belongs to genuine governance decisions like org
 // admission (see Vote/OrgAdmissionRequest below), not to fact-finding. The
 // fact-checker's actual reasoning/evidence live off-chain, in the versioned
-// IPFS document — only its CID is anchored here (ReportRecord.ReportID),
+// IPFS document — only its CID is anchored here (ReportRecord.RootCID),
 // never the content itself.
 type FactCheck struct {
 	CheckerMSP string `json:"checker_msp"`
 	Outcome    string `json:"outcome"`
-	TxID       string `json:"txid"`
+	TxID       string `json:"tx_id"`
+	// Round this check belongs to. Tallies are per-round: reopening starts a
+	// fresh panel, and every org — including those who checked before — may
+	// check again, because new evidence is exactly what a reopen is for.
+	Round int `json:"round"`
+}
+
+// Reopen records one challenge to a finalised verdict. Kept as a list rather
+// than a single field so the full challenge history is readable from the
+// record itself: "which orgs keep reopening claims that are then reaffirmed?"
+// is the question a consortium would ask when it suspects bad faith, and an
+// audit trail that has to be reconstructed by diffing block history is a
+// weaker guarantee than one that can simply be read.
+type Reopen struct {
+	OrgMSP string `json:"org_msp"`
+	Round  int    `json:"round"`
+	At     string `json:"at"`
+	TxID   string `json:"tx_id"`
 }
 
 type ReportRecord struct {
-	ReportID          string      `json:"id"`
-	ContentHash       string      `json:"content_hash"`
-	ProposedLabel     string      `json:"inference_label"`
-	Confidence        float64     `json:"confidence"`
-	ModelVersion      string      `json:"model_version"`
-	Timestamp         string      `json:"timestamp"`
-	SubmittedBy       string      `json:"submitted_by"`
-	FactCheckDeadline string      `json:"fact_check_deadline"`
-	Status            string      `json:"status"`
-	FactChecks        []FactCheck `json:"fact_checks"`
-	FinalLabel        string      `json:"final_label,omitempty" metadata:",optional"`
-	FinalizedBy       string      `json:"finalized_by,omitempty" metadata:",optional"`
-	FinalizedAt       string      `json:"finalized_at,omitempty" metadata:",optional"`
+	RootCID string `json:"root_cid"`
+	// CurrentCID is the head of this claim's off-chain version chain. It
+	// equals RootCID at submission and advances on every re-publish, so the
+	// ledger — not the gateway's local index — is the authority on which
+	// document version the consortium actually endorsed. Walk backwards from
+	// it via each document's own previous_cid to recover the full history.
+	CurrentCID    string  `json:"current_cid"`
+	InferenceHash string  `json:"inference_hash"`
+	ProposedLabel string  `json:"inference_label"`
+	Confidence    float64 `json:"confidence"`
+	ModelVersion  string  `json:"model_version"`
+	Timestamp     string  `json:"timestamp"`
+	SubmittedBy   string  `json:"submitted_by"`
+	// TxID is the transaction that created this record. Written once by
+	// Submit and never touched again, so it is immutable like the rest of
+	// the claim's identity. "What wrote this record last" is deliberately
+	// not stored — GetHistoryForKey already states it, and duplicating that
+	// in mutable state only invites the two to disagree. Each FactCheck
+	// carries its own TxID because history merely *implies* which
+	// transaction added which entry (by diffing array lengths); this one
+	// records what history states outright.
+	TxID              string `json:"tx_id"`
+	FactCheckDeadline string `json:"fact_check_deadline"`
+	// Round 0 is the original review; each reopen increments it. RequiredPanel
+	// is how many checks this round must gather before it can close, growing
+	// by panelStep each time: 3, 5, 7 … capped at the governance quorum.
+	Round         int         `json:"round"`
+	RequiredPanel int         `json:"required_panel"`
+	Reopens       []Reopen    `json:"reopens,omitempty" metadata:",optional"`
+	Status        string      `json:"status"`
+	FactChecks    []FactCheck `json:"fact_checks"`
+	FinalLabel    string      `json:"final_label,omitempty" metadata:",optional"`
+	FinalizedBy   string      `json:"finalized_by,omitempty" metadata:",optional"`
+	FinalizedAt   string      `json:"finalized_at,omitempty" metadata:",optional"`
 }
 
 type RegisteredOrg struct {
@@ -78,7 +131,7 @@ type RegisteredOrg struct {
 type Vote struct {
 	VoterMSP string `json:"voter_msp"`
 	Verdict  string `json:"verdict"`
-	TxID     string `json:"txid"`
+	TxID     string `json:"tx_id"`
 }
 
 type OrgAdmissionRequest struct {
@@ -96,8 +149,8 @@ type MisinformationContract struct {
 	contractapi.Contract
 }
 
-func newReportKey(ctx contractapi.TransactionContextInterface, reportID string) (string, error) {
-	return ctx.GetStub().CreateCompositeKey("pred", []string{reportID})
+func newReportKey(ctx contractapi.TransactionContextInterface, rootCID string) (string, error) {
+	return ctx.GetStub().CreateCompositeKey("pred", []string{rootCID})
 }
 
 func newOrgKey(ctx contractapi.TransactionContextInterface, mspid string) (string, error) {
@@ -151,9 +204,9 @@ func (c *MisinformationContract) SetFoundingOrgLimit(
 	return limit, nil
 }
 
-func validateReportInput(reportID, contentHash, label, modelVersion, timestamp string, confidence float64) error {
-	if strings.TrimSpace(reportID) == "" {
-		return fmt.Errorf("report_id must not be empty")
+func validateReportInput(rootCID, inferenceHash, label, modelVersion, timestamp string, confidence float64) error {
+	if strings.TrimSpace(rootCID) == "" {
+		return fmt.Errorf("root_cid must not be empty")
 	}
 	if label != "0" && label != "1" {
 		return fmt.Errorf("label must be \"0\" or \"1\", got %q", label)
@@ -164,11 +217,11 @@ func validateReportInput(reportID, contentHash, label, modelVersion, timestamp s
 	if strings.TrimSpace(modelVersion) == "" {
 		return fmt.Errorf("model_version must not be empty")
 	}
-	if len(contentHash) != 64 {
-		return fmt.Errorf("content_hash must be a 64-char sha256 hex digest, got %d chars", len(contentHash))
+	if len(inferenceHash) != 64 {
+		return fmt.Errorf("inference_hash must be a 64-char sha256 hex digest, got %d chars", len(inferenceHash))
 	}
-	if _, err := hex.DecodeString(contentHash); err != nil {
-		return fmt.Errorf("content_hash is not valid hex: %v", err)
+	if _, err := hex.DecodeString(inferenceHash); err != nil {
+		return fmt.Errorf("inference_hash is not valid hex: %v", err)
 	}
 	if _, err := time.Parse(time.RFC3339, timestamp); err != nil {
 		return fmt.Errorf("timestamp must be RFC3339 UTC, got %q: %v", timestamp, err)
@@ -388,7 +441,7 @@ func (c *MisinformationContract) VoteOnOrgAdmission(
 // FinalizeOrgAdmission admits the candidate once at least quorumFor(current
 // registered org count) of its votes are "1" (admit) — a supermajority that
 // scales with consortium size, deliberately a higher and different bar than
-// the fixed 2-vote/tiebreak rule FinalizeReport uses for fact-checking a
+// the fixed 2-check/tiebreak rule applyConsensus uses for fact-checking a
 // single claim: admitting a new permanent member is a governance decision,
 // not a per-claim verdict.
 func (c *MisinformationContract) FinalizeOrgAdmission(
@@ -488,11 +541,11 @@ func (c *MisinformationContract) QueryOrgAdmission(
 
 func (c *MisinformationContract) Submit(
 	ctx contractapi.TransactionContextInterface,
-	reportID, contentHash, label string,
+	rootCID, inferenceHash, label string,
 	confidence float64,
 	modelVersion, timestamp string,
 ) error {
-	if err := validateReportInput(reportID, contentHash, label, modelVersion, timestamp, confidence); err != nil {
+	if err := validateReportInput(rootCID, inferenceHash, label, modelVersion, timestamp, confidence); err != nil {
 		return err
 	}
 	submittedBy, err := ctx.GetClientIdentity().GetMSPID()
@@ -504,26 +557,30 @@ func (c *MisinformationContract) Submit(
 	} else if !ok {
 		return fmt.Errorf("org %s is not a registered stakeholder; call RegisterOrg first", submittedBy)
 	}
-	key, err := newReportKey(ctx, reportID)
+	key, err := newReportKey(ctx, rootCID)
 	if err != nil {
 		return fmt.Errorf("failed to build key: %v", err)
 	}
 	if exists, _ := ctx.GetStub().GetState(key); exists != nil {
-		return fmt.Errorf("report %s already exists (immutable once finalised)", reportID)
+		return fmt.Errorf("report %s already exists (immutable once finalised)", rootCID)
 	}
 	deadline := time.Now().UTC().Add(factCheckWindow).Format(time.RFC3339)
 	if txTS, err := ctx.GetStub().GetTxTimestamp(); err == nil && txTS != nil {
 		deadline = txTS.AsTime().Add(factCheckWindow).UTC().Format(time.RFC3339)
 	}
 	record := ReportRecord{
-		ReportID:          reportID,
-		ContentHash:       contentHash,
+		RootCID:           rootCID,
+		CurrentCID:        rootCID,
+		InferenceHash:     inferenceHash,
 		ProposedLabel:     label,
 		Confidence:        confidence,
 		ModelVersion:      modelVersion,
 		Timestamp:         timestamp,
 		SubmittedBy:       submittedBy,
+		TxID:              ctx.GetStub().GetTxID(),
 		FactCheckDeadline: deadline,
+		Round:             0,
+		RequiredPanel:     initialPanel,
 		Status:            statusPending,
 		FactChecks:        []FactCheck{},
 	}
@@ -539,12 +596,16 @@ func (c *MisinformationContract) Submit(
 
 // SubmitFactCheck records a fact-checker's outcome on a claim — only what the
 // on-chain consensus tally needs. The reasoning/support behind the outcome
-// live off-chain, in a re-published IPFS document; the ledger stores no
-// pointer to it, since the claim's id is itself the off-chain address.
+// live off-chain, in a re-published IPFS document whose CID is anchored here
+// as CurrentCID, so the version carrying this fact-check is itself
+// tamper-evident rather than trusted from the gateway's local index.
 func (c *MisinformationContract) SubmitFactCheck(
 	ctx contractapi.TransactionContextInterface,
-	reportID, outcome string,
+	rootCID, outcome, newCID string,
 ) error {
+	if strings.TrimSpace(newCID) == "" {
+		return fmt.Errorf("newCID must not be empty")
+	}
 	checkerMSP, err := ctx.GetClientIdentity().GetMSPID()
 	if err != nil {
 		return fmt.Errorf("failed to read caller MSP: %v", err)
@@ -557,7 +618,7 @@ func (c *MisinformationContract) SubmitFactCheck(
 	if !isValidOutcome(outcome) {
 		return fmt.Errorf("outcome must be \"0\" or \"1\", got %q", outcome)
 	}
-	key, err := newReportKey(ctx, reportID)
+	key, err := newReportKey(ctx, rootCID)
 	if err != nil {
 		return fmt.Errorf("failed to build key: %v", err)
 	}
@@ -566,26 +627,32 @@ func (c *MisinformationContract) SubmitFactCheck(
 		return fmt.Errorf("failed to read state: %v", err)
 	}
 	if recordBytes == nil {
-		return fmt.Errorf("no report found for %s", reportID)
+		return fmt.Errorf("no report found for %s", rootCID)
 	}
 	var record ReportRecord
 	if err := json.Unmarshal(recordBytes, &record); err != nil {
 		return fmt.Errorf("failed to unmarshal record: %v", err)
 	}
-	if record.Status != statusPending && record.Status != statusUnderReview {
-		return fmt.Errorf("report %s is %s; only PENDING/UNDER_REVIEW reports accept fact-checks", reportID, record.Status)
+	if record.Status != statusPending && record.Status != statusUnderReview && record.Status != statusReopened {
+		return fmt.Errorf("report %s is %s; only PENDING/UNDER_REVIEW/REOPENED reports accept fact-checks", rootCID, record.Status)
 	}
+	// One check per org per round, not per report: a reopen exists precisely
+	// so the question can be examined again, and the orgs that examined it
+	// before are the ones most likely to hold new evidence.
 	for _, v := range record.FactChecks {
-		if v.CheckerMSP == checkerMSP {
-			return fmt.Errorf("org %s has already fact-checked report %s", checkerMSP, reportID)
+		if v.CheckerMSP == checkerMSP && v.Round == record.Round {
+			return fmt.Errorf("org %s has already fact-checked report %s in round %d", checkerMSP, rootCID, record.Round)
 		}
 	}
 	record.FactChecks = append(record.FactChecks, FactCheck{
 		CheckerMSP: checkerMSP,
 		Outcome:    outcome,
 		TxID:       ctx.GetStub().GetTxID(),
+		Round:      record.Round,
 	})
 	record.Status = statusUnderReview
+	record.CurrentCID = newCID
+	applyConsensus(ctx, &record, checkerMSP)
 	recordBytes, err = json.Marshal(record)
 	if err != nil {
 		return fmt.Errorf("failed to marshal record: %v", err)
@@ -596,35 +663,94 @@ func (c *MisinformationContract) SubmitFactCheck(
 	return nil
 }
 
-// tallyFactChecks counts fact-checks per outcome. The outcome domain is
-// binary ("0"/"1"), so at most two keys ever exist and map iteration order
-// cannot affect which outcome wins or whether a tie is detected.
-func tallyFactChecks(checks []FactCheck) map[string]int {
-	tally := make(map[string]int)
+// tallyRound counts the fact-checks belonging to one round, per outcome. The
+// outcome domain is binary, so at most two keys ever exist and map iteration
+// order cannot affect which outcome wins.
+func tallyRound(checks []FactCheck, round int) (map[string]int, int) {
+	tally, n := make(map[string]int), 0
 	for _, v := range checks {
-		tally[v.Outcome]++
+		if v.Round == round {
+			tally[v.Outcome]++
+			n++
+		}
 	}
-	return tally
+	return tally, n
 }
 
-// FinalizeReport closes a report once at least 2 fact-checks exist and
-// one outcome has a strict majority: 2 agreeing fact-checks finalise
-// immediately; 2 disagreeing fact-checks stay PENDING until a 3rd
-// fact-check breaks the tie.
-func (c *MisinformationContract) FinalizeReport(
+// supermajorityOf returns how many agreeing checks a panel of n needs: a
+// two-thirds supermajority, rounded up. One ratio governs every round — the
+// escalation on reopen comes from the panel growing, not from moving the bar,
+// so there is a single number to state and defend.
+func supermajorityOf(n int) int {
+	return (2*n + 2) / 3
+}
+
+// applyConsensus closes the report in place once the current round has
+// gathered its required panel and one outcome holds a two-thirds
+// supermajority of it. Panels are odd, so no round can deadlock on a tie.
+//
+// This runs inside SubmitFactCheck rather than being its own transaction. The
+// decision is a pure function of fact-checks already on the ledger — no caller
+// supplies anything to it — so there is nothing for anyone to decide, and a
+// settled report should not sit open waiting for someone to remember to close
+// it. FinalizedBy is therefore the org whose fact-check closed it, which is a
+// truer fact than whoever happened to run a finalise command.
+func applyConsensus(ctx contractapi.TransactionContextInterface, record *ReportRecord, closerMSP string) {
+	panel := record.RequiredPanel
+	if panel < initialPanel {
+		panel = initialPanel
+	}
+	tally, n := tallyRound(record.FactChecks, record.Round)
+	if n < panel {
+		return
+	}
+	needed := supermajorityOf(n)
+	winner, winnerCount := "", 0
+	for outcome, count := range tally {
+		if count > winnerCount {
+			winner, winnerCount = outcome, count
+		}
+	}
+	if winnerCount < needed {
+		return
+	}
+	record.FinalLabel = winner
+	record.Status = statusFinal
+	record.FinalizedBy = closerMSP
+	record.FinalizedAt = deterministicTimestamp(ctx)
+}
+
+// ReopenReport puts a finalised claim back under review. Any registered org
+// may reopen — a low bar to close is only defensible if verdicts are
+// correctable, so no organisation needs permission to raise a question.
+//
+// Three properties keep that from being an attack surface. The standing
+// FinalLabel is deliberately NOT cleared: it remains the consortium's answer
+// throughout the new round, so reopening cannot be used to make an
+// inconvenient verdict disappear while the round runs. The required panel
+// grows by panelStep, so overturning a verdict is strictly harder than
+// establishing one was. And the round carries its own deadline: a challenge
+// that cannot gather its panel expires and the standing verdict is
+// reaffirmed, which makes a frivolous reopen strengthen what it attacked
+// rather than leave it in limbo.
+//
+// Escalation is capped at the governance quorum. A claim confirmed by a panel
+// that large has met the same bar as admitting a permanent member, and is
+// terminal — that ceiling is what stops reopening from cycling forever.
+func (c *MisinformationContract) ReopenReport(
 	ctx contractapi.TransactionContextInterface,
-	reportID string,
+	rootCID string,
 ) error {
-	finalizerMSP, err := ctx.GetClientIdentity().GetMSPID()
+	callerMSP, err := ctx.GetClientIdentity().GetMSPID()
 	if err != nil {
 		return fmt.Errorf("failed to read caller MSP: %v", err)
 	}
-	if ok, err := c.isRegisteredOrg(ctx, finalizerMSP); err != nil {
+	if ok, err := c.isRegisteredOrg(ctx, callerMSP); err != nil {
 		return err
 	} else if !ok {
-		return fmt.Errorf("org %s is not a registered stakeholder; call RegisterOrg first", finalizerMSP)
+		return fmt.Errorf("org %s is not a registered stakeholder; call RegisterOrg first", callerMSP)
 	}
-	key, err := newReportKey(ctx, reportID)
+	key, err := newReportKey(ctx, rootCID)
 	if err != nil {
 		return fmt.Errorf("failed to build key: %v", err)
 	}
@@ -633,48 +759,120 @@ func (c *MisinformationContract) FinalizeReport(
 		return fmt.Errorf("failed to read state: %v", err)
 	}
 	if recordBytes == nil {
-		return fmt.Errorf("no report found for %s", reportID)
+		return fmt.Errorf("no report found for %s", rootCID)
 	}
 	var record ReportRecord
 	if err := json.Unmarshal(recordBytes, &record); err != nil {
 		return fmt.Errorf("failed to unmarshal record: %v", err)
 	}
-	if record.Status != statusPending && record.Status != statusUnderReview {
-		return fmt.Errorf("report %s is %s; only PENDING/UNDER_REVIEW reports can be finalised", reportID, record.Status)
+	if record.Status != statusFinal {
+		return fmt.Errorf("report %s is %s; only FINAL reports can be reopened", rootCID, record.Status)
 	}
-	if len(record.FactChecks) < 2 {
-		return fmt.Errorf("report %s has %d fact-check(s); at least 2 fact-checks are required to finalise", reportID, len(record.FactChecks))
-	}
-	tally := tallyFactChecks(record.FactChecks)
-	winner, winnerCount, tied := "", 0, false
-	for outcome, count := range tally {
-		switch {
-		case count > winnerCount:
-			winner, winnerCount, tied = outcome, count, false
-		case count == winnerCount && winnerCount > 0:
-			tied = true
+	// One reopen per org per report. The round cap is a budget for the
+	// report, so without this a single actor could spend all of it alone and
+	// leave a later, well-founded challenge with no recourse. Exhausting it
+	// now takes three separate organisations, each permanently named below.
+	for _, r := range record.Reopens {
+		if r.OrgMSP == callerMSP {
+			return fmt.Errorf("org %s has already reopened report %s (in round %d)", callerMSP, rootCID, r.Round)
 		}
 	}
-	if tied {
-		return fmt.Errorf("report %s is tied at %d-%d; a tie-breaking fact-check is required to finalise", reportID, winnerCount, winnerCount)
+	if record.Round >= maxReopenRounds {
+		return fmt.Errorf(
+			"report %s is settled: it has already been reopened %d times, the limit",
+			rootCID, record.Round)
 	}
-	record.FinalLabel = winner
-	record.Status = statusFinal
-	record.FinalizedBy = finalizerMSP
-	record.FinalizedAt = deterministicTimestamp(ctx)
-	recordBytes, err = json.Marshal(record)
+	orgs, err := c.getRegisteredOrgs(ctx)
+	if err != nil {
+		return err
+	}
+	// The panel cannot exceed the consortium — there would be nobody left to
+	// seat on it. This is a physical limit, not a policy one, and it is what
+	// makes escalating reopen unavailable to consortiums smaller than
+	// initialPanel + panelStep.
+	nextPanel := record.RequiredPanel + panelStep
+	if nextPanel > len(orgs) {
+		return fmt.Errorf(
+			"report %s cannot be reopened: the next round needs a panel of %d but only %d orgs are registered",
+			rootCID, nextPanel, len(orgs))
+	}
+	record.Round++
+	record.RequiredPanel = nextPanel
+	record.Status = statusReopened
+	record.Reopens = append(record.Reopens, Reopen{
+		OrgMSP: callerMSP,
+		Round:  record.Round,
+		At:     deterministicTimestamp(ctx),
+		TxID:   ctx.GetStub().GetTxID(),
+	})
+	// A fresh window for the new round. FinalLabel/FinalizedBy stay as they
+	// are: the previous verdict stands until this round overturns it.
+	deadline := time.Now().UTC().Add(factCheckWindow).Format(time.RFC3339)
+	if txTS, err := ctx.GetStub().GetTxTimestamp(); err == nil && txTS != nil {
+		deadline = txTS.AsTime().Add(factCheckWindow).UTC().Format(time.RFC3339)
+	}
+	record.FactCheckDeadline = deadline
+	updated, err := json.Marshal(record)
 	if err != nil {
 		return fmt.Errorf("failed to marshal record: %v", err)
 	}
-	if err := ctx.GetStub().PutState(key, recordBytes); err != nil {
-		return fmt.Errorf("failed to write finalised record: %v", err)
+	if err := ctx.GetStub().PutState(key, updated); err != nil {
+		return fmt.Errorf("failed to write reopened record: %v", err)
+	}
+	return nil
+}
+
+// SetCurrentCID advances a claim's off-chain version pointer. Most
+// re-publishes ride along with the invoke that caused them (SubmitFactCheck
+// carries its own newCID), but finalisation is inherently two-phase: the new
+// document records the FinalLabel that applyConsensus itself computes, so its
+// CID cannot exist until after that transaction commits. This closes that
+// window rather than leaving the pointer one version stale.
+func (c *MisinformationContract) SetCurrentCID(
+	ctx contractapi.TransactionContextInterface,
+	rootCID, newCID string,
+) error {
+	if strings.TrimSpace(newCID) == "" {
+		return fmt.Errorf("newCID must not be empty")
+	}
+	callerMSP, err := ctx.GetClientIdentity().GetMSPID()
+	if err != nil {
+		return fmt.Errorf("failed to read caller MSP: %v", err)
+	}
+	if ok, err := c.isRegisteredOrg(ctx, callerMSP); err != nil {
+		return err
+	} else if !ok {
+		return fmt.Errorf("org %s is not a registered stakeholder; call RegisterOrg first", callerMSP)
+	}
+	key, err := newReportKey(ctx, rootCID)
+	if err != nil {
+		return fmt.Errorf("failed to build key: %v", err)
+	}
+	recordBytes, err := ctx.GetStub().GetState(key)
+	if err != nil {
+		return fmt.Errorf("failed to read state: %v", err)
+	}
+	if recordBytes == nil {
+		return fmt.Errorf("no report found for %s", rootCID)
+	}
+	var record ReportRecord
+	if err := json.Unmarshal(recordBytes, &record); err != nil {
+		return fmt.Errorf("failed to unmarshal record: %v", err)
+	}
+	record.CurrentCID = newCID
+	updated, err := json.Marshal(record)
+	if err != nil {
+		return fmt.Errorf("failed to marshal record: %v", err)
+	}
+	if err := ctx.GetStub().PutState(key, updated); err != nil {
+		return fmt.Errorf("failed to write record: %v", err)
 	}
 	return nil
 }
 
 func (c *MisinformationContract) ExpireReport(
 	ctx contractapi.TransactionContextInterface,
-	reportID string,
+	rootCID string,
 ) error {
 	finalizerMSP, err := ctx.GetClientIdentity().GetMSPID()
 	if err != nil {
@@ -685,7 +883,7 @@ func (c *MisinformationContract) ExpireReport(
 	} else if !ok {
 		return fmt.Errorf("org %s is not a registered stakeholder; call RegisterOrg first", finalizerMSP)
 	}
-	key, err := newReportKey(ctx, reportID)
+	key, err := newReportKey(ctx, rootCID)
 	if err != nil {
 		return fmt.Errorf("failed to build key: %v", err)
 	}
@@ -694,21 +892,38 @@ func (c *MisinformationContract) ExpireReport(
 		return fmt.Errorf("failed to read state: %v", err)
 	}
 	if recordBytes == nil {
-		return fmt.Errorf("no report found for %s", reportID)
+		return fmt.Errorf("no report found for %s", rootCID)
 	}
 	var record ReportRecord
 	if err := json.Unmarshal(recordBytes, &record); err != nil {
 		return fmt.Errorf("failed to unmarshal record: %v", err)
 	}
-	if record.Status != statusPending && record.Status != statusUnderReview {
-		return fmt.Errorf("report %s is %s; only PENDING/UNDER_REVIEW reports can expire", reportID, record.Status)
+	if record.Status != statusPending && record.Status != statusUnderReview && record.Status != statusReopened {
+		return fmt.Errorf("report %s is %s; only PENDING/UNDER_REVIEW/REOPENED reports can expire", rootCID, record.Status)
 	}
 	expired, err := isPastDeadline(record.FactCheckDeadline)
 	if err != nil {
 		return err
 	}
 	if !expired {
-		return fmt.Errorf("report %s is still within its fact-check window (deadline %s)", reportID, record.FactCheckDeadline)
+		return fmt.Errorf("report %s is still within its fact-check window (deadline %s)", rootCID, record.FactCheckDeadline)
+	}
+	if record.Status == statusReopened {
+		// A challenge that could not gather its panel fails, and the verdict
+		// it questioned is reaffirmed rather than the claim being discarded.
+		// This is what stops a frivolous reopen from parking a claim in limbo
+		// forever: the standing answer comes back, stronger for having held.
+		record.Status = statusFinal
+		record.FinalizedBy = finalizerMSP
+		record.FinalizedAt = deterministicTimestamp(ctx)
+		updated, err := json.Marshal(record)
+		if err != nil {
+			return fmt.Errorf("failed to marshal record: %v", err)
+		}
+		if err := ctx.GetStub().PutState(key, updated); err != nil {
+			return fmt.Errorf("failed to write reaffirmed record: %v", err)
+		}
+		return nil
 	}
 	record.Status = statusExpired
 	record.FinalizedBy = finalizerMSP
@@ -733,9 +948,9 @@ func isPastDeadline(rfc3339 string) (bool, error) {
 
 func (c *MisinformationContract) QueryReport(
 	ctx contractapi.TransactionContextInterface,
-	reportID string,
+	rootCID string,
 ) (*ReportRecord, error) {
-	key, err := newReportKey(ctx, reportID)
+	key, err := newReportKey(ctx, rootCID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build key: %v", err)
 	}
@@ -744,7 +959,7 @@ func (c *MisinformationContract) QueryReport(
 		return nil, fmt.Errorf("failed to read state: %v", err)
 	}
 	if recordBytes == nil {
-		return nil, fmt.Errorf("no report found for %s", reportID)
+		return nil, fmt.Errorf("no report found for %s", rootCID)
 	}
 	var record ReportRecord
 	if err := json.Unmarshal(recordBytes, &record); err != nil {
@@ -766,15 +981,15 @@ type ReportHistoryEntry struct {
 // the blockchain already is that history, this just exposes it.
 func (c *MisinformationContract) QueryReportHistory(
 	ctx contractapi.TransactionContextInterface,
-	reportID string,
+	rootCID string,
 ) ([]*ReportHistoryEntry, error) {
-	key, err := newReportKey(ctx, reportID)
+	key, err := newReportKey(ctx, rootCID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build key: %v", err)
 	}
 	iter, err := ctx.GetStub().GetHistoryForKey(key)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read history for %s: %v", reportID, err)
+		return nil, fmt.Errorf("failed to read history for %s: %v", rootCID, err)
 	}
 	defer iter.Close()
 	var entries []*ReportHistoryEntry
@@ -799,8 +1014,19 @@ func (c *MisinformationContract) QueryReportHistory(
 		entries = append(entries, entry)
 	}
 	if entries == nil {
-		return nil, fmt.Errorf("no report found for %s", reportID)
+		return nil, fmt.Errorf("no report found for %s", rootCID)
 	}
+	// Sort explicitly rather than trusting the iterator. GetHistoryForKey was
+	// observed returning newest-first on this deployment while the contract
+	// documents oldest-first, and callers reasonably read entries[0] as the
+	// submission. TxID breaks ties so the result is deterministic across
+	// peers even if two writes share a block timestamp.
+	sort.SliceStable(entries, func(i, j int) bool {
+		if entries[i].Timestamp != entries[j].Timestamp {
+			return entries[i].Timestamp < entries[j].Timestamp
+		}
+		return entries[i].TxID < entries[j].TxID
+	})
 	return entries, nil
 }
 

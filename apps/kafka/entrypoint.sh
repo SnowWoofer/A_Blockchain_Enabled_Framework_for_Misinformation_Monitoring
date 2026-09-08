@@ -27,7 +27,7 @@ fi
 # ordering) - so pin partition counts here instead of leaving them accidental.
 # Topic names must match KAFKA_INPUT_TOPIC / KAFKA_OUTPUT_TOPIC in the
 # flagging-engine's app/config.py.
-KAFKA_TOPICS=${KAFKA_TOPICS:-claims.raw,claims.flagged}
+KAFKA_TOPICS=${KAFKA_TOPICS:-claims.raw,claims.inferenced}
 KAFKA_TOPIC_PARTITIONS=${KAFKA_TOPIC_PARTITIONS:-3}
 
 (

@@ -19,7 +19,9 @@ TEST_NETWORK="${FABRIC_SAMPLES:-${PROJECT_ROOT}/fabric-samples}/test-network"
 ADD_ORG3="${TEST_NETWORK}/addOrg3"
 
 CC_NAME="misinformation"
-CC_VERSION="2.2"
+# Inherited from deploy.sh so the three scripts cannot drift; whichever
+# runs last stamps the committed label, and they used to disagree.
+CC_VERSION="${CC_VERSION:-2.5}"
 CC_SEQUENCE="2"
 CHANNEL_NAME="mychannel"
 POLICY="OutOf(2, 'Org1MSP.member','Org2MSP.member','Org3MSP.member')"

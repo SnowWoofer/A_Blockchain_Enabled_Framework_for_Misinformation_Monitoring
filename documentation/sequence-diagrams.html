@@ -1,0 +1,166 @@
+<title>Framework Sequence Diagrams</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400&display=swap">
+<style>
+:root{
+  --ground:#F5F7F9;--surface:#FFF;--surface-2:#EAEEF2;--inset:#F0F3F6;
+  --ink:#151A21;--ink-2:#4B5563;--ink-3:#7A8493;--rule:#DCE2E8;
+  --k:#4F4FC4;--k-bg:#ECECFA;--c:#0A6B74;--c-bg:#DFF0F1;--i:#A26400;--i-bg:#FBF1DF;
+  --warn:#9A2F2F;--warn-bg:#FBEBEB;
+  --shadow:0 1px 2px rgba(20,26,34,.05),0 8px 24px -16px rgba(20,26,34,.25);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --ground:#0E1219;--surface:#161C25;--surface-2:#1E2530;--inset:#11161E;
+  --ink:#E9ECF1;--ink-2:#A9B2BF;--ink-3:#767F8D;--rule:#28313D;
+  --k:#9C9CF2;--k-bg:#1B1B2E;--c:#54C6D1;--c-bg:#10272A;--i:#E2A33A;--i-bg:#2A2113;
+  --warn:#E88A8A;--warn-bg:#2A1616;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px -16px rgba(0,0,0,.7);
+}}
+:root[data-theme="dark"]{
+  --ground:#0E1219;--surface:#161C25;--surface-2:#1E2530;--inset:#11161E;
+  --ink:#E9ECF1;--ink-2:#A9B2BF;--ink-3:#767F8D;--rule:#28313D;
+  --k:#9C9CF2;--k-bg:#1B1B2E;--c:#54C6D1;--c-bg:#10272A;--i:#E2A33A;--i-bg:#2A2113;
+  --warn:#E88A8A;--warn-bg:#2A1616;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px -16px rgba(0,0,0,.7);
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);
+  font-family:"Source Serif 4",Georgia,serif;font-size:16px;line-height:1.62;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1000px;margin:0 auto;padding:48px 24px 90px}
+h1,h2,.ui,figcaption b{font-family:Archivo,"Helvetica Neue",Arial,sans-serif}
+code{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-size:.85em;
+  background:var(--surface-2);padding:1px 5px;border-radius:3px}
+.mast{border-bottom:2px solid var(--ink);padding-bottom:20px;margin-bottom:34px}
+.eyebrow{font-family:Archivo,sans-serif;font-size:11px;font-weight:600;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--ink-3);margin:0 0 12px}
+h1{font-size:clamp(28px,4vw,44px);font-weight:700;letter-spacing:-.026em;margin:0 0 12px;line-height:1.05}
+.standfirst{font-size:17.5px;color:var(--ink-2);max-width:64ch;margin:0}
+figure{margin:0 0 46px;background:var(--surface);border:1px solid var(--rule);
+  border-radius:6px;box-shadow:var(--shadow);overflow:hidden}
+.fighead{padding:15px 20px 0}
+.num{font-family:Archivo,sans-serif;font-size:11px;font-weight:700;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink-3);display:block;margin-bottom:5px}
+h2{font-size:21px;font-weight:650;letter-spacing:-.016em;margin:0 0 8px;text-wrap:balance}
+.lede{color:var(--ink-2);font-size:15.5px;margin:0 0 6px;max-width:70ch}
+.mermaid{padding:12px 16px 4px;overflow-x:auto;text-align:center;background:var(--inset)}
+figcaption{padding:14px 20px 18px;border-top:1px solid var(--rule);font-size:14.5px;color:var(--ink-2)}
+figcaption b{color:var(--ink);font-weight:600}
+.flag{margin:10px 20px 18px;padding:11px 14px;border-radius:4px;font-size:14.5px}
+.flag.c{background:var(--c-bg)} .flag.w{background:var(--warn-bg)} .flag.i{background:var(--i-bg)}
+.flag b{font-family:Archivo,sans-serif;font-size:11px;letter-spacing:.09em;text-transform:uppercase;
+  display:block;margin-bottom:4px}
+.flag.c b{color:var(--c)} .flag.w b{color:var(--warn)} .flag.i b{color:var(--i)}
+footer{margin-top:20px;padding-top:16px;border-top:1px solid var(--rule);
+  font-family:Archivo,sans-serif;font-size:12px;color:var(--ink-3);max-width:72ch}
+a{color:var(--c)}
+:focus-visible{outline:2px solid var(--c);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media (max-width:640px){.wrap{padding:30px 14px 60px}}
+</style>
+<div class="wrap">
+  <div class="mast">
+    <p class="eyebrow">Blockchain-Enabled Framework for Misinformation Monitoring</p>
+    <h1>Framework Sequence Diagrams</h1>
+    <p class="standfirst">Five flows that carry the framework's claims — registration, fact-checking, reopening, a failed challenge, and independent verification — traced through every service they touch.</p>
+  </div>
+<figure><div class="fighead"><span class="num">Figure 01</span><h2>Registration — ingest to ledger</h2><p class="lede">How a claim gets from raw text to an anchored on-chain record. Every claim takes this path regardless of the model's verdict: the AI triages, it never filters.</p></div><pre class="mermaid">sequenceDiagram
+    autonumber
+    participant I as claim-ingest-worker
+    participant K as Kafka
+    participant F as flagging-engine
+    participant S as submission-worker
+    participant G as blockchain_gateway
+    participant P as IPFS
+    participant L as Fabric ledger
+    I->>K: produce claims.raw
+    Note right of I: ingest_id minted here<br/>source_platform + uuid4
+    K->>F: consume
+    F->>F: score — label = argmax<br/>confidence = P(predicted class)
+    F->>K: produce claims.inferenced
+    Note right of F: + label, label_binary, confidence,<br/>misinformation_probability
+    K->>S: consume
+    S->>G: POST /api/reports
+    G->>G: nest into source + inference<br/>inference_hash = sha256(those two only)
+    G->>P: add document (previous_cid = null)
+    P-->>G: root_cid
+    G->>L: Submit(root_cid, inference_hash, label, …)
+    L->>L: status = PENDING<br/>round 0, panel 3
+    L-->>G: committed
+    G-->>S: {root_cid, inference_hash}</pre><figcaption><b>The hash is computed before publication, over a subset.</b> <code>inference_hash</code> covers <code>source</code> and <code>inference</code> and nothing else, so it stays fixed for the life of the claim while the document around it grows. The CID covers the whole document and changes with every version.</figcaption><div class="flag c"><b>Why the gateway hashes rather than the model service</b>The gateway is what anchors to the chain, so it must compute the hash over the document it is actually about to store — otherwise it would be anchoring a value it never verified.</div></figure><figure><div class="fighead"><span class="num">Figure 02</span><h2>Fact-checking — and the finalisation that rides along</h2><p class="lede">There is no finalise call. A claim closes inside the same transaction that carries the fact-check which settled it.</p></div><pre class="mermaid">sequenceDiagram
+    autonumber
+    participant O as Fact-checking org
+    participant FC as fact-checking-service
+    participant G as blockchain_gateway
+    participant P as IPFS
+    participant L as Fabric ledger
+    O->>FC: GET /claims/pending
+    FC->>G: GET /api/reports (open statuses)
+    G->>L: QueryAllReports
+    L-->>FC: records
+    FC-->>O: claims open + not checked this round
+    O->>FC: POST /claims/{id}/fact-check
+    FC->>FC: validate outcome is "0" or "1"
+    FC->>G: POST /api/reports/{id}/fact-check
+    G->>P: publish new version<br/>+ reasoning, support, previous_cid
+    P-->>G: new_cid
+    G->>L: SubmitFactCheck(root_cid, outcome, new_cid)
+    L->>L: guards — open? org not checked this round?
+    L->>L: applyConsensus over this round only
+    alt panel reached and two-thirds agree
+        L->>L: status = FINAL, final_label set<br/>finalized_by = this checker
+    else panel not reached
+        L->>L: status = UNDER_REVIEW
+    end
+    L-->>G: committed (tx_id only)
+    G->>L: QueryReport — did it close?
+    alt it closed
+        G->>P: publish verdict version
+        P-->>G: final_cid
+        G->>L: SetCurrentCID(root_cid, final_cid)
+    end
+    G-->>O: {status, round, checks_this_round, final_label?}</pre><figcaption><b>The gateway re-reads the record after the invoke.</b> The SDK sidecar's <code>/invoke</code> returns only a transaction id, not the chaincode's return value, so the gateway cannot know from the response whether this check was the one that closed the claim.</figcaption><div class="flag i"><b>IPFS is written before the chain — deliberately</b>The reverse order was used until the ledger began anchoring <code>current_cid</code>. Now a rejected invoke simply leaves an unreferenced object: <code>current_cid</code> still points at the previous version, so nothing resolves to the orphan. Publishing first is what lets the new CID be anchored by the same transaction that accepts the fact-check.</div></figure><figure><div class="fighead"><span class="num">Figure 03</span><h2>Reopening — escalation without withdrawal</h2><p class="lede">Any registered org may reopen a settled claim. The panel grows by two, the ratio stays at two-thirds, and the existing verdict remains in force throughout.</p></div><pre class="mermaid">sequenceDiagram
+    autonumber
+    participant O4 as Org4 (challenger)
+    participant G as blockchain_gateway
+    participant L as Fabric ledger
+    participant ALL as Orgs 1–5
+    O4->>G: POST /api/reports/{id}/reopen
+    G->>L: ReopenReport(root_cid)
+    L->>L: guards — FINAL? this org not reopened before?<br/>round < 3? next panel ≤ registered orgs?
+    L->>L: round++, panel += 2, status = REOPENED<br/>append to reopens[] with org + tx_id
+    Note over L: final_label is NOT cleared —<br/>the standing verdict holds all round
+    L-->>G: committed
+    G-->>O4: {REOPENED, round 1, panel 5, standing_label}
+    O4->>G: POST .../reopen (again)
+    G-->>O4: 400 — this org has already reopened
+    ALL->>G: fact-checks, round 1 (orgs that checked<br/>in round 0 may check again)
+    G->>L: SubmitFactCheck × 5
+    L->>L: 4 of 5 agree → FINAL<br/>final_label overturned 1 → 0</pre><figcaption><b>Two orgs can close a claim quickly; no two orgs can close it permanently.</b> Collusion resistance scales with contestation — 2 organisations for an unchallenged claim, up to 6 of 9 for one challenged to the round limit.</figcaption><div class="flag w"><b>Why the verdict must not lift on reopen</b>If reopening cleared <code>final_label</code>, reopening would itself be the attack — anyone wanting a misinformation label gone would simply challenge it and let the label vanish while the round ran.</div></figure><figure><div class="fighead"><span class="num">Figure 04</span><h2>A challenge that fails — expiry reaffirms</h2><p class="lede">The failure path matters as much as the success path: a reopen that cannot gather its panel must not leave the claim stranded.</p></div><pre class="mermaid">sequenceDiagram
+    autonumber
+    participant A as Any registered org
+    participant G as blockchain_gateway
+    participant L as Fabric ledger
+    Note over L: REOPENED, panel 5,<br/>only 2 checks arrived, deadline passed
+    A->>G: POST /api/reports/{id}/expire
+    G->>L: ExpireReport(root_cid)
+    L->>L: past fact_check_deadline?
+    alt was REOPENED
+        L->>L: status → FINAL<br/>standing final_label reaffirmed
+    else was PENDING / UNDER_REVIEW
+        L->>L: status → EXPIRED
+    end
+    L-->>G: committed</pre><figcaption><b>A frivolous reopen strengthens what it attacked.</b> The challenger either overturns the verdict or hands it a second confirmation — there is no outcome where a claim sits contested indefinitely.</figcaption></figure><figure><div class="fighead"><span class="num">Figure 05</span><h2>Independent verification — trusting neither store</h2><p class="lede">What an outside fact-checking organisation running no infrastructure can check for itself.</p></div><pre class="mermaid">sequenceDiagram
+    autonumber
+    participant V as Verifier (no peer, no IPFS node)
+    participant G as blockchain_gateway
+    participant L as Fabric ledger
+    V->>G: GET /api/reports/{root_cid}
+    G-->>V: document — source, inference, fact_checks, …
+    V->>G: GET /api/reports/{root_cid}/chain
+    G->>L: QueryReport
+    L-->>V: anchored inference_hash, status, final_label
+    V->>V: recompute sha256(canonical({source, inference}))
+    V->>V: compare against the anchored value
+    Note over V: Pure arithmetic — no trust in<br/>whoever served the document or the record</pre><figcaption><b>A CID cannot be recomputed by hand; <code>inference_hash</code> can.</b> That is why both exist: the CID proves a document version is byte-intact, and the hash lets anyone with three lines of code prove a document is the claim the consortium anchored.</figcaption></figure>  <footer>Drawn from the running system on 7 September 2026: a five-org Fabric network under an OutOf(2, Org1–Org5) endorsement policy, chaincode <code>misinformation</code> v2.5. Every path shown here was exercised end to end, including the overturned verdict in Figure 03. See also the <a href="./api-reference.html">Service API Reference</a>.</footer>
+</div>

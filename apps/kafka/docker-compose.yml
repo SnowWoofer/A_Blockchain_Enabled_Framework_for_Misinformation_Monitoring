@@ -3,7 +3,7 @@ services:
     build: .
     container_name: kafka
     environment:
-      KAFKA_TOPICS: claims.raw,claims.flagged
+      KAFKA_TOPICS: claims.raw,claims.inferenced
       KAFKA_TOPIC_PARTITIONS: 3
     ports:
       - "9094:9094"

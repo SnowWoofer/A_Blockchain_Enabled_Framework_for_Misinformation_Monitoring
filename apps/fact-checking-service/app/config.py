@@ -12,15 +12,21 @@ class Settings(BaseSettings):
     # X-API-Key); there is no separate account/login layer here. Which
     # individual person at that org is using it is that org's own concern,
     # handled by their internal systems, not this one.
-    org_api_keys: dict[str, str] = {
-        "org1": "key-org1",
-        "org2": "key-org2",
-        "org3": "key-org3",
-        # Client-only member: no peer, no ledger copy — identity only.
-        "org4": "key-org4",
-    }
+    # Consortium membership — the same source of truth blockchain_gateway
+    # uses for its ORGS. The key map below is derived from this rather than
+    # listed separately: the two used to be maintained by hand and drifted, so
+    # a five-org consortium silently locked org5 out of this service (401,
+    # "unknown API key") while the gateway accepted it perfectly well.
+    orgs: str = "org1,org2,org3"
+    # Only needed if the keys are not named key-<org>; otherwise derived.
+    org_api_keys: dict[str, str] = {}
 
     log_level: str = "INFO"
 
 
 settings = Settings()
+
+if not settings.org_api_keys:
+    settings.org_api_keys = {
+        o.strip(): f"key-{o.strip()}" for o in settings.orgs.split(",") if o.strip()
+    }

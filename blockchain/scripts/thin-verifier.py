@@ -35,7 +35,7 @@ def fetch(url: str, api_key: str):
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("report_id")
+    ap.add_argument("root_cid")
     ap.add_argument("--api", default="http://localhost:8000")
     ap.add_argument("--key", default="key-org3")
     ap.add_argument("--document", help="verify a local copy someone handed you, "
@@ -47,18 +47,28 @@ def main() -> int:
         with open(args.document) as fh:
             document = json.load(fh)
     else:
-        document = fetch(f"{base}/api/reports/{args.report_id}", args.key)
-    ledger = fetch(f"{base}/api/reports/{args.report_id}/chain", args.key)
+        document = fetch(f"{base}/api/reports/{args.root_cid}", args.key)
+    ledger = fetch(f"{base}/api/reports/{args.root_cid}/chain", args.key)
 
-    anchored = ledger.get("content_hash", "")
+    anchored = ledger.get("inference_hash", "")
     recomputed = hashlib.sha256(canonical(core_content(document)).encode("utf-8")).hexdigest()
     ok = anchored == recomputed and bool(anchored)
 
-    print(f"report id        : {args.report_id}")
+    print(f"report id        : {args.root_cid}")
     print(f"claim            : {document.get('source', {}).get('content', '')[:60]}")
     print(f"model said       : inference_label={document.get('inference', {}).get('label')}")
     print(f"consortium said  : status={ledger.get('status')} final_label={ledger.get('final_label', '-')}")
-    print(f"votes            : {[(v['checker_msp'], v['outcome']) for v in ledger.get('fact_checks', [])]}")
+    # Grouped by round, and called fact-checks rather than votes: the
+    # chaincode is explicit that a checker is reporting a finding, not
+    # expressing a preference. Printing them flat made the same org appearing
+    # in two rounds look like a duplicate vote rather than a re-examination.
+    by_round: dict = {}
+    for v in ledger.get("fact_checks", []):
+        by_round.setdefault(v.get("round", 0), []).append((v["checker_msp"], v["outcome"]))
+    for rnd in sorted(by_round):
+        print(f"fact-checks r{rnd}   : {by_round[rnd]}")
+    for rp in ledger.get("reopens") or []:
+        print(f"reopened by      : {rp.get('org_msp')} into round {rp.get('round')} at {rp.get('at')}")
     print(f"anchored hash    : {anchored}")
     print(f"recomputed hash  : {recomputed}")
     print(f"VERDICT          : {'VERIFIED - document matches the ledger' if ok else 'TAMPERED - does NOT match'}")

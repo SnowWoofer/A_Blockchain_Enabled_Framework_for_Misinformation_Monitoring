@@ -5,11 +5,13 @@ services:
     environment:
       # Same host-reachability note as submission-worker's compose file.
       BLOCKCHAIN_API_BASE: ${BLOCKCHAIN_API_BASE:-http://host.docker.internal:8000}
-      # JSON object — one org-level API key per org (from
-      # blockchain/scripts/bootstrap-keys.sh). An org authenticates directly
-      # with its own key as X-API-Key; there's no separate account/login
-      # layer — user management within an org is that org's own concern.
-      ORG_API_KEYS: ${FACT_CHECKING_ORG_API_KEYS:-{"org1":"key-org1","org2":"key-org2","org3":"key-org3","org4":"key-org4"}}
+      # Consortium membership. Keys are derived as key-<org> (what
+      # blockchain/scripts/bootstrap-keys.sh writes), so adding a member is a
+      # change here only — keep this in step with blockchain_gateway's ORGS.
+      # An org authenticates directly with its own key as X-API-Key; there's
+      # no separate account/login layer — user management within an org is
+      # that org's own concern.
+      ORGS: ${ORGS:-org1,org2,org3,org4,org5}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:

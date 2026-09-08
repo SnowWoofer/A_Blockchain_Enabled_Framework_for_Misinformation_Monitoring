@@ -16,11 +16,36 @@ logger = logging.getLogger(__name__)
 # Fields the claim must actually carry. Anything missing is a broken upstream
 # contract, not something to paper over with a default — the claim goes to the
 # dead-letter file so it can be replayed once the producer is fixed.
-REQUIRED_FIELDS = ("msg_id", "confidence", "model_version", "content", "source_platform")
+REQUIRED_FIELDS = ("ingest_id", "label_binary", "confidence", "model_version", "content", "source_platform")
+
+
+async def _await_kafka(*clients, attempts: int = 40, delay: float = 3.0) -> None:
+    """Start Kafka clients, waiting for the broker to accept connections.
+
+    These services and the broker come up together, and the broker takes ~30s
+    to pass its health check. aiokafka's start() fails fast, so without this
+    the service crashed on boot and relied on Docker's restart policy to try
+    again — five restarts and a screenful of tracebacks on every deployment,
+    for an entirely expected condition. depends_on cannot express this: each
+    service ships its own compose file and kafka is not in it.
+    """
+    from aiokafka.errors import KafkaConnectionError
+
+    for attempt in range(1, attempts + 1):
+        try:
+            for client in clients:
+                await client.start()
+            return
+        except KafkaConnectionError:
+            if attempt == attempts:
+                raise
+            if attempt == 1 or attempt % 10 == 0:
+                logger.info("Kafka not reachable yet (attempt %d/%d), retrying…", attempt, attempts)
+            await asyncio.sleep(delay)
 
 
 class SubmissionConsumer:
-    """Reads scored claims off KAFKA_INPUT_TOPIC (claims.flagged) and submits
+    """Reads scored claims off KAFKA_INPUT_TOPIC (claims.inferenced) and submits
     each one to the blockchain gateway's POST /api/reports (writes off-chain
     to IPFS, anchors the hash on-chain). A claim that fails to submit — the
     gateway being down, an invalid API key, etc. — is appended as a line to
@@ -46,7 +71,7 @@ class SubmissionConsumer:
             value_deserializer=lambda v: json.loads(v.decode("utf-8")),
             enable_auto_commit=True,
         )
-        await self.consumer.start()
+        await _await_kafka(self.consumer)
         self._task = asyncio.create_task(self._run())
         logger.info(
             "Submission consumer started: %s -> %s (group=%s, dead-letter=%s)",
@@ -82,8 +107,10 @@ class SubmissionConsumer:
             CLAIMS_REGISTRATION_FAILED_TOTAL.inc()
             return
         body = {
-            "msg_id": payload["msg_id"],
-            "label": "1" if payload.get("flagged") else "0",
+            "ingest_id": payload["ingest_id"],
+            # Pass-through: the flagging engine owns the model->ledger label
+            # mapping, since only it knows this model's class ordering.
+            "label": payload["label_binary"],
             "confidence": payload["confidence"],
             "model_version": payload["model_version"],
             "content": payload["content"],

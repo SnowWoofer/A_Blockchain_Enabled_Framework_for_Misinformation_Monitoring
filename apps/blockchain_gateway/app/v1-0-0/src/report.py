@@ -8,16 +8,16 @@ def canonical_json(obj: Any) -> str:
     return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
 
 
-def content_hash(payload: Any) -> str:
+def inference_hash(payload: Any) -> str:
     return hashlib.sha256(canonical_json(payload).encode("utf-8")).hexdigest()
 
 
 def _core_content(report: Dict[str, Any]) -> Dict[str, Any]:
     """The immutable part of a claim: what was flagged, and the AI's initial
-    read on it. content_hash is computed over exactly this and nothing else,
+    read on it. inference_hash is computed over exactly this and nothing else,
     so it stays fixed across every later version of the document — fields
     that legitimately change over time (fact_checks, fact_check_status,
-    report_id/CID, submitter) are deliberately excluded."""
+    root_cid/CID, submitter) are deliberately excluded."""
     return {
         "source": report.get("source"),
         "inference": report.get("inference"),
@@ -26,7 +26,7 @@ def _core_content(report: Dict[str, Any]) -> Dict[str, Any]:
 
 def make_report(
     *,
-    msg_id: str,
+    ingest_id: str,
     label: str,
     confidence: float,
     model_version: str,
@@ -41,7 +41,7 @@ def make_report(
         # The claim's identity all the way from claims.raw. The document has no
         # id of its own: its identifier is the CID it hashes to, assigned by
         # storage.save_report once the bytes are sealed.
-        "msg_id": msg_id,
+        "ingest_id": ingest_id,
         "source": {
             "platform": source_platform,
             "content": content,
@@ -66,12 +66,12 @@ def make_report(
         "fact_check_status": "Pending",
         "fact_checks": [],
     }
-    report["content_hash"] = content_hash(_core_content(report))
+    report["inference_hash"] = inference_hash(_core_content(report))
     return report
 
 
 def verify_report_integrity(report: Dict[str, Any]) -> bool:
-    expected = report.get("content_hash")
+    expected = report.get("inference_hash")
     if not expected:
         return False
-    return content_hash(_core_content(report)) == expected
+    return inference_hash(_core_content(report)) == expected

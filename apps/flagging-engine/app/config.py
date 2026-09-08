@@ -11,7 +11,6 @@ class Settings(BaseSettings):
     model_quantization: str = "none"
     model_path: str = "./model"
     model_max_length: int = 256
-    flag_threshold: float = 0.5
 
     # --- Dynamic batching / performance tuning ---
     max_batch_size: int = 8
@@ -21,7 +20,7 @@ class Settings(BaseSettings):
     kafka_enabled: bool = True
     kafka_bootstrap_servers: str = "kafka:9092"
     kafka_input_topic: str = "claims.raw"
-    kafka_output_topic: str = "claims.flagged"
+    kafka_output_topic: str = "claims.inferenced"
     kafka_consumer_group: str = "flagging-engine"
 
     log_level: str = "INFO"

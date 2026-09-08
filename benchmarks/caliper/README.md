@@ -16,14 +16,14 @@ benchmarks/caliper/
 ├── networks/fabric/test-network.yaml       # Caliper network config (Org1 identity)
 ├── networks/fabric/ccp.json                # connection profile (peer0.org1..3)
 └── workload/
-    ├── submitReport.js                     # SubmitReport with valid synthetic args
+    ├── submitReport.js                     # Submit with valid synthetic args
     └── queryAllReports.js                  # read-only world-state range scan
 ```
 
 ## Run
 
 ```bash
-./startup.sh --orgs 3 --samples 50   # network must be up first
+./startup.sh --orgs 3 --test-samples 50   # network must be up first
 benchmarks/caliper/run-caliper.sh
 ```
 
@@ -33,7 +33,7 @@ Report lands at `benchmarks/caliper/report.html`.
 
 | Round | Contract function | Load | Notes |
 |---|---|---|---|
-| `submit-report-write` | `SubmitReport` | 500 tx @ fixed 25 TPS, 2 workers | 2-of-3 endorsement; unique report ids per worker/tx |
+| `submit-report-write` | `Submit` | 500 tx @ fixed 25 TPS, 2 workers | 2-of-3 endorsement; unique report ids per worker/tx |
 | `query-all-reports-read` | `QueryAllReports` | 1000 tx @ fixed 50 TPS, 2 workers | CouchDB-backed world-state scan |
 
 Workload args match the chaincode validators exactly (64-hex content hash,

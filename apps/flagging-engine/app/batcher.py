@@ -5,7 +5,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import Callable, List
 
-from .metrics import BATCH_SIZE, FLAGGED_TOTAL, INFERENCE_LATENCY, QUEUE_DEPTH, QUEUE_WAIT, REQUESTS_TOTAL
+from .metrics import BATCH_SIZE, INFERENCE_LATENCY, MISINFORMATION_TOTAL, QUEUE_DEPTH, QUEUE_WAIT, REQUESTS_TOTAL
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +75,7 @@ class DynamicBatcher:
             results = await loop.run_in_executor(self.executor, self.infer_fn, texts)
             INFERENCE_LATENCY.observe(time.perf_counter() - start)
             REQUESTS_TOTAL.inc(len(results))
-            FLAGGED_TOTAL.inc(sum(1 for r in results if r["flagged"]))
+            MISINFORMATION_TOTAL.inc(sum(1 for r in results if r["label_binary"] == "1"))
             for future, result in zip(futures, results):
                 if not future.done():
                     future.set_result(result)

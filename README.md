@@ -8,7 +8,7 @@ on their behalf.
 
 ## How it works
 
-- **On-chain** (Go chaincode): hash + `off_chain_uri` + metadata only. Never raw text.
+- **On-chain** (Go chaincode): `inference_hash` + `current_cid` + metadata only. Never raw text.
 - **Off-chain**: full report in IPFS (content-addressed; the CID doubles as the
   report id), SQLite fallback.
 - **Gateway** (`:8000`): the only thing users/orgs talk to. API-key auth
@@ -293,8 +293,8 @@ UI: http://localhost:8080 — login `exploreradmin` / `exploreradminpw`.
 Grab any CID from the load phase, then check the on-chain/off-chain link:
 
 ```bash
-curl -s -H "X-API-Key: stress-key" http://localhost:8000/api/reports           # list, first report_id is a CID
-CID=<paste-your-report_id-here>
+curl -s -H "X-API-Key: stress-key" http://localhost:8000/api/reports           # list; root_cid is the v1 CID
+CID=<paste-your-root_cid-here>
 curl -s -H "X-API-Key: stress-key" "http://localhost:8000/api/reports/$CID"     # full report from IPFS
 curl -s -H "X-API-Key: stress-key" "http://localhost:8000/api/reports/$CID/verify"
 ```
@@ -303,7 +303,7 @@ curl -s -H "X-API-Key: stress-key" "http://localhost:8000/api/reports/$CID/verif
 committed on the ledger. Expected close-out:
 
 ```json
-{"report_id":"Qm...","off_chain_intact":true,"matches_on_chain":true,"verified":true,"explanation":"The off-chain copy is unmodified AND its hash matches the immutable, consortium-voted hash stored on the ledger."}
+{"root_cid":"Qm...","off_chain_intact":true,"matches_on_chain":true,"verified":true,"explanation":"The off-chain copy is unmodified AND its hash matches the immutable, consortium-voted hash stored on the ledger."}
 ```
 
 > The `/verify` endpoint previously returned HTTP 500 because the on-chain query
@@ -367,15 +367,15 @@ All endpoints require `-H "X-API-Key: <key>"` (keys from `bootstrap-keys.sh`;
 | Method & path | Purpose |
 |---|---|
 | `GET /api/status` | IPFS backend status |
-| `POST /api/reports` | Submit a report (body: `report_id`, `language` nso/zul/eng, `label` 0/1, `confidence`, `model_version`, `raw_text`, ...) |
+| `POST /api/reports` | Submit a claim (body: `ingest_id`, `label` `"0"`/`"1"`, `confidence`, `model_version`, `content`, `source_platform`, `published_at`, `inference_timestamp`). Returns `root_cid` + `inference_hash`. |
 | `GET /api/reports` | List reports |
 | `GET /api/reports/{id}` | Report + off-chain payload |
-| `GET /api/reports/{id}/chain` | On-chain record (hash, uri, status, votes) |
+| `GET /api/reports/{id}/chain` | On-chain record (`inference_hash`, `current_cid`, `status`, `round`, `required_panel`, `fact_checks`, `reopens`) |
 | `GET /api/reports/{id}/verify` | Tamper-evidence check (off-chain vs on-chain hash) |
-| `GET /api/reports/{id}/history` | Full tx/history trail via Fabric's native `GetHistoryForKey` — every version this claim's `off_chain_uri` has pointed to, oldest first |
-| `POST /api/reports/{id}/vote` | Org vote on a report |
-| `POST /api/reports/{id}/finalize` | Finalize a verdict (consortium quorum) |
-| `POST /api/reports/{id}/expire` | Expire a report past its voting deadline |
+| `GET /api/reports/{id}/history` | Every transaction that wrote this claim's ledger key, via Fabric's `GetHistoryForKey`, sorted oldest first — `[0]` is the submission |
+| `POST /api/reports/{id}/fact-check` | Submit a fact-check (body: `outcome` `"0"`/`"1"`, `reasoning`, `support`). The chaincode closes the claim itself once the round reaches a two-thirds supermajority of its panel — there is no finalise call. |
+| `POST /api/reports/{id}/reopen` | Reopen a `FINAL` claim at a panel two larger. The standing verdict holds while the new round runs; one reopen per org, three per claim. |
+| `POST /api/reports/{id}/expire` | Expire a claim past its fact-check deadline. A `REOPENED` claim reverts to `FINAL` with its standing verdict reaffirmed. |
 | `POST /api/orgs/apply`, `/api/orgs/{msp}/admission`, `/vote`, `/finalize` | New-org admission workflow (pending after founding limit) |
 | `GET /api/orgs`, `GET /api/orgs/{msp}/admission` | Registered orgs / admission status |
 

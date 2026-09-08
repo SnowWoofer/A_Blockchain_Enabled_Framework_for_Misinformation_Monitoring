@@ -4,7 +4,7 @@ services:
     container_name: submission-worker
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      KAFKA_INPUT_TOPIC: claims.flagged
+      KAFKA_INPUT_TOPIC: claims.inferenced
       KAFKA_CONSUMER_GROUP: submission-worker
       # blockchain_gateway is its own independent service/compose stack —
       # host.docker.internal (below) resolves to the host from inside the

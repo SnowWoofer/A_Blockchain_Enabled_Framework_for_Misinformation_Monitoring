@@ -13,6 +13,31 @@ from .schemas import ClaimMessage
 logger = logging.getLogger(__name__)
 
 
+async def _await_kafka(*clients, attempts: int = 40, delay: float = 3.0) -> None:
+    """Start Kafka clients, waiting for the broker to accept connections.
+
+    These services and the broker come up together, and the broker takes ~30s
+    to pass its health check. aiokafka's start() fails fast, so without this
+    the service crashed on boot and relied on Docker's restart policy to try
+    again — five restarts and a screenful of tracebacks on every deployment,
+    for an entirely expected condition. depends_on cannot express this: each
+    service ships its own compose file and kafka is not in it.
+    """
+    from aiokafka.errors import KafkaConnectionError
+
+    for attempt in range(1, attempts + 1):
+        try:
+            for client in clients:
+                await client.start()
+            return
+        except KafkaConnectionError:
+            if attempt == attempts:
+                raise
+            if attempt == 1 or attempt % 10 == 0:
+                logger.info("Kafka not reachable yet (attempt %d/%d), retrying…", attempt, attempts)
+            await asyncio.sleep(delay)
+
+
 class FlaggingConsumer:
     """Kafka 'data inject' / 'data egest' side of the Flagging-Engine: reads raw
     claims off KAFKA_INPUT_TOPIC, runs them through the dynamic batcher, and
@@ -38,8 +63,7 @@ class FlaggingConsumer:
             bootstrap_servers=settings.kafka_bootstrap_servers,
             value_serializer=lambda v: json.dumps(v).encode("utf-8"),
         )
-        await self.consumer.start()
-        await self.producer.start()
+        await _await_kafka(self.consumer, self.producer)
         self._task = asyncio.create_task(self._run())
         logger.info(
             "Kafka consumer started: %s -> %s (group=%s)",
@@ -71,10 +95,13 @@ class FlaggingConsumer:
         result = await self.batcher.submit(claim.content)
         out = {
             **claim.model_dump(),
-            "flagged": result["flagged"],
             "label": result["label"],
+            "label_binary": result["label_binary"],
             "confidence": result["confidence"],
-            "flag_threshold": settings.flag_threshold,
+            # Raw p(misinformation), spanning the full [0,1] range. `confidence`
+            # is the predicted class's probability and so only spans [0.5,1],
+            # which makes it a poor sort key; this is the triage signal.
+            "misinformation_probability": result["misinformation_probability"],
             "model_version": self.model_version,
             "inference_timestamp": dt.datetime.now(dt.timezone.utc).isoformat(),
         }

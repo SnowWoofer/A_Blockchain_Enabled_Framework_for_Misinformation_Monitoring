@@ -7,8 +7,10 @@ const { WorkloadModuleBase } = require('@hyperledger/caliper-core');
  * Write benchmark: anchors synthetic misinformation reports on-chain.
  *
  * Argument order must match the committed chaincode contract exactly:
- *   Submit(ctx, id, content_hash, label, confidence,
- *          model_version, timestamp)
+ *   Submit(ctx, rootCID, inferenceHash, label, confidence,
+ *          modelVersion, timestamp)
+ * The first two were called id/content_hash before they were renamed; only
+ * the names changed, so this workload's positional arguments still line up.
  * All fields are validated by misinformation.go, so every generated value
  * below satisfies those checks (64-hex hash, confidence in [0,1], RFC3339 ts).
  */
@@ -29,8 +31,8 @@ class SubmitReportWorkload extends WorkloadModuleBase {
             contractId: this.roundArguments.contractId,
             contractFunction: 'Submit',
             contractArguments: [
-                reportId,           // 1. id
-                contentHash,        // 2. contentHash (64-char hex digest)
+                reportId,           // 1. rootCID (any unique id)
+                contentHash,        // 2. inferenceHash (64-char hex digest)
                 label,              // 3. label (0/1)
                 confidence,         // 4. confidence (float in [0,1])
                 modelVersion,       // 5. model_version

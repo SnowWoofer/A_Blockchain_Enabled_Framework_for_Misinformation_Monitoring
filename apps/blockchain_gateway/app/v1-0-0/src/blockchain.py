@@ -128,32 +128,35 @@ class FabricBridge:
         return self.query("QueryOrgAdmission", [candidate_msp])
 
     def submit_report(
-        self, report_id: str, content_hash: str, label: str,
+        self, root_cid: str, inference_hash: str, label: str,
         confidence: float, model_version: str, timestamp: str,
     ) -> str:
         return self.invoke(
             "Submit",
-            [report_id, content_hash, label,
+            [root_cid, inference_hash, label,
              f"{confidence:.6f}", model_version, timestamp],
         )
 
-    def submit_fact_check(self, report_id: str, outcome: str) -> str:
-        return self.invoke("SubmitFactCheck", [report_id, outcome])
+    def submit_fact_check(self, root_cid: str, outcome: str, new_cid: str) -> str:
+        return self.invoke("SubmitFactCheck", [root_cid, outcome, new_cid])
 
-    def finalize_report(self, report_id: str) -> str:
-        return self.invoke("FinalizeReport", [report_id])
+    def reopen_report(self, root_cid: str) -> str:
+        return self.invoke("ReopenReport", [root_cid])
 
-    def expire_report(self, report_id: str) -> str:
-        return self.invoke("ExpireReport", [report_id])
+    def set_current_cid(self, root_cid: str, new_cid: str) -> str:
+        return self.invoke("SetCurrentCID", [root_cid, new_cid])
 
-    def query_report(self, report_id: str) -> Any:
-        return self.query("QueryReport", [report_id])
+    def expire_report(self, root_cid: str) -> str:
+        return self.invoke("ExpireReport", [root_cid])
+
+    def query_report(self, root_cid: str) -> Any:
+        return self.query("QueryReport", [root_cid])
 
     def query_all(self) -> Any:
         return self.query("QueryAllReports", [])
 
-    def history(self, report_id: str) -> Any:
-        return self.query("QueryReportHistory", [report_id])
+    def history(self, root_cid: str) -> Any:
+        return self.query("QueryReportHistory", [root_cid])
 
 
 class FabricGatewayBridge:
@@ -265,32 +268,35 @@ class FabricGatewayBridge:
         return self.query("QueryOrgAdmission", [candidate_msp])
 
     def submit_report(
-        self, report_id: str, content_hash: str, label: str,
+        self, root_cid: str, inference_hash: str, label: str,
         confidence: float, model_version: str, timestamp: str,
     ) -> str:
         return self.invoke(
             "Submit",
-            [report_id, content_hash, label,
+            [root_cid, inference_hash, label,
              f"{confidence:.6f}", model_version, timestamp],
         )
 
-    def submit_fact_check(self, report_id: str, outcome: str) -> str:
-        return self.invoke("SubmitFactCheck", [report_id, outcome])
+    def submit_fact_check(self, root_cid: str, outcome: str, new_cid: str) -> str:
+        return self.invoke("SubmitFactCheck", [root_cid, outcome, new_cid])
 
-    def finalize_report(self, report_id: str) -> str:
-        return self.invoke("FinalizeReport", [report_id])
+    def reopen_report(self, root_cid: str) -> str:
+        return self.invoke("ReopenReport", [root_cid])
 
-    def expire_report(self, report_id: str) -> str:
-        return self.invoke("ExpireReport", [report_id])
+    def set_current_cid(self, root_cid: str, new_cid: str) -> str:
+        return self.invoke("SetCurrentCID", [root_cid, new_cid])
 
-    def query_report(self, report_id: str) -> Any:
-        return self.query("QueryReport", [report_id])
+    def expire_report(self, root_cid: str) -> str:
+        return self.invoke("ExpireReport", [root_cid])
+
+    def query_report(self, root_cid: str) -> Any:
+        return self.query("QueryReport", [root_cid])
 
     def query_all(self) -> Any:
         return self.query("QueryAllReports", [])
 
-    def history(self, report_id: str) -> Any:
-        return self.query("QueryReportHistory", [report_id])
+    def history(self, root_cid: str) -> Any:
+        return self.query("QueryReportHistory", [root_cid])
 
 
 def _cli_main(argv: Optional[Sequence[str]] = None) -> int:

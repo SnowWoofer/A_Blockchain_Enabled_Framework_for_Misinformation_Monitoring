@@ -1,5 +1,14 @@
 .env
-data
+# Share what someone needs to replicate; not what they can regenerate.
+#
+# TRACKED — data/translated_masked_samples_test.json. The labelled evaluation
+# set is the one artefact here that cannot be recreated: the classifications
+# are human judgements, and every accuracy number is measured against them.
+#
+# Both files under data/ are tracked: the evaluation set and the ready-made
+# /ingest payload built from it. IGNORED here is only re-run output —
+# benchmark CSVs. Runtime state under apps/*/data/ is ignored further down.
+results/local/*.csv
 temp*
 __pycache__
 *.pyc

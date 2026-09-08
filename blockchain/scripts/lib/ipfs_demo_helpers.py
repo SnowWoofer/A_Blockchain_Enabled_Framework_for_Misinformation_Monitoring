@@ -7,7 +7,7 @@ import sys
 def newest_report_id() -> None:
     reports = json.load(sys.stdin)
     reports.sort(key=lambda r: r["timestamp"])
-    print(reports[-1]["id"] if reports else "")
+    print(reports[-1]["root_cid"] if reports else "")
 
 
 def claim_text() -> None:

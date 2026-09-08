@@ -104,15 +104,19 @@ class MisinfoModel:
         results = []
         for row in probs:
             misinfo_prob = float(row[1])
-            flagged = misinfo_prob >= settings.flag_threshold
-            label = self.id2label[1] if flagged else self.id2label[0]
-            confidence = misinfo_prob if flagged else float(row[0])
+            # The model's own prediction (argmax), not a tunable policy cut.
+            # label_binary is the ledger's domain ("0"/"1", enforced by the
+            # chaincode) and is emitted here rather than re-derived downstream:
+            # the string in `label` comes from this model's id2label and is not
+            # stable across models, so only this service can map it safely.
+            predicted = 1 if misinfo_prob >= 0.5 else 0
             results.append(
                 {
-                    "label": label,
-                    "confidence": confidence,
+                    "label": self.id2label[predicted],
+                    "label_binary": str(predicted),
+                    # Probability of the predicted class, so always >= 0.5.
+                    "confidence": float(row[predicted]),
                     "misinformation_probability": misinfo_prob,
-                    "flagged": flagged,
                 }
             )
         return results

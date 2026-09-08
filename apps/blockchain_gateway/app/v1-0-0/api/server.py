@@ -40,10 +40,10 @@ class AdmissionVote(BaseModel):
 
 
 class ReportCreate(BaseModel):
-    # msg_id is the claim's identity from claims.raw and is carried through
+    # ingest_id is the claim's identity from claims.raw and is carried through
     # unchanged. It is NOT the report's identifier — that is the IPFS CID,
     # assigned once the document is sealed.
-    msg_id: str
+    ingest_id: str
     label: str
     confidence: float = Field(ge=0.0, le=1.0)
     model_version: str
@@ -61,7 +61,10 @@ VERIFIED_STATUS = {"0": "Verified_Non_Misinformation", "1": "Verified_Misinforma
 
 
 class FactCheckSubmission(BaseModel):
-    outcome: str  # one of: factual / opinion / misinformation
+    # "0" (non-misinformation) or "1" (misinformation) — the same binary
+    # domain the model predicts into, so a finalised final_label can be
+    # compared directly against inference_label. Enforced by the chaincode.
+    outcome: str
     reasoning: str = ""
     support: List[str] = Field(default_factory=list)
 
@@ -103,6 +106,30 @@ def bridge_for(org: str, endorsers: Optional[List[str]] = None) -> Any:
     return FabricBridge(org=org, endorsers=endorsers or ["org1", "org2"])
 
 
+def _unwrap_chain_error(msg: str) -> str:
+    """Peel the transport wrappers off a chaincode rejection.
+
+    A business rejection ("org X has already fact-checked this claim") arrives
+    nested three deep: the sidecar's `gateway service error (500): {json}`,
+    wrapping `{"ok":false,...,"error":"chaincode response 500, <message>"}`.
+    Callers got an unreadable, truncated blob for what is an ordinary and
+    expected refusal, so pull the innermost message out.
+    """
+    text = msg
+    brace = text.find("{")
+    if brace != -1:
+        try:
+            payload = json.loads(text[brace:])
+            if isinstance(payload, dict) and payload.get("error"):
+                text = str(payload["error"])
+        except (ValueError, TypeError):
+            pass
+    marker = "chaincode response 500, "
+    if marker in text:
+        text = text.split(marker, 1)[1]
+    return text.strip() or msg
+
+
 def chain_call(fn, *args, **kwargs) -> Any:
     """Run a chaincode invoke/query and surface its error message as a 400
     instead of letting it fall through to FastAPI's bare 500 handler."""
@@ -111,7 +138,7 @@ def chain_call(fn, *args, **kwargs) -> Any:
     except HTTPException:
         raise
     except Exception as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise HTTPException(status_code=400, detail=_unwrap_chain_error(str(exc))) from exc
 
 
 def _now_rfc3339() -> str:
@@ -176,7 +203,7 @@ async def expire_overdue_reports(interval_s: int = 3600) -> None:
                 if rec.get("status") == "PENDING":
                     deadline = rec.get("fact_check_deadline", "")
                     if deadline and _dt.datetime.fromisoformat(deadline.replace("Z", "+00:00")) < _dt.datetime.now(_dt.timezone.utc):
-                        bridge.expire_report(rec["id"])
+                        bridge.expire_report(rec["root_cid"])
         except Exception as exc:
             print(f"[scheduler] expiry pass failed: {exc}")
         await asyncio.sleep(interval_s)
@@ -248,7 +275,7 @@ def create_report(body: ReportCreate, _org: str = Depends(require_org)):
     if _org not in ORG_MSPID:
         raise HTTPException(status_code=400, detail="unknown signing org")
     report = make_report(
-        msg_id=body.msg_id,
+        ingest_id=body.ingest_id,
         label=body.label,
         confidence=body.confidence,
         model_version=body.model_version,
@@ -260,27 +287,27 @@ def create_report(body: ReportCreate, _org: str = Depends(require_org)):
         org_mspid=ORG_MSPID[_org],
     )
     uri = STORE.save_report(report)
-    report_id = report["report_id"]
+    root_cid = report["root_cid"]
     bridge = bridge_for(_org)
     chain_call(
         bridge.submit_report,
-        report_id, report["content_hash"], body.label,
+        root_cid, report["inference_hash"], body.label,
         body.confidence, body.model_version, _now_rfc3339(),
     )
-    return {"id": report_id, "content_hash": report["content_hash"]}
+    return {"root_cid": root_cid, "inference_hash": report["inference_hash"]}
 
 
-@app.get("/api/reports/{report_id}")
-def get_report(report_id: str, _org: str = Depends(require_org)):
-    report = STORE.get_report(report_id)
+@app.get("/api/reports/{root_cid}")
+def get_report(root_cid: str, _org: str = Depends(require_org)):
+    report = STORE.get_report(root_cid)
     if not report:
         raise HTTPException(status_code=404, detail="report not found off-chain")
     return report
 
 
-@app.get("/api/reports/{report_id}/chain")
-def get_chain(report_id: str, _org: str = Depends(require_org)):
-    return _on_chain_record(chain_call(bridge_for(_org).query_report, report_id))
+@app.get("/api/reports/{root_cid}/chain")
+def get_chain(root_cid: str, _org: str = Depends(require_org)):
+    return _on_chain_record(chain_call(bridge_for(_org).query_report, root_cid))
 
 
 @app.get("/api/reports")
@@ -291,24 +318,22 @@ def list_reports(status: Optional[str] = None, _org: str = Depends(require_org))
     return records
 
 
-@app.post("/api/reports/{report_id}/fact-check")
-def submit_fact_check(report_id: str, body: FactCheckSubmission, _org: str = Depends(require_org)):
+@app.post("/api/reports/{root_cid}/fact-check")
+def submit_fact_check(root_cid: str, body: FactCheckSubmission, _org: str = Depends(require_org)):
     if _org not in ORG_MSPID:
         raise HTTPException(status_code=400, detail="unknown signing org")
-    report = STORE.get_report(report_id)
+    report = STORE.get_report(root_cid)
     if not report:
         raise HTTPException(status_code=404, detail="report not found off-chain")
-    # Chain FIRST. The ledger owns the guards that can reject this — one
-    # fact-check per org, and only on a PENDING/UNDER_REVIEW report. Writing
-    # the off-chain document before the invoke meant a rejected submission
-    # still appended an entry to IPFS that the ledger never accepted, leaving
-    # the document permanently showing more fact-checks than the chain.
+    # IPFS FIRST, then chain — the reverse of the original order, and safe
+    # now only because the ledger holds CurrentCID. The old worry was that a
+    # rejected invoke would leave an IPFS document showing more fact-checks
+    # than the chain; that document is now simply unreferenced, because
+    # CurrentCID still points at the previous version and nothing resolves
+    # to the orphan. Publishing first is what lets the new CID be anchored
+    # by the same invoke that accepts the fact-check, instead of a second
+    # write that could fail on its own.
     # Only the outcome goes on-chain — reasoning/support stay off-chain.
-    chain_call(bridge_for(_org).submit_fact_check, report_id, body.outcome)
-    # Accepted: re-publish the full document as a new, immutable version (new
-    # CID) with this fact-check appended — old versions stay resolvable in
-    # IPFS, nothing is mutated in place. The ledger stores no pointer to the
-    # new version: the claim's id is itself the off-chain address.
     report = {
         **report,
         "fact_check_status": "Under_Review",
@@ -323,38 +348,89 @@ def submit_fact_check(report_id: str, body: FactCheckSubmission, _org: str = Dep
             },
         ],
     }
-    STORE.save_report_version(report_id, report)
-    return {"ok": True}
+    new_cid = STORE.save_report_version(root_cid, report)
+    if not new_cid:
+        raise HTTPException(
+            status_code=503,
+            detail="off-chain store unavailable; fact-check not recorded",
+        )
+    # The ledger still owns every guard that can reject this — one fact-check
+    # per org, PENDING/UNDER_REVIEW only — and advances CurrentCID to the
+    # version carrying it in the same transaction.
+    bridge = bridge_for(_org)
+    chain_call(bridge.submit_fact_check, root_cid, body.outcome, new_cid)
 
+    # The chaincode closes the report itself the moment the fact-checks
+    # settle — there is no finalise call to make. Read back what that invoke
+    # decided: the tally is a pure function of ledger state, so the gateway
+    # cannot know in advance whether this check was the closing one.
+    chain_record = _on_chain_record(chain_call(bridge.query_report, root_cid))
+    if chain_record.get("status") != "FINAL":
+        return {
+            "ok": True,
+            "current_cid": new_cid,
+            "status": chain_record.get("status"),
+            "round": chain_record.get("round"),
+            "required_panel": chain_record.get("required_panel"),
+            "checks_this_round": sum(
+                1 for f in chain_record.get("fact_checks", [])
+                if f.get("round") == chain_record.get("round")
+            ),
+        }
 
-@app.post("/api/reports/{report_id}/finalize")
-def finalize_report(report_id: str, _org: str = Depends(require_org)):
-    chain_call(bridge_for(_org).finalize_report, report_id)
-    chain_record = _on_chain_record(chain_call(bridge_for(_org).query_report, report_id))
+    # It closed. Publish one more version carrying the consortium's verdict
+    # and advance the pointer to it. Two-phase by necessity: this document
+    # records the final_label the chaincode itself computed, so its CID
+    # cannot exist until that transaction has committed.
     final_label = chain_record.get("final_label", "")
-    report = STORE.get_report(report_id)
-    if report and final_label:
-        report = {**report, "fact_check_status": VERIFIED_STATUS.get(final_label, "Verified")}
-        STORE.save_report_version(report_id, report)
+    report = {**report, "fact_check_status": VERIFIED_STATUS.get(final_label, "Verified")}
+    final_cid = STORE.save_report_version(root_cid, report)
+    if final_cid:
+        chain_call(bridge.set_current_cid, root_cid, final_cid)
+        new_cid = final_cid
+    return {"ok": True, "current_cid": new_cid, "status": "FINAL", "final_label": final_label}
+
+
+@app.post("/api/reports/{root_cid}/reopen")
+def reopen_report(root_cid: str, _org: str = Depends(require_org)):
+    """Put a finalised claim back under review at a larger panel.
+
+    The standing verdict is deliberately left in place — on-chain and in the
+    off-chain document — for the duration of the new round. Reopening raises
+    a question; it does not withdraw the consortium's answer while that
+    question is open."""
+    bridge = bridge_for(_org)
+    chain_call(bridge.reopen_report, root_cid)
+    rec = _on_chain_record(chain_call(bridge.query_report, root_cid))
+    return {
+        "ok": True,
+        "status": rec.get("status"),
+        "round": rec.get("round"),
+        "required_panel": rec.get("required_panel"),
+        "standing_label": rec.get("final_label"),
+        "deadline": rec.get("fact_check_deadline"),
+        # Full challenge history, readable without walking block history —
+        # this is the record a consortium inspects when it suspects bad faith.
+        "reopens": rec.get("reopens", []),
+    }
+
+
+@app.post("/api/reports/{root_cid}/expire")
+def expire_report(root_cid: str, _org: str = Depends(require_org)):
+    chain_call(bridge_for(_org).expire_report, root_cid)
     return {"ok": True}
 
 
-@app.post("/api/reports/{report_id}/expire")
-def expire_report(report_id: str, _org: str = Depends(require_org)):
-    chain_call(bridge_for(_org).expire_report, report_id)
-    return {"ok": True}
-
-
-@app.get("/api/reports/{report_id}/verify")
-def verify_report(report_id: str, _org: str = Depends(require_org)):
-    report = STORE.get_report(report_id)
+@app.get("/api/reports/{root_cid}/verify")
+def verify_report(root_cid: str, _org: str = Depends(require_org)):
+    report = STORE.get_report(root_cid)
     if not report:
         raise HTTPException(status_code=404, detail="report not found off-chain")
-    on_chain = _on_chain_record(chain_call(bridge_for(_org).query_report, report_id))
+    on_chain = _on_chain_record(chain_call(bridge_for(_org).query_report, root_cid))
     intact = verify_report_integrity(report)
-    matches_on_chain = report.get("content_hash") == on_chain.get("content_hash")
+    matches_on_chain = report.get("inference_hash") == on_chain.get("inference_hash")
     return {
-        "report_id": report_id,
+        "root_cid": root_cid,
         "off_chain_intact": intact,
         "matches_on_chain": matches_on_chain,
         "verified": intact and matches_on_chain,
@@ -365,6 +441,6 @@ def verify_report(report_id: str, _org: str = Depends(require_org)):
     }
 
 
-@app.get("/api/reports/{report_id}/history")
-def report_history(report_id: str, _org: str = Depends(require_org)):
-    return _on_chain_list(chain_call(bridge_for(_org).history, report_id))
+@app.get("/api/reports/{root_cid}/history")
+def report_history(root_cid: str, _org: str = Depends(require_org)):
+    return _on_chain_list(chain_call(bridge_for(_org).history, root_cid))

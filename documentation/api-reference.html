@@ -1,0 +1,168 @@
+<title>Misinformation Framework API</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --ground:#F5F7F9;--surface:#FFF;--surface-2:#EAEEF2;--inset:#F0F3F6;
+  --ink:#151A21;--ink-2:#4B5563;--ink-3:#7A8493;--rule:#DCE2E8;
+  --k:#4F4FC4;--k-bg:#ECECFA; --c:#0A6B74;--c-bg:#DFF0F1; --i:#A26400;--i-bg:#FBF1DF;
+  --get:#0A6B74;--get-bg:#DFF0F1; --post:#4F4FC4;--post-bg:#ECECFA;
+  --warn:#9A2F2F;--warn-bg:#FBEBEB;
+  --jstr:#0D6B45;--jkey:#243044;--jnum:#9A4A00;--jcom:#7A8493;
+  --shadow:0 1px 2px rgba(20,26,34,.05),0 8px 24px -16px rgba(20,26,34,.25);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --ground:#0E1219;--surface:#161C25;--surface-2:#1E2530;--inset:#11161E;
+  --ink:#E9ECF1;--ink-2:#A9B2BF;--ink-3:#767F8D;--rule:#28313D;
+  --k:#9C9CF2;--k-bg:#1B1B2E; --c:#54C6D1;--c-bg:#10272A; --i:#E2A33A;--i-bg:#2A2113;
+  --get:#54C6D1;--get-bg:#10272A; --post:#9C9CF2;--post-bg:#1B1B2E;
+  --warn:#E88A8A;--warn-bg:#2A1616;
+  --jstr:#7FD3A8;--jkey:#C9D1DC;--jnum:#E2A33A;--jcom:#767F8D;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px -16px rgba(0,0,0,.7);
+}}
+:root[data-theme="dark"]{
+  --ground:#0E1219;--surface:#161C25;--surface-2:#1E2530;--inset:#11161E;
+  --ink:#E9ECF1;--ink-2:#A9B2BF;--ink-3:#767F8D;--rule:#28313D;
+  --k:#9C9CF2;--k-bg:#1B1B2E; --c:#54C6D1;--c-bg:#10272A; --i:#E2A33A;--i-bg:#2A2113;
+  --get:#54C6D1;--get-bg:#10272A; --post:#9C9CF2;--post-bg:#1B1B2E;
+  --warn:#E88A8A;--warn-bg:#2A1616;
+  --jstr:#7FD3A8;--jkey:#C9D1DC;--jnum:#E2A33A;--jcom:#767F8D;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px -16px rgba(0,0,0,.7);
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);
+  font-family:"Source Serif 4",Georgia,serif;font-size:15.5px;line-height:1.6;-webkit-font-smoothing:antialiased}
+h1,h2,h3,.ui,.verb,.badge,.blab,.navsvc{font-family:Archivo,"Helvetica Neue",Arial,sans-serif}
+code,pre{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace}
+.shell{max-width:1220px;margin:0 auto;padding:44px 24px 90px;display:grid;
+  grid-template-columns:236px minmax(0,1fr);gap:0 44px;align-items:start}
+.mast{grid-column:1/-1;border-bottom:2px solid var(--ink);padding-bottom:20px;margin-bottom:30px}
+.eyebrow{font-family:Archivo,sans-serif;font-size:11px;font-weight:600;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--ink-3);margin:0 0 12px}
+h1{font-size:clamp(28px,4vw,42px);font-weight:700;letter-spacing:-.026em;margin:0 0 12px;line-height:1.05}
+.standfirst{font-size:17px;color:var(--ink-2);max-width:66ch;margin:0}
+.authnote{margin:16px 0 0;padding:12px 15px;background:var(--c-bg);border-radius:4px;
+  font-size:14px;color:var(--ink);max-width:78ch}
+nav{position:sticky;top:20px}
+.navsvc{display:flex;flex-direction:column;gap:1px;padding:8px 11px;margin-bottom:3px;
+  border-radius:4px;text-decoration:none;border-left:3px solid transparent}
+.navsvc:hover{background:var(--surface-2)}
+.navsvc.k{border-left-color:var(--k)} .navsvc.c{border-left-color:var(--c)} .navsvc.i{border-left-color:var(--i)}
+.nvname{font-size:13px;font-weight:600;color:var(--ink)}
+.nvmeta{font-size:11px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.svc{border-top:2px solid var(--ink);padding-top:22px;margin-bottom:44px}
+.svc:first-of-type{border-top:none;padding-top:0}
+.svchead{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:8px}
+h2{font-size:23px;font-weight:700;letter-spacing:-.02em;margin:0}
+.svc.k h2{color:var(--k)} .svc.c h2{color:var(--c)} .svc.i h2{color:var(--i)}
+.badges{display:flex;gap:6px;flex-wrap:wrap}
+.badge{font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:3px;letter-spacing:.04em}
+.badge.port{background:var(--surface-2);color:var(--ink-2);font-variant-numeric:tabular-nums}
+.badge.auth{background:var(--c-bg);color:var(--c)}
+.badge.noauth{background:var(--surface-2);color:var(--ink-3)}
+.badge.int{background:var(--warn-bg);color:var(--warn)}
+.role{color:var(--ink-2);margin:0 0 22px;max-width:74ch;font-size:15px}
+.ep{background:var(--surface);border:1px solid var(--rule);border-radius:5px;
+  padding:16px 18px;margin-bottom:12px;box-shadow:var(--shadow)}
+.epline{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.verb{font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:3px;letter-spacing:.06em}
+.verb.get{background:var(--get-bg);color:var(--get)}
+.verb.post{background:var(--post-bg);color:var(--post)}
+.path{font-size:14px;font-weight:500;color:var(--ink);overflow-wrap:anywhere}
+.sum{margin:0 0 12px;color:var(--ink-2);max-width:74ch}
+.sum b,.notes b{color:var(--ink)}
+.blk{margin:0 0 10px}
+.blab{display:block;font-size:10px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;
+  color:var(--ink-3);margin-bottom:5px}
+pre{margin:0;padding:12px 14px;background:var(--inset);border-radius:4px;overflow-x:auto;
+  font-size:12.5px;line-height:1.55;color:var(--jkey)}
+.notes{margin:10px 0 0;padding-left:18px;color:var(--ink-2);font-size:14.5px}
+.notes li{margin-bottom:5px} .notes li:last-child{margin-bottom:0}
+.rej{margin-top:12px;padding:10px 13px;background:var(--warn-bg);border-radius:4px}
+.rej .blab{color:var(--warn)}
+.rej ul{margin:0;padding-left:18px;font-size:14px;color:var(--ink-2)}
+code{font-size:.86em;background:var(--surface-2);padding:1px 5px;border-radius:3px}
+.pre-wrap code,pre code{background:none;padding:0}
+.tables{grid-column:1/-1;border-top:2px solid var(--ink);padding-top:26px;
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:26px}
+h3{font-size:13px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin:0 0 12px}
+table{border-collapse:collapse;width:100%;font-size:14px;background:var(--surface);
+  border:1px solid var(--rule);border-radius:5px;overflow:hidden}
+th,td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font-family:Archivo,sans-serif;font-size:10px;font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink-3);background:var(--surface-2);white-space:nowrap}
+tbody tr:last-child td{border-bottom:none}
+td code{white-space:nowrap}
+footer{grid-column:1/-1;margin-top:36px;padding-top:16px;border-top:1px solid var(--rule);
+  font-family:Archivo,sans-serif;font-size:12px;color:var(--ink-3);max-width:74ch}
+a{color:var(--c)}
+:focus-visible{outline:2px solid var(--c);outline-offset:2px;border-radius:2px}
+html{scroll-behavior:smooth} @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+@media (max-width:860px){
+  .shell{grid-template-columns:1fr;padding:30px 15px 70px;gap:0}
+  nav{position:static;display:flex;flex-wrap:wrap;gap:5px;margin-bottom:28px}
+  .navsvc{flex:1 1 auto;margin:0}
+}
+</style>
+<div class="shell">
+  <div class="mast">
+    <p class="eyebrow">Blockchain-Enabled Framework for Misinformation Monitoring</p>
+    <h1>Service API Reference</h1>
+    <p class="standfirst">Every HTTP endpoint across the seven services — what it does, what it expects, and where the behaviour is not what you would guess.</p>
+    <p class="authnote"><b>Authentication.</b> Two services require an <code>X-API-Key</code> header, and both accept the same org-level keys written by <code>bootstrap-keys.sh</code> (<code>key-org1</code>, <code>key-org2</code>, …). There is no user or account layer: an organisation authenticates as itself, and which person inside it is calling is that organisation's own concern. Ports shown are host-side; inside <code>kafka_net</code> the Python services all listen on <code>:8000</code>.</p>
+  </div>
+  <nav><a class="navsvc k" href="#ingest"><span class="nvname">claim-ingest-worker</span><span class="nvmeta">:8003 · 2</span></a><a class="navsvc k" href="#flagging"><span class="nvname">flagging-engine</span><span class="nvmeta">:8004 · 3</span></a><a class="navsvc k" href="#submission"><span class="nvname">submission-worker</span><span class="nvmeta">:8001 · 2</span></a><a class="navsvc c" href="#gateway"><span class="nvname">blockchain_gateway</span><span class="nvmeta">:8000 · 16</span></a><a class="navsvc c" href="#factcheck"><span class="nvname">fact-checking-service</span><span class="nvmeta">:8002 · 5</span></a><a class="navsvc i" href="#fabricgw"><span class="nvname">fabric_gateway</span><span class="nvmeta">:9100 · 3</span></a><a class="navsvc i" href="#ipfsgw"><span class="nvname">ipfs_gateway</span><span class="nvmeta">:9101 · 3</span></a></nav>
+  <main><section class="svc k" id="ingest"><div class="svchead"><h2>claim-ingest-worker</h2><div class="badges"><span class="badge port">:8003</span><span class="badge noauth">no auth</span></div></div><p class="role">Test harness. Pushes claim texts onto <code>claims.raw</code> so the rest of the pipeline can be exercised end to end. A stand-in for real ingestion — not part of the framework's claims.</p><div class="ep" id="get-health"><div class="epline"><span class="verb get">GET</span><code class="path">/health</code></div><p class="sum">Liveness.</p><div class="blk"><span class="blab">Response</span><pre>{&quot;status&quot;: &quot;ok&quot;}</pre></div></div><div class="ep" id="post-ingest"><div class="epline"><span class="verb post">POST</span><code class="path">/ingest</code></div><p class="sum">Queue one or more claim texts onto <code>claims.raw</code>.</p><div class="blk"><span class="blab">Request</span><pre>{&quot;claims&quot;: [&quot;&lt;claim text&gt;&quot;, &quot;...&quot;]}</pre></div><div class="blk"><span class="blab">Response</span><pre>{
+  &quot;queued&quot;: 2,
+  &quot;ingest_ids&quot;: [&quot;test_data_4039de7f…&quot;, &quot;test_data_1b335e2d…&quot;]
+}</pre></div><ul class="notes"><li>Mints <code>ingest_id</code> per claim as <code>&lt;source_platform&gt;_&lt;uuid4&gt;</code> and emits <code>{ingest_id, source_platform, content, ingest_timestamp}</code>.</li><li>Ids are random, not derived from content — the same text twice gets two different ids, and nothing can recompute one.</li></ul></div></section><section class="svc k" id="flagging"><div class="svchead"><h2>flagging-engine</h2><div class="badges"><span class="badge port">:8004</span><span class="badge noauth">no auth</span></div></div><p class="role">The model. Its real work is over Kafka — consumes <code>claims.raw</code>, publishes <code>claims.inferenced</code>. These endpoints are for direct scoring and observability.</p><div class="ep" id="get-health"><div class="epline"><span class="verb get">GET</span><code class="path">/health</code></div><p class="sum">Liveness, plus whether the model has finished loading.</p></div><div class="ep" id="post-predict"><div class="epline"><span class="verb post">POST</span><code class="path">/predict</code></div><p class="sum">Score one piece of text directly, bypassing Kafka.</p><div class="blk"><span class="blab">Request</span><pre>{&quot;post_text&quot;: &quot;&lt;text&gt;&quot;}</pre></div><div class="blk"><span class="blab">Response</span><pre>{
+  &quot;label&quot;: &quot;misinformation&quot;,
+  &quot;label_binary&quot;: &quot;1&quot;,
+  &quot;confidence&quot;: 0.999955,
+  &quot;misinformation_probability&quot;: 0.999955,
+  &quot;model_version&quot;: &quot;afro-xlmr-large-76L-misinfo-v1&quot;
+}</pre></div><ul class="notes"><li><code>label</code> is the model's argmax and <code>confidence</code> is the probability of <em>that</em> class — always ≥ 0.5, so it can never contradict the label.</li><li><code>label_binary</code> is the ledger's domain. Emitted here because only this service knows its model's class ordering.</li><li><b>Sort on <code>misinformation_probability</code>, not <code>confidence</code>.</b> Confidence is near 1.0 for a confidently benign claim and a confidently harmful one alike; only the probability spans the full range.</li></ul></div><div class="ep" id="get-metrics"><div class="epline"><span class="verb get">GET</span><code class="path">/metrics</code></div><p class="sum">Prometheus exposition.</p><ul class="notes"><li><code>flagging_engine_requests_total</code>, <code>flagging_engine_misinformation_total</code>, inference latency, queue wait, batch size.</li></ul></div></section><section class="svc k" id="submission"><div class="svchead"><h2>submission-worker</h2><div class="badges"><span class="badge port">:8001</span><span class="badge noauth">no auth</span></div></div><p class="role">Consumes <code>claims.inferenced</code> and calls the gateway's <code>POST /api/reports</code> for each claim. No request API — a claim it cannot submit is appended to a local dead-letter file rather than dropped.</p><div class="ep" id="get-health"><div class="epline"><span class="verb get">GET</span><code class="path">/health</code></div><p class="sum">Liveness.</p></div><div class="ep" id="get-metrics"><div class="epline"><span class="verb get">GET</span><code class="path">/metrics</code></div><p class="sum">Prometheus exposition.</p><ul class="notes"><li><code>claims_registered_total</code>, <code>claims_registration_failed_total</code>, and the timestamp of the last successful write.</li></ul></div></section><section class="svc c" id="gateway"><div class="svchead"><h2>blockchain_gateway</h2><div class="badges"><span class="badge port">:8000</span><span class="badge auth">X-API-Key</span></div></div><p class="role">The ledger and IPFS API. Assembles claim documents, computes <code>inference_hash</code>, publishes to IPFS, invokes chaincode. The API key determines which org signs the transaction.</p><div class="ep" id="get-api-status"><div class="epline"><span class="verb get">GET</span><code class="path">/api/status</code></div><p class="sum">Off-chain storage status — whether IPFS is reachable and which backend is live (<code>ipfs</code>, or <code>sqlite</code> when degraded).</p></div><div class="ep" id="post-api-reports"><div class="epline"><span class="verb post">POST</span><code class="path">/api/reports</code></div><p class="sum">Register a claim. Called by the submission-worker, once per claim.</p><div class="blk"><span class="blab">Request</span><pre>{
+  &quot;ingest_id&quot;: &quot;test_data_4039de7f…&quot;,
+  &quot;label&quot;: &quot;1&quot;,
+  &quot;confidence&quot;: 0.999955,
+  &quot;model_version&quot;: &quot;afro-xlmr-large-76L-misinfo-v1&quot;,
+  &quot;content&quot;: &quot;&lt;claim text&gt;&quot;,
+  &quot;source_platform&quot;: &quot;test_data&quot;,
+  &quot;published_at&quot;: &quot;2026-09-07T09:14:22Z&quot;,
+  &quot;inference_timestamp&quot;: &quot;2026-09-07T09:14:23.184627+00:00&quot;
+}</pre></div><div class="blk"><span class="blab">Response</span><pre>{&quot;root_cid&quot;: &quot;Qm…&quot;, &quot;inference_hash&quot;: &quot;18f09cb4…&quot;}</pre></div><ul class="notes"><li>Nests the flat fields into <code>source</code> and <code>inference</code>, hashes exactly those two subtrees, publishes to IPFS, anchors the CID.</li><li><code>root_cid</code> is the v1 CID and becomes the ledger key. It never changes.</li></ul></div><div class="ep" id="get-api-reports"><div class="epline"><span class="verb get">GET</span><code class="path">/api/reports</code></div><p class="sum">List every on-chain record.</p><ul class="notes"><li>Optional <code>?status=PENDING|UNDER_REVIEW|REOPENED|FINAL|EXPIRED</code>, filtered client-side after fetching all records.</li></ul></div><div class="ep" id="get-api-reports-root_cid"><div class="epline"><span class="verb get">GET</span><code class="path">/api/reports/{root_cid}</code></div><p class="sum">The full off-chain document at whichever version the ledger points to.</p><ul class="notes"><li><code>root_cid</code>, <code>current_cid</code> and <code>previous_cid</code> are added on read so callers can walk the version chain.</li></ul></div><div class="ep" id="get-api-reports-root_cid-chain"><div class="epline"><span class="verb get">GET</span><code class="path">/api/reports/{root_cid}/chain</code></div><p class="sum">The on-chain record only.</p><ul class="notes"><li><code>inference_hash</code>, <code>current_cid</code>, <code>inference_label</code>, <code>confidence</code>, <code>status</code>, <code>round</code>, <code>required_panel</code>, <code>fact_checks[]</code>, <code>reopens[]</code>, and <code>final_label</code> once settled.</li></ul></div><div class="ep" id="post-api-reports-root_cid-fact-check"><div class="epline"><span class="verb post">POST</span><code class="path">/api/reports/{root_cid}/fact-check</code></div><p class="sum">Submit one fact-check. <b>This is also how a claim gets finalised</b> — there is no separate finalise call.</p><div class="blk"><span class="blab">Request</span><pre>{&quot;outcome&quot;: &quot;0&quot; | &quot;1&quot;, &quot;reasoning&quot;: &quot;&lt;free text&gt;&quot;, &quot;support&quot;: [&quot;&lt;url&gt;&quot;]}</pre></div><div class="blk"><span class="blab">Response</span><pre>// still open
+{&quot;ok&quot;: true, &quot;current_cid&quot;: &quot;Qm…&quot;, &quot;status&quot;: &quot;UNDER_REVIEW&quot;,
+ &quot;round&quot;: 0, &quot;required_panel&quot;: 3, &quot;checks_this_round&quot;: 2}
+
+// settled in this same transaction
+{&quot;ok&quot;: true, &quot;current_cid&quot;: &quot;Qm…&quot;, &quot;status&quot;: &quot;FINAL&quot;, &quot;final_label&quot;: &quot;1&quot;}</pre></div><ul class="notes"><li>Publishes a new document version carrying the reasoning and links, then invokes chaincode with that version's CID.</li><li>The chaincode closes the claim itself once the round reaches its panel with a two-thirds supermajority.</li></ul><div class="rej"><span class="blab">Rejected when</span><ul><li>the claim is not open</li><li>the org already checked <em>in this round</em></li><li><code>outcome</code> is not <code>"0"</code>/<code>"1"</code></li></ul></div></div><div class="ep" id="post-api-reports-root_cid-reopen"><div class="epline"><span class="verb post">POST</span><code class="path">/api/reports/{root_cid}/reopen</code></div><p class="sum">Reopen a <code>FINAL</code> claim at a panel two larger. Any registered org may reopen. No body.</p><div class="blk"><span class="blab">Response</span><pre>{&quot;ok&quot;: true, &quot;status&quot;: &quot;REOPENED&quot;, &quot;round&quot;: 1, &quot;required_panel&quot;: 5,
+ &quot;standing_label&quot;: &quot;1&quot;, &quot;deadline&quot;: &quot;2026-09-10T…&quot;,
+ &quot;reopens&quot;: [{&quot;org_msp&quot;: &quot;Org4MSP&quot;, &quot;round&quot;: 1, &quot;at&quot;: &quot;…&quot;, &quot;tx_id&quot;: &quot;…&quot;}]}</pre></div><ul class="notes"><li><b><code>standing_label</code> is deliberately not cleared.</b> Reopening raises a question without withdrawing the consortium's answer while that question is open.</li></ul><div class="rej"><span class="blab">Rejected when</span><ul><li>the claim is not <code>FINAL</code></li><li>this org has already reopened it</li><li>it has been reopened three times</li><li>the next panel would exceed the registered org count</li></ul></div></div><div class="ep" id="post-api-reports-root_cid-expire"><div class="epline"><span class="verb post">POST</span><code class="path">/api/reports/{root_cid}/expire</code></div><p class="sum">Close out a claim past its fact-check deadline.</p><ul class="notes"><li>A <code>PENDING</code>/<code>UNDER_REVIEW</code> claim becomes <code>EXPIRED</code>.</li><li>A <code>REOPENED</code> claim returns to <code>FINAL</code> with its standing verdict <b>reaffirmed</b> — a challenge that cannot gather its panel fails, rather than leaving the claim in limbo.</li></ul></div><div class="ep" id="get-api-reports-root_cid-verify"><div class="epline"><span class="verb get">GET</span><code class="path">/api/reports/{root_cid}/verify</code></div><p class="sum">Tamper-evidence check.</p><div class="blk"><span class="blab">Response</span><pre>{&quot;root_cid&quot;: &quot;Qm…&quot;, &quot;off_chain_intact&quot;: true,
+ &quot;matches_on_chain&quot;: true, &quot;verified&quot;: true, &quot;explanation&quot;: &quot;…&quot;}</pre></div><ul class="notes"><li><code>off_chain_intact</code> recomputes the document's hash from its own contents; <code>matches_on_chain</code> compares that to the anchored value. Both must hold.</li></ul></div><div class="ep" id="get-api-reports-root_cid-history"><div class="epline"><span class="verb get">GET</span><code class="path">/api/reports/{root_cid}/history</code></div><p class="sum">Every transaction that ever wrote this claim's ledger key, via Fabric's <code>GetHistoryForKey</code>.</p><ul class="notes"><li><b>Sorted oldest first, so <code>[0]</code> is the submission.</b></li><li>Each entry carries <code>tx_id</code>, <code>timestamp</code>, <code>is_delete</code>, and the full record as it stood at that moment.</li></ul></div><div class="ep" id="post-api-orgs-apply"><div class="epline"><span class="verb post">POST</span><code class="path">/api/orgs/apply</code></div><p class="sum">Issue an API key for a new org.</p><div class="blk"><span class="blab">Request</span><pre>{&quot;org&quot;: &quot;org6&quot;}</pre></div></div><div class="ep" id="post-api-orgs-msp-admission"><div class="epline"><span class="verb post">POST</span><code class="path">/api/orgs/{msp}/admission</code></div><p class="sum">Open an admission request for a candidate MSP.</p></div><div class="ep" id="post-api-orgs-msp-admission-vote"><div class="epline"><span class="verb post">POST</span><code class="path">/api/orgs/{msp}/admission/vote</code></div><p class="sum">Vote on admission.</p><div class="blk"><span class="blab">Request</span><pre>{&quot;verdict&quot;: &quot;0&quot; | &quot;1&quot;}</pre></div></div><div class="ep" id="post-api-orgs-msp-admission-finalize"><div class="epline"><span class="verb post">POST</span><code class="path">/api/orgs/{msp}/admission/finalize</code></div><p class="sum">Admit the candidate if roughly two-thirds of registered orgs voted yes.</p><ul class="notes"><li>Admission uses a <b>scaling</b> supermajority of the whole consortium, unlike fact-checking's fixed small panel: admitting a permanent member is a governance decision, not a per-claim verdict.</li></ul></div><div class="ep" id="get-api-orgs-msp-admission"><div class="epline"><span class="verb get">GET</span><code class="path">/api/orgs/{msp}/admission</code></div><p class="sum">The current admission request and its votes.</p></div><div class="ep" id="get-api-orgs"><div class="epline"><span class="verb get">GET</span><code class="path">/api/orgs</code></div><p class="sum">Registered orgs and when each was registered.</p></div></section><section class="svc c" id="factcheck"><div class="svchead"><h2>fact-checking-service</h2><div class="badges"><span class="badge port">:8002</span><span class="badge auth">X-API-Key</span></div></div><p class="role">The API a fact-checking organisation actually uses. A thin org-facing layer over the gateway that adds a work queue and joins on-chain records to their readable off-chain content.</p><div class="ep" id="get-health"><div class="epline"><span class="verb get">GET</span><code class="path">/health</code></div><p class="sum">Liveness.</p></div><div class="ep" id="get-claims-pending"><div class="epline"><span class="verb get">GET</span><code class="path">/claims/pending</code></div><p class="sum">The caller's work queue.</p><ul class="notes"><li>Claims still open (<code>PENDING</code>, <code>UNDER_REVIEW</code>, <code>REOPENED</code>) that this org has not checked <b>in the current round</b>.</li><li>The per-round filter matters: after a reopen, an org that checked in round 0 may and should check again, so filtering on the whole history would hide exactly the claims that most need re-examination.</li><li>No assignment, no locking. Orgs pick from the queue; the chaincode rejects a submission if the claim closed meanwhile. Closed claims leave the queue and everyone moves on.</li><li>Each claim is enriched with its off-chain content — a fact-checker cannot fact-check a hash.</li></ul></div><div class="ep" id="get-claims-root_cid"><div class="epline"><span class="verb get">GET</span><code class="path">/claims/{root_cid}</code></div><p class="sum">One claim: the on-chain record joined to its readable off-chain document.</p></div><div class="ep" id="post-claims-root_cid-fact-check"><div class="epline"><span class="verb post">POST</span><code class="path">/claims/{root_cid}/fact-check</code></div><p class="sum">Submit a finding.</p><div class="blk"><span class="blab">Request</span><pre>{&quot;outcome&quot;: &quot;0&quot; | &quot;1&quot;, &quot;reasoning&quot;: &quot;&lt;required, non-empty&gt;&quot;, &quot;support&quot;: [&quot;&lt;url&gt;&quot;]}</pre></div><ul class="notes"><li>Validates <code>outcome</code> at this boundary and returns a readable <code>400</code> rather than passing an invalid value to the chaincode.</li><li>Otherwise identical in effect to the gateway endpoint, including automatic finalisation.</li></ul></div><div class="ep" id="post-claims-root_cid-reopen"><div class="epline"><span class="verb post">POST</span><code class="path">/claims/{root_cid}/reopen</code></div><p class="sum">Reopen a finalised claim. Same semantics and guards as the gateway endpoint.</p></div></section><section class="svc i" id="fabricgw"><div class="svchead"><h2>fabric_gateway</h2><div class="badges"><span class="badge port">:9100</span><span class="badge noauth">no auth</span><span class="badge int">internal</span></div></div><p class="role">Node sidecar wrapping the official <code>@hyperledger/fabric-gateway</code> SDK. Holds each org's signing identity and is the only component that talks to peers.</p><div class="ep" id="get-health"><div class="epline"><span class="verb get">GET</span><code class="path">/health</code></div><p class="sum">Channel, chaincode name, target peer, and which org identities are loaded.</p></div><div class="ep" id="post-invoke"><div class="epline"><span class="verb post">POST</span><code class="path">/invoke</code></div><p class="sum">Submit a transaction and wait for commit.</p><div class="blk"><span class="blab">Request</span><pre>{&quot;org&quot;: &quot;org1&quot;, &quot;channel&quot;: &quot;mychannel&quot;, &quot;chaincode&quot;: &quot;misinformation&quot;,
+ &quot;function&quot;: &quot;SubmitFactCheck&quot;, &quot;args&quot;: [&quot;&lt;root_cid&gt;&quot;, &quot;1&quot;, &quot;&lt;new_cid&gt;&quot;]}</pre></div><div class="blk"><span class="blab">Response</span><pre>{&quot;ok&quot;: true, &quot;status&quot;: &quot;SUCCESS&quot;, &quot;tx_id&quot;: &quot;…&quot;}</pre></div><ul class="notes"><li><b>Returns the transaction id, not the chaincode's return payload.</b> A caller needing the resulting state must query for it — which is why the gateway re-reads a record after fact-checking.</li></ul></div><div class="ep" id="post-query"><div class="epline"><span class="verb post">POST</span><code class="path">/query</code></div><p class="sum">Evaluate a read-only transaction. Same body shape; returns the decoded result.</p></div></section><section class="svc i" id="ipfsgw"><div class="svchead"><h2>ipfs_gateway</h2><div class="badges"><span class="badge port">:9101</span><span class="badge noauth">no auth</span><span class="badge int">internal</span></div></div><p class="role">A deliberately generic IPFS bridge. It knows nothing about claims, reports or hashing.</p><div class="ep" id="get-health"><div class="epline"><span class="verb get">GET</span><code class="path">/health</code></div><p class="sum">Whether the IPFS node is reachable, and its version.</p></div><div class="ep" id="post-add"><div class="epline"><span class="verb post">POST</span><code class="path">/add</code></div><p class="sum">Stores the raw request body in IPFS and returns its CID. No interpretation of the bytes.</p></div><div class="ep" id="get-cat-cid"><div class="epline"><span class="verb get">GET</span><code class="path">/cat/{cid}</code></div><p class="sum">Returns the raw bytes for a CID, exactly as stored.</p></div></section></main>
+  <div class="tables">
+    <div>
+      <h3>Claim status</h3>
+      <table><thead><tr><th>Status</th><th>Meaning</th></tr></thead><tbody>
+        <tr><td><code>PENDING</code></td><td>Registered, no fact-checks yet</td></tr>
+        <tr><td><code>UNDER_REVIEW</code></td><td>At least one fact-check, panel not yet satisfied</td></tr>
+        <tr><td><code>FINAL</code></td><td>Settled — <code>final_label</code> holds the verdict</td></tr>
+        <tr><td><code>REOPENED</code></td><td>Under re-examination at a larger panel; the previous verdict still stands</td></tr>
+        <tr><td><code>EXPIRED</code></td><td>Deadline passed without reaching a panel</td></tr>
+      </tbody></table>
+    </div>
+    <div>
+      <h3>Identifiers</h3>
+      <table><thead><tr><th>Field</th><th>Identifies</th><th>Changes?</th></tr></thead><tbody>
+        <tr><td><code>ingest_id</code></td><td>this ingestion event</td><td>never</td></tr>
+        <tr><td><code>inference_hash</code></td><td>the claim as scored by this model</td><td>never</td></tr>
+        <tr><td><code>root_cid</code></td><td>the v1 document — the ledger key</td><td>never</td></tr>
+        <tr><td><code>current_cid</code></td><td>the live document version</td><td>every re-publish</td></tr>
+        <tr><td><code>previous_cid</code></td><td>the version this one supersedes</td><td>per version</td></tr>
+        <tr><td><code>tx_id</code></td><td>the transaction that <em>created</em> its carrier</td><td>never</td></tr>
+      </tbody></table>
+    </div>
+  </div>
+  <footer>Generated from the service source on 7 September 2026 — 28 endpoints across seven services, cross-checked against every route declaration in <code>apps/</code>. <code>fabric_gateway</code> and <code>ipfs_gateway</code> apply no authorisation of their own: anything that can reach them can invoke chaincode or write to IPFS as any configured identity. Acceptable for a single-host prototype, but worth stating rather than discovering.</footer>
+</div>

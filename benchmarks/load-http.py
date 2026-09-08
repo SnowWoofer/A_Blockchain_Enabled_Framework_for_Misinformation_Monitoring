@@ -2,7 +2,9 @@
 from __future__ import annotations
 import argparse
 import collections
+import csv
 import json
+import os
 import signal
 import statistics
 import sys
@@ -10,6 +12,8 @@ import threading
 import time
 import urllib.error
 import urllib.request
+from datetime import datetime, timezone
+from pathlib import Path
 
 
 def _post(base: str, path: str, body: dict, api_key: str) -> tuple[int, float]:
@@ -96,7 +100,7 @@ def worker(
                 return
         if rw_mix >= 100 or (i % 100) < rw_mix:
             body = {
-                "msg_id": f"{tag}-{worker_id}-{i}",
+                "ingest_id": f"{tag}-{worker_id}-{i}",
                 "label": "1",
                 "confidence": 0.9,
                 "model_version": "stress-v1",
@@ -120,7 +124,7 @@ def progress_loop(results: list, stop: threading.Event, started: float, interval
             print(f"[progress] {el:8.1f}s | {n:7d} reqs | {n / el:7.2f} req/s", flush=True)
 
 
-def summarize(results: list, elapsed: float) -> int:
+def summarize(results: list, elapsed: float) -> tuple[int, dict]:
     lat = sorted(ms for _, ms in results)
     ok = sum(1 for s, _ in results if s and s < 400)
     codes = collections.Counter(s for s, _ in results)
@@ -130,21 +134,49 @@ def summarize(results: list, elapsed: float) -> int:
             return 0.0
         return lat[min(len(lat) - 1, int(len(lat) * p))]
 
+    throughput = len(results) / elapsed if results and elapsed > 0 else 0.0
+    data = {
+        "requests": len(results),
+        "ok": ok,
+        "failed": len(results) - ok,
+        "elapsed_s": round(elapsed, 2),
+        "throughput_rps": round(throughput, 2),
+        "latency_avg_ms": round(statistics.fmean(lat), 1) if lat else 0.0,
+        "latency_p50_ms": round(pct(0.50), 1),
+        "latency_p95_ms": round(pct(0.95), 1),
+        "latency_p99_ms": round(pct(0.99), 1),
+        "latency_max_ms": round(lat[-1], 1) if lat else 0.0,
+    }
+    for code, count in sorted(codes.items(), key=lambda kv: (kv[0] == 0, kv[0])):
+        data[f"status_{code}"] = count
+
     print("=" * 64)
-    print(f" requests   : {len(results)}  ({ok} ok / {len(results) - ok} failed)")
-    print(f" elapsed    : {elapsed:.1f}s")
+    print(f" requests   : {data['requests']}  ({data['ok']} ok / {data['failed']} failed)")
+    print(f" elapsed    : {data['elapsed_s']}s")
     if results and elapsed > 0:
-        print(f" throughput : {len(results) / elapsed:.2f} req/s")
+        print(f" throughput : {data['throughput_rps']} req/s")
     if lat:
-        print(f" latency avg: {statistics.fmean(lat):.1f} ms")
+        print(f" latency avg: {data['latency_avg_ms']} ms")
     print(
-        f" p50/p95/p99/max: {pct(0.50):.1f} / {pct(0.95):.1f} / "
-        f"{pct(0.99):.1f} / {(lat[-1] if lat else 0.0):.1f} ms"
+        f" p50/p95/p99/max: {data['latency_p50_ms']} / {data['latency_p95_ms']} / "
+        f"{data['latency_p99_ms']} / {data['latency_max_ms']} ms"
     )
     ordered = dict(sorted(codes.items(), key=lambda kv: (kv[0] == 0, kv[0])))
     print(f" status     : {ordered}")
     print("=" * 64)
-    return 0 if results else 1
+    return (0 if results else 1), data
+
+
+def write_csv(path: Path, data: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    write_header = not path.exists() or path.stat().st_size == 0
+    with open(path, "a", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=["timestamp"] + list(data.keys()))
+        if write_header:
+            writer.writeheader()
+        data["timestamp"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        writer.writerow(data)
+    print(f"  Output: {path}")
 
 
 def main() -> int:
@@ -161,7 +193,10 @@ def main() -> int:
                     help="stream mode: seconds to run")
     ap.add_argument("--forever", action="store_true",
                     help="stream mode: run until Ctrl-C")
-    ap.add_argument("--label", default="stress", help="report_id prefix")
+    ap.add_argument("--label", default="stress", help="ingest_id prefix")
+    default_output = os.path.join("results", "local", "http.csv")
+    ap.add_argument("--output", default=default_output,
+                    help="CSV output path (default: results/local/http.csv)")
     args = ap.parse_args()
 
     api_key = "stress-key"
@@ -211,7 +246,10 @@ def main() -> int:
         t.join()
     stop.set()
     elapsed = time.perf_counter() - started
-    return summarize(results, elapsed)
+    rc, data = summarize(results, elapsed)
+    if data:
+        write_csv(Path(args.output), data)
+    return rc
 
 
 if __name__ == "__main__":

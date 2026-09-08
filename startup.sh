@@ -69,7 +69,12 @@ echo ">> [2/6] Starting IPFS + IPFS Gateway..."
 "${SCRIPT_DIR}/blockchain/scripts/start-ipfs-gateway.sh"
 
 echo ">> [3/6] Bootstrapping API keys (idempotent — safe on every run)..."
-"${SCRIPT_DIR}/blockchain/scripts/bootstrap-keys.sh" org1 org2 org3
+# Key one org per member of the consortium we just deployed. This used to be
+# hardcoded to org1..org3, so `--orgs 5` produced a network whose orgs 4 and 5
+# could authenticate nowhere — every run needed bootstrap-keys.sh by hand.
+BOOTSTRAP_ORGS=()
+for n in $(seq 1 "${ORGS}"); do BOOTSTRAP_ORGS+=("org${n}"); done
+"${SCRIPT_DIR}/blockchain/scripts/bootstrap-keys.sh" "${BOOTSTRAP_ORGS[@]}"
 
 echo ">> [4/6] Starting Fabric Gateway SDK sidecar + blockchain gateway..."
 "${SCRIPT_DIR}/blockchain/scripts/start-gateway-service.sh" up

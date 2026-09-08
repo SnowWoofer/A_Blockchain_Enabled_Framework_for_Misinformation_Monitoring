@@ -23,8 +23,12 @@ PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 CHAINCODE_PATH="${PROJECT_ROOT}/chaincode/misinformation/go"
 export FABRIC_SAMPLES="${FABRIC_SAMPLES:-${PROJECT_ROOT}/fabric-samples}"
 TEST_NETWORK="${FABRIC_SAMPLES}/test-network"
+# The founding-org-limit invoke below shells out to `peer` directly. Only
+# network.sh puts fabric-samples/bin on PATH, and only for its own subshell,
+# so without this the --orgs N path dies with "peer: command not found".
+export PATH="${FABRIC_SAMPLES}/bin:${PATH}"
 CC_NAME="misinformation"
-CC_VERSION="2.2"
+export CC_VERSION="${CC_VERSION:-2.5}"
 CC_SEQUENCE="1"
 CC_SRC_LANGUAGE="go"
 CHANNEL_NAME="mychannel"
@@ -73,6 +77,21 @@ if [ -n "${RESET_NETWORK}" ]; then
   if docker network ls --format '{{.Name}}' | grep -qx 'fabric_test'; then
     echo ">> Removing stale fabric_test docker network (wrong compose labels)..."
     docker network rm fabric_test >/dev/null 2>&1 || true
+  fi
+  # network.sh only knows the three orgs fabric-samples ships with, so peers
+  # added by add-orgs.sh (org4 upward) survive its teardown. Their volumes
+  # still hold the previous run's channel state, while cryptogen regenerates
+  # fresh MSP certs on the next run — the peer then reports "already joined"
+  # and every later invoke as that org fails with "creator org unknown,
+  # creator is malformed". --orgs N worked exactly once without this.
+  stale_peers="$(docker volume ls --format '{{.Name}}' \
+    | grep -E '^compose_peer0\.org([4-9]|[1-9][0-9])\.example\.com$' || true)"
+  if [ -n "${stale_peers}" ]; then
+    echo ">> Removing added-org peer volumes left by the previous run..."
+    for v in ${stale_peers}; do
+      docker rm -f "$(docker ps -aq --filter "volume=${v}")" >/dev/null 2>&1 || true
+      docker volume rm "${v}" >/dev/null 2>&1 || echo "   (could not remove ${v})"
+    done
   fi
 fi
 

@@ -17,7 +17,7 @@ services:
       KAFKA_ENABLED: "true"
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       KAFKA_INPUT_TOPIC: claims.raw
-      KAFKA_OUTPUT_TOPIC: claims.flagged
+      KAFKA_OUTPUT_TOPIC: claims.inferenced
     ports:
       - "8004:8000"
     networks:
