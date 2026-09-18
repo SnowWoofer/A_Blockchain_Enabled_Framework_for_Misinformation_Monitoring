@@ -615,5 +615,20 @@ docker compose -f blockchain/explorer/docker-compose.yaml down   # or down -v to
 |Runs stop silently after a Windows reboot / lid-close / sleep|WSL terminates detached processes; `feed_samples.py` writes its CSV **only on step completion**, so a killed run banks nothing — replay the same seed (`--seed 100`) and identical samples are re-fed. No corruption, partial steps are simply lost.|
 |Builds fail intermittently (keepalive ACK timeouts, high load, `ipfs … did not become ready`) with swap exhausted|Restore swap: `sudo fallocate -l 8G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile`. Note `sudo -n` (non-interactive) fails on this box — run such commands in an interactive shell.|
 
+RPC API 
 
-
+Found the bug. There are two sets of IPFS volumes:
+Compose project	Node 0	Node 1
+ipfs_gateway (from apps/ipfs_gateway/)	ipfs-data (external)	ipfs_gateway_ipfs-data-1
+orphan	—	ipfs-data-1
+The earlier chown commands targeted ipfs-data-1 and ipfs-data-2 — the wrong volumes. The compose containers use ipfs_gateway_ipfs-data-1 and ipfs_gateway_ipfs-data-2.
+Plan
+Step 1 — Chown the correct volumes:
+docker run --rm -v ipfs_gateway_ipfs-data-1:/data -u root alpine chown -R 1000:1000 /data
+docker run --rm -v ipfs_gateway_ipfs-data-2:/data -u root alpine chown -R 1000:1000 /data
+Step 2 — Restart the containers:
+docker restart ipfs-node-1 ipfs-node-2
+Step 3 — Verify:
+for p in 5001 5101 5201; do curl -sf -X POST "http://localhost:$p/api/v0/version" && echo " :$p OK" || echo " :$p FAIL"; done
+Optional cleanup — remove the orphan volumes that were accidentally created:
+docker volume rm ipfs-data-1 ipfs-data-2
