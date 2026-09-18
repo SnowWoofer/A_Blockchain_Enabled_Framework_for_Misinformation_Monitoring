@@ -300,7 +300,7 @@ python3 benchmarks/feed_samples.py \
   --ai-pct 70 \
   --mode direct \
   --reject-pct 20 \
-  --seed 42
+  --seed 100
 ```
 
 Results are appended to `results/local/real_loads.csv`.
