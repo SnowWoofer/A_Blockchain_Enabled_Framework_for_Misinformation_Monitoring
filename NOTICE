@@ -1,0 +1,259 @@
+A Blockchain Enabled Framework For Misinformation Monitoring
+Copyright 2026 SnowWoofer
+
+This product is licensed under the Apache License, Version 2.0.
+A copy of the license is available in the LICENSE file at the root of
+this repository or at http://www.apache.org/licenses/LICENSE-2.0
+
+This product includes software developed by third parties. The following
+is a list of those third-party components, their licenses, and their
+source locations.
+
+
+========================================================================
+Hyperledger Fabric
+========================================================================
+
+  This product includes the Hyperledger Fabric blockchain platform,
+  including peers, orderers, certificate authorities, and supporting
+  tools.
+
+  Copyright: Copyright contributors to the Hyperledger project
+  License:   Apache-2.0
+  Source:    https://github.com/hyperledger/fabric
+
+
+========================================================================
+Hyperledger Fabric Gateway SDK
+========================================================================
+
+  This product uses the official Fabric Gateway SDK for Node.js and Go.
+
+  Copyright: Copyright contributors to the Hyperledger project
+  License:   Apache-2.0
+  Source:    https://github.com/hyperledger/fabric-gateway
+
+
+========================================================================
+Hyperledger Fabric Chaincode / Contract APIs (Go)
+========================================================================
+
+  fabric-chaincode-go, fabric-contract-api-go, fabric-protos-go-apiv2
+
+  Copyright: Copyright contributors to the Hyperledger project
+  License:   Apache-2.0
+  Source:    https://github.com/hyperledger/fabric-chaincode-go
+             https://github.com/hyperledger/fabric-contract-api-go
+             https://github.com/hyperledger/fabric-protos-go-apiv2
+
+
+========================================================================
+Hyperledger Explorer
+========================================================================
+
+  This product includes Hyperledger Explorer for ledger visualization.
+
+  Copyright: Copyright contributors to the Hyperledger project
+  License:   Apache-2.0
+  Source:    https://github.com/hyperledger/blockchain-explorer
+
+
+========================================================================
+Hyperledger Caliper
+========================================================================
+
+  This product includes Hyperledger Caliper for blockchain benchmarking.
+
+  Copyright: Copyright contributors to the Hyperledger project
+  License:   Apache-2.0
+  Source:    https://github.com/hyperledger/caliper
+
+
+========================================================================
+IPFS / Kubo
+========================================================================
+
+  This product uses IPFS (InterPlanetary File System) for decentralized
+  content-addressed storage.
+
+  Copyright: Copyright contributors to the IPFS project
+  License:   MIT
+  Source:    https://github.com/ipfs/kubo
+
+
+========================================================================
+AfroXLM-R (afro-xlmr-large)
+========================================================================
+
+  The AI flagging engine is built on AfroXLM-R, a multilingual language
+  model adapted from XLM-RoBERTa for 17+ African languages.
+
+  Copyright: Copyright contributors to the Davlan/afro-xlmr project
+  License:   MIT
+  Source:    https://github.com/Davlan/afro-xlmr
+  Model:     https://huggingface.co/Davlan/afro-xlmr-large
+
+
+========================================================================
+XLM-RoBERTa (base model)
+========================================================================
+
+  AfroXLM-R is adapted from XLM-RoBERTa by Meta AI.
+
+  Copyright: Copyright (c) Meta Platforms, Inc. and affiliates
+  License:   MIT
+  Source:    https://github.com/facebookresearch/xlm
+
+
+========================================================================
+Apache Kafka (KRaft mode)
+========================================================================
+
+  This product uses Apache Kafka for message streaming.
+
+  Copyright: Copyright contributors to the Apache Software Foundation
+  License:   Apache-2.0
+  Source:    https://kafka.apache.org
+
+
+========================================================================
+Apache CouchDB
+========================================================================
+
+  CouchDB is used as the state database for the Fabric network.
+
+  Copyright: Copyright contributors to the Apache Software Foundation
+  License:   Apache-2.0
+  Source:    https://github.com/apache/couchdb
+
+
+========================================================================
+Prometheus
+========================================================================
+
+  This product uses Prometheus for metrics collection and monitoring.
+
+  Copyright: Copyright contributors to the Prometheus project
+  License:   Apache-2.0
+  Source:    https://github.com/prometheus/prometheus
+
+
+========================================================================
+Grafana
+========================================================================
+
+  This product uses Grafana for dashboard visualization.
+
+  Copyright: Copyright Grafana Labs
+  License:   AGPL-3.0
+  Source:    https://github.com/grafana/grafana
+
+
+========================================================================
+FastAPI
+========================================================================
+
+  Copyright: Copyright (c) Sebastiian Ramirez
+  License:   MIT
+  Source:    https://github.com/fastapi/fastapi
+
+
+========================================================================
+Uvicorn
+========================================================================
+
+  Copyright: Copyright (c) Encode OSS Ltd.
+  License:   BSD-3-Clause
+  Source:    https://github.com/encode/uvicorn
+
+
+========================================================================
+Pydantic / pydantic-settings
+========================================================================
+
+  Copyright: Copyright (c) Samuel Colvin and other contributors
+  License:   MIT
+  Source:    https://github.com/pydantic/pydantic
+             https://github.com/pydantic/pydantic-settings
+
+
+========================================================================
+Transformers (Hugging Face)
+========================================================================
+
+  Copyright: Copyright (c) Hugging Face Inc.
+  License:   Apache-2.0
+  Source:    https://github.com/huggingface/transformers
+
+
+========================================================================
+Accelerate (Hugging Face)
+========================================================================
+
+  Copyright: Copyright (c) Hugging Face Inc.
+  License:   Apache-2.0
+  Source:    https://github.com/huggingface/accelerate
+
+
+========================================================================
+BitsAndBytes
+========================================================================
+
+  Copyright: Copyright (c) Tim Dettmers
+  License:   Apache-2.0
+  Source:    https://github.com/TimDettmers/bitsandbytes
+
+
+========================================================================
+aiokafka
+========================================================================
+
+  Copyright: Copyright (c) Andrew Godwin and other contributors
+  License:   Apache-2.0
+  Source:    https://github.com/aio-libs/aiokafka
+
+
+========================================================================
+httpx
+========================================================================
+
+  Copyright: Copyright (c) Encode OSS Ltd.
+  License:   BSD-3-Clause
+  Source:    https://github.com/encode/httpx
+
+
+========================================================================
+NumPy
+========================================================================
+
+  Copyright: Copyright (c) NumPy Developers
+  License:   BSD-3-Clause
+  Source:    https://github.com/numpy/numpy
+
+
+========================================================================
+Express.js
+========================================================================
+
+  Copyright: Copyright (c) TJ Holowaychuk and other contributors
+  License:   MIT
+  Source:    https://github.com/expressjs/express
+
+
+========================================================================
+gRPC (Node.js and Go)
+========================================================================
+
+  Copyright: Copyright (c) gRPC authors
+  License:   Apache-2.0
+  Source:    https://github.com/grpc/grpc-node
+             https://github.com/grpc/grpc-go
+
+
+========================================================================
+Protocol Buffers (protobuf)
+========================================================================
+
+  Copyright: Copyright (c) Google Inc.
+  License:   BSD-3-Clause
+  Source:    https://github.com/protocolbuffers/protobuf
