@@ -29,9 +29,9 @@ wait_for_gateway() {
 
 for N in "${ORGS[@]}"; do
   echo ""
-  echo "========================================"
+  echo "==========="
   echo "  ORGS=$N"
-  echo "========================================"
+  echo "==========="
 
   docker rm -f $(docker ps -aq) 2>/dev/null || true
 

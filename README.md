@@ -222,10 +222,19 @@ Benchmark harnesses (`feed_samples.py`, `load-http.py`) use the bootstrap API-ke
 The system has **two layers** that start independently. Start the blockchain
 layer first — the app layer depends on it being reachable.
 
+### Step 0: Purge stale containers
+
+```
+docker rm -f $(docker ps -aq) 2>/dev/null
+```
+
+> Leftover containers from earlier consortium sizes repeatedly break builds
+> and IPFS checkpoints. Always purge first.
+
 ### Step 1: Start the blockchain layer
 
 ```
-./startup.sh --orgs 3 --test-samples 50 --skip-caliper
+./startup.sh --orgs 5 --test-samples 10 --skip-caliper
 ```
 
 This runs 7 steps automatically:
@@ -235,7 +244,7 @@ This runs 7 steps automatically:
 3. Starts IPFS + IPFS Gateway
 4. Bootstraps API keys for org1..orgN (idempotent — safe to re-run)
 5. Starts Fabric Gateway SDK sidecar + blockchain gateway
-6. Runs a validation load (50 synthetic requests to confirm the gateway works)
+6. Runs a validation load (10 synthetic requests to confirm the gateway works)
 7. Optionally runs a Caliper benchmark (skip with `--skip-caliper`)
 
 After this, the blockchain gateway is live at `:8000`. Scale the consortium
@@ -246,28 +255,21 @@ consortium regardless of what `--orgs` you provisioned. `startup.sh` sets the
 `ORGS_LIST` for the gateways itself, so the gateway org map is always in sync
 on this path (only the incremental path below needs a manual gateway restart).
 
-> **Recommended workflow** — provision the network first with `startup.sh`,
-> then run benchmark variants yourself against the resulting `N`-org
-> consortium. **Purge stale containers first** — leftover containers from
-> earlier consortium sizes repeatedly break builds and IPFS checkpoints:
->
-> ```
-> docker rm -f $(docker ps -aq) 2>/dev/null                       # purge stale containers
-> bash startup.sh --orgs N --test-samples 10 --skip-caliper      # net + keys + gateways only
-> docker compose up -d --build                                   # AI pipeline (never touches the gateways)
-> ```
->
-> Wait for the flagging-engine warmup (~1 min int8 quantize on CPU) and confirm
-> the gate before feeding:
->
-> ```
-> curl -s -H "X-API-Key: stress-key" http://localhost:8000/api/status            # gateway
-> for p in 5001 5101 5201; do curl -s -X POST http://localhost:$p/api/v0/version >/dev/null \
->   && echo "ipfs :$p OK" || echo "ipfs :$p DOWN";done                          
-> until [ "$(curl -s -o /dev/null -w '%{http_code}' -X POST http://localhost:8004/predict -d '{}' 2>/dev/null)" = "422" ]; do sleep 5; done && echo "engine ready"
-> ```
+### Step 2: Start Explorer (patched)
 
-### Step 2: Start the application pipeline (optional)
+```
+docker compose -f blockchain/explorer/docker-compose.yaml down -v
+docker compose -f blockchain/explorer/docker-compose.yaml up -d --build
+sleep 30
+```
+
+Verify Explorer sync (should show `lscc` fallback, no errors):
+
+```
+docker logs explorer 2>&1 | grep -i "error\|lscc\|sync" | tail -10
+```
+
+### Step 3: Start the application pipeline (optional)
 
 ```
 docker compose up -d --build
@@ -290,7 +292,112 @@ flagging-engine's 2.2 GB model fits comfortably on a laptop.
 > finishes loading (~1 min int8 quantize on CPU). Requests in that window get
 > `Connection refused` / `Connection reset`; the service has `restart:
 > unless-stopped`, so a Kafka hiccup on first boot self-heals. Don't feed until
-> the `until …422` probe above prints `engine ready`.
+> the `until …422` probe below prints `engine ready`.
+
+### Step 4: Wait for all services
+
+```
+# Check gateway
+curl -s -H "X-API-Key: stress-key" http://localhost:8000/api/status
+
+# Check IPFS nodes
+for p in 5001 5101 5201; do
+  curl -s -X POST http://localhost:$p/api/v0/version >/dev/null \
+    && echo "ipfs :$p OK" || echo "ipfs :$p DOWN"
+done
+
+# Wait for AI engine to be ready (returns 422)
+until [ "$(curl -s -o /dev/null -w '%{http_code}' -X POST http://localhost:8004/predict -d '{}' 2>/dev/null)" = "422" ]; do
+  sleep 5
+done && echo "engine ready"
+```
+
+### Step 5: Feed data through the pipeline
+
+```
+python3 benchmarks/feed_samples.py \
+  --data data/translated_masked_samples_test.json \
+  --samples 10 \
+  --ai-pct 70 \
+  --mode direct \
+  --reject-pct 20 \
+  --seed 100
+```
+
+Results are appended to `results/local/real_loads.csv`.
+
+|Flag|Purpose|Default|
+|-|-|-|
+|`--data`|JSON file with statements|`data/translated_masked_samples_test.json`|
+|`--samples N`|Randomly select N samples|all|
+|`--ai-pct P`|% of reports the AI processed (submitted by org1 in direct mode)|100|
+|`--num-orgs N`|Override on-chain org count|**auto-detected** from `/api/orgs`|
+|`--mode`|`direct` (org1 = AI stakeholder, submits ai_pct%, random orgs submit the rest, everyone-except-submitter votes) or `indirect` (random org submits each report)|direct|
+|`--reject-pct P`|% of reports with sub-2/3 consensus (REJECTED)|0|
+|`--fact-check`|Simulate fact-checking (consensus voting) after submission|**on**|
+|`--no-fact-check`|Disable fact-checking|—|
+|`--seed N`|Random seed for reproducibility|**100**|
+|`--vote-pool N`|Max concurrent fact-check votes in flight per report (keep 1)|**1** (sequential — no Fabric MVCC conflicts)|
+|`--endpoint`|Flagging-engine `/predict` base URL|`http://localhost:8004`|
+|`--blockchain-api`|Blockchain gateway base URL|`http://localhost:8000`|
+|`--output`|Output path (`.csv` for CSV, `.jsonl` for JSONL)|`results/local/real_loads.csv`|
+
+**How it works:**
+
+1. Loads JSON, randomly selects N samples
+2. AI-verdict: if the model engine is reachable, `/predict` provides the label
+
+   * confidence; otherwise the harness falls back to deterministic seeded draws
+   (see [AI verdicts & confidence](#ai-verdicts--confidence))
+3. Submission split — direct mode: `ai_pct%` submitted by org1, the rest by a
+   random `org2..orgN`
+4. Fact-checks one vote from each non-submitting org — subsequently polls
+   `/api/reports/{id}/chain` until `FINAL` or `REJECTED`
+   (all votes are cast first; the chain early-finalises the moment quorum is
+   mathematically settled, so unneeded votes simply land on an already-closed
+   report)
+5. Outputs per-sample results to CSV + console summary
+
+**Accepted vs Rejected:**
+
+* **Accepted** (`FINAL`): fact-checkers reached `>= ceil(2/3 × registered_orgs)`
+  YES votes — the report is finalised with label "1".
+* **Rejected** (`REJECTED`): even if every remaining org voted YES the 2/3
+  threshold is unreachable — e.g. 13 orgs (required 9): after 7 votes of which
+  2 are YES, `tally[1] + remaining = 2 + 6 = 8 < 9`, so the maximum possible
+  YES is 8 and the chain finalises rejection immediately; the remaining orgs
+  never need to vote.
+
+Both are on-chain with a `report_id` = **the IPFS CID** of the report blob.
+Rejected reports are permanent evidence that consensus was attempted but failed.
+
+### Step 6: Verify everything via API
+
+```
+# Check status (orgs, reports, blocks)
+curl -s -H "X-API-Key: stress-key" http://localhost:8000/api/status
+
+# Check report chain history
+CID=QmfQxxokgmiia8A461KwMPCxzZxTpnxBoWSyrhNPzBq5hj
+curl -s -H "X-API-Key: key-org1" "http://localhost:8000/api/reports/$CID/chain"
+
+# Check full consensus lifecycle
+curl -s -H "X-API-Key: key-org1" "http://localhost:8000/api/reports/$CID/history"
+
+# Check IPFS content retrieval
+curl -sL "http://localhost:8081/ipfs/$CID"
+
+# Verify IPFS integrity
+curl -s -H "X-API-Key: key-org1" "http://localhost:8000/api/reports/$CID/verify"
+```
+
+### Step 7: Check Explorer UI
+
+```
+Open http://localhost:8080
+Login: exploreradmin / exploreradminpw
+Navigate to: Network > Channels > mychannel > Blocks
+```
 
 ### Growing the consortium on a live network (no reset)
 
@@ -516,10 +623,15 @@ Results: `benchmarks/caliper/report.html` + `results/local/caliper.csv`
 
 ```
 docker compose -f blockchain/explorer/docker-compose.yaml down -v
-docker compose -f blockchain/explorer/docker-compose.yaml up -d
+docker compose -f blockchain/explorer/docker-compose.yaml up -d --build
 # open http://localhost:8080 — login exploreradmin / exploreradminpw
 # (connection profile is regenerated by deploy.sh / gen-explorer-config.sh for the current org count)
 ```
+
+> **Note:** The Explorer image is patched to handle Fabric 2.5.x (missing `lscc`
+> system chaincode). The `Dockerfile` wraps the `lscc` call in try-catch so it
+> falls back to `_lifecycle`. Use `--build` on first run or after any Explorer
+> image update.
 
 Stop with the same compose file `down` (use `down -v` only to wipe Explorer's
 own postgres/wallet data).
@@ -552,7 +664,7 @@ TORCH_DEVICE=cuda MODEL_QUANTIZATION=fp16 MAX_BATCH_SIZE=64 MAX_QUEUE_DELAY_MS=5
 CID=<report_id_from_csv>                       # CSV column report_id == IPFS CID
 
 # on-chain record (status, consensus, votes)   — the ledger
-curl -s -H "X-API-Key: key-org1" "http://localhost8000/api/reports/$CID/chain"
+curl -s -H "X-API-Key: key-org1" "http://localhost:8000/api/reports/$CID/chain"
 
 # the report blob itself                       — the IPFS gateway (kubo :8081)
 curl -sL "http://localhost:8081/ipfs/$CID"
@@ -870,39 +982,5 @@ docker compose -f blockchain/explorer/docker-compose.yaml down   # or down -v to
 |JWT auth: all endpoints return 401 "missing Authorization header"|After login, pass the token as `-H "Authorization: Bearer <token>"`.|
 |JWT auth: 401 "invalid or expired token"|Token expired (default 24h). Re-login via `/api/auth/login` to get a fresh token.|
 |Apply org returns 400 "not registered on-chain"|The target org must be registered via `RegisterOrg` before `apply_org` can generate its API key. |
-
-RPC API 
-
-Found the bug. There are two sets of IPFS volumes:
-Compose project	Node 0	Node 1
-ipfs_gateway (from apps/ipfs_gateway/)	ipfs-data (external)	ipfs_gateway_ipfs-data-1
-orphan	—	ipfs-data-1
-The earlier chown commands targeted ipfs-data-1 and ipfs-data-2 — the wrong volumes. The compose containers use ipfs_gateway_ipfs-data-1 and ipfs_gateway_ipfs-data-2.
-Plan
-Step 1 — Chown the correct volumes:
-docker run --rm -v ipfs_gateway_ipfs-data-1:/data -u root alpine chown -R 1000:1000 /data
-docker run --rm -v ipfs_gateway_ipfs-data-2:/data -u root alpine chown -R 1000:1000 /data
-Step 2 — Restart the containers:
-docker restart ipfs-node-1 ipfs-node-2
-Step 3 — Verify:
-for p in 5001 5101 5201; do curl -sf -X POST "http://localhost:$p/api/v0/version" && echo " :$p OK" || echo " :$p FAIL"; done
-Optional cleanup — remove the orphan volumes that were accidentally created:
-docker volume rm ipfs-data-1 ipfs-data-2
-
-IPFS node 1 (port 5101) failed to start — this is the volume ownership issue you found earlier. Here's the plan:
-Plan: Fix IPFS Node 1 Startup Failure
-Root Cause
-ipfs-node-1 can't start because the Docker volume ipfs_gateway_ipfs-data-1 has wrong ownership (root:root instead of 1000:1000).
-Step 1: Fix volume ownership
-docker run --rm -v ipfs_gateway_ipfs-data-1:/data -u root alpine chown -R 1000:1000 /data
-docker run --rm -v ipfs_gateway_ipfs-data-2:/data -u root alpine chown -R 1000:1000 /data
-Step 2: Restart IPFS containers
-docker restart ipfs-node ipfs-node-1 ipfs-node-2
-Step 3: Verify all 3 nodes are ready
-for p in 5001 5101 5201; do
-  curl -sf -X POST "http://localhost:$p/api/v0/version" && echo " :$p OK" || echo " :$p FAIL"
-done
-Step 4: Clean up orphan volumes (optional)
-docker volume rm ipfs-data-1 ipfs-data-2
-Step 5: Re-run startup.sh
-./startup.sh --orgs 5 --test-samples 10 --skip-caliper
+|IPFS nodes crash-loop with `Error: lock /data/ipfs/repo.lock: permission denied`|Run `docker run --rm -v ipfs_gateway_ipfs-data-1:/data -u root alpine chown -R 1000:1000 /data` (and `ipfs-data-2`), then `docker restart ipfs-node ipfs-node-1 ipfs-node-2`.|
+|Explorer shows no blocks / sync errors|Use `--build` when starting Explorer: `docker compose -f blockchain/explorer/docker-compose.yaml up -d --build`. The patched image handles Fabric 2.5.x missing `lscc`.|
