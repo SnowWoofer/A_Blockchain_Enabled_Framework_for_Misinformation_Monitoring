@@ -263,7 +263,7 @@ on this path (only the incremental path below needs a manual gateway restart).
 > ```
 > curl -s -H "X-API-Key: stress-key" http://localhost:8000/api/status            # gateway
 > for p in 5001 5101 5201; do curl -s -X POST http://localhost:$p/api/v0/version >/dev/null \
->   && echo "ipfs :$p OK" || echo "ipfs :$p DOWN"; done                          # IPFS swarm
+>   && echo "ipfs :$p OK" || echo "ipfs :$p DOWN";done                          
 > until [ "$(curl -s -o /dev/null -w '%{http_code}' -X POST http://localhost:8004/predict -d '{}' 2>/dev/null)" = "422" ]; do sleep 5; done && echo "engine ready"
 > ```
 
@@ -888,3 +888,21 @@ Step 3 — Verify:
 for p in 5001 5101 5201; do curl -sf -X POST "http://localhost:$p/api/v0/version" && echo " :$p OK" || echo " :$p FAIL"; done
 Optional cleanup — remove the orphan volumes that were accidentally created:
 docker volume rm ipfs-data-1 ipfs-data-2
+
+IPFS node 1 (port 5101) failed to start — this is the volume ownership issue you found earlier. Here's the plan:
+Plan: Fix IPFS Node 1 Startup Failure
+Root Cause
+ipfs-node-1 can't start because the Docker volume ipfs_gateway_ipfs-data-1 has wrong ownership (root:root instead of 1000:1000).
+Step 1: Fix volume ownership
+docker run --rm -v ipfs_gateway_ipfs-data-1:/data -u root alpine chown -R 1000:1000 /data
+docker run --rm -v ipfs_gateway_ipfs-data-2:/data -u root alpine chown -R 1000:1000 /data
+Step 2: Restart IPFS containers
+docker restart ipfs-node ipfs-node-1 ipfs-node-2
+Step 3: Verify all 3 nodes are ready
+for p in 5001 5101 5201; do
+  curl -sf -X POST "http://localhost:$p/api/v0/version" && echo " :$p OK" || echo " :$p FAIL"
+done
+Step 4: Clean up orphan volumes (optional)
+docker volume rm ipfs-data-1 ipfs-data-2
+Step 5: Re-run startup.sh
+./startup.sh --orgs 5 --test-samples 10 --skip-caliper

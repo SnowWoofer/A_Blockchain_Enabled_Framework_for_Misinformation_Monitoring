@@ -83,3 +83,4 @@ benchmarks/results-live*
 !instruction.txt
 apps/flagging-engine/model/model.safetensors
 apps/flagging-engine/model/model-001.safetensors
+report
