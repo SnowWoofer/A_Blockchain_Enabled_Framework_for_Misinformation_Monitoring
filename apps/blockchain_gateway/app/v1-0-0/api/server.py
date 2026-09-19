@@ -14,6 +14,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from storage import OffChainStore
+from auth import (
+    AUTH_MODE, UserStore, create_token, init_user_store, set_server_store,
+    get_auth_mode, require_org as _require_org,
+)
 try:
     from blockchain import FabricBridge, FabricGatewayBridge
     from report import make_report, verify_report_integrity
@@ -34,43 +38,47 @@ _gateway_available: Optional[bool] = None
 class OrgApply(BaseModel):
     org: str
 
-
 class AdmissionVote(BaseModel):
     verdict: str
 
-
 class ReportCreate(BaseModel):
-    # msg_id is the claim's identity from claims.raw and is carried through
-    # unchanged. It is NOT the report's identifier — that is the IPFS CID,
-    # assigned once the document is sealed.
+    # msg_id is the claim's identity from claims.raw and is carried through unchanged.
     msg_id: str
     label: str
     confidence: float = Field(ge=0.0, le=1.0)
     model_version: str
     content: str
-    # Required, with no default: the caller knows where the claim came from.
-    # Defaulting it silently attributed every claim to twitter.
+    # Required, with no default: the submitter knows where the claim came from.
     source_platform: str
     published_at: str = ""
     inference_timestamp: str = ""
 
 
-# final_label / outcome are the binary label domain ("0"/"1"); the off-chain
-# document spells the finalised result out for readers.
+# final_label / outcome are the binary label domain ("0"/"1");
 VERIFIED_STATUS = {"0": "Verified_Non_Misinformation", "1": "Verified_Misinformation"}
 
 
 class FactCheckSubmission(BaseModel):
-    outcome: str  # one of: factual / opinion / misinformation
+    outcome: str  # misinformation / non-misinformation
     reasoning: str = ""
     support: List[str] = Field(default_factory=list)
 
 
-def require_org(x_api_key: str = Header(..., alias="X-API-Key")) -> str:
-    org = STORE.org_for_key(x_api_key)
-    if not org:
-        raise HTTPException(status_code=401, detail="unknown API key")
-    return org
+class AuthLogin(BaseModel):
+    org: str
+    password: str
+
+
+class AuthRegister(BaseModel):
+    org: str
+    password: str
+
+
+def require_org(
+    x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
+    authorization: Optional[str] = Header(None, alias="Authorization"),
+) -> str:
+    return _require_org(x_api_key=x_api_key, authorization=authorization)
 
 
 def _gateway_up() -> bool:
@@ -83,7 +91,7 @@ def _gateway_up() -> bool:
         if _gateway_available:
             print(f"[bridge] using official Fabric Gateway SDK service at {FABRIC_GATEWAY_URL}")
         else:
-            print("[bridge] Gateway SDK service unreachable — falling back to peer CLI")
+            print("[bridge] Gateway SDK service unreachable, falling back to peer CLI")
     return _gateway_available
 
 
@@ -104,8 +112,7 @@ def bridge_for(org: str, endorsers: Optional[List[str]] = None) -> Any:
 
 
 def chain_call(fn, *args, **kwargs) -> Any:
-    """Run a chaincode invoke/query and surface its error message as a 400
-    instead of letting it fall through to FastAPI's bare 500 handler."""
+    #Run a chaincode invoke/query and surface its error message as a 400
     try:
         return fn(*args, **kwargs)
     except HTTPException:
@@ -117,12 +124,7 @@ def chain_call(fn, *args, **kwargs) -> Any:
 def _now_rfc3339() -> str:
     return _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
-
-# Consortium membership is not fixed at three. Orgs join by channel config
-# update plus an on-chain admission vote, and some of them run no peer at all
-# (see blockchain/scripts/add-client-org.sh) — a client-only member signs its
-# own transactions and is endorsed by the orgs that do run peers. Derive the
-# map from ORGS so adding a member is configuration, not a code change.
+# Consortium membership is not fixed at three. Orgs join by channel config update plus an on-chain admission vote, and some of them run no peer at all
 ORG_MSPID = {
     o.strip(): f"Org{o.strip().removeprefix('org')}MSP"
     for o in os.environ.get("ORGS", "org1,org2,org3").split(",")
@@ -131,11 +133,7 @@ ORG_MSPID = {
 
 
 def _decode_chain_value(value: Any) -> Any:
-    """The Fabric Gateway SDK sidecar occasionally hands back a query result
-    as its raw byte values (a Uint8Array, not a Node Buffer, rendered via
-    default toString() as comma-separated decimal codes) instead of decoded
-    JSON — non-deterministically, depending on peer/connection path. Recover
-    the real value in either case."""
+    # The Fabric Gateway SDK sidecar occasionally hands back a query result as its raw byte values instead of decoded JSON.
     if isinstance(value, (dict, list)):
         return value
     if isinstance(value, str):
@@ -177,15 +175,22 @@ async def expire_overdue_reports(interval_s: int = 3600) -> None:
                     deadline = rec.get("fact_check_deadline", "")
                     if deadline and _dt.datetime.fromisoformat(deadline.replace("Z", "+00:00")) < _dt.datetime.now(_dt.timezone.utc):
                         bridge.expire_report(rec["id"])
+                        report = STORE.get_report(rec["id"])
+                        if report:
+                            report = {**report, "fact_check_status": "Expired"}
+                            STORE.save_report_version(rec["id"], report)
         except Exception as exc:
             print(f"[scheduler] expiry pass failed: {exc}")
         await asyncio.sleep(interval_s)
 
+USER_DB = os.environ.get("USER_DB") or str(Path(__file__).resolve().parent / "users.db")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global STORE
     STORE = OffChainStore(OFFCHAIN_DB)
+    set_server_store(STORE)
+    init_user_store(USER_DB)
     task = asyncio.create_task(expire_overdue_reports())
     yield
     task.cancel()
@@ -200,12 +205,42 @@ app.add_middleware(
 
 @app.post("/api/orgs/apply")
 def apply_org(body: OrgApply, _org: str = Depends(require_org)):
+    registered = _on_chain_list(chain_call(bridge_for(_org).list_orgs))
+    registered_names = [o.get("name", "") for o in registered]
+    if body.org not in registered_names:
+        raise HTTPException(status_code=400, detail=f"org '{body.org}' is not registered on-chain")
     token = hashlib.sha256(f"{body.org}|{time.time_ns()}".encode("utf-8")).digest()
     STORE.verify_onboarding_token(body.org, token)
     raw = f"{body.org}|{time.time_ns()}|{_org}"
     api_key = hashlib.sha256(raw.encode("utf-8")).hexdigest()
     STORE.upsert_org_key(api_key, body.org)
     return {"org": body.org, "api_key": api_key}
+
+
+@app.post("/api/auth/register")
+def auth_register(body: AuthRegister):
+    if get_auth_mode() != "jwt":
+        raise HTTPException(status_code=400, detail="register is only available in JWT auth mode")
+    from auth import _user_store
+    if not _user_store:
+        raise HTTPException(status_code=500, detail="user store not initialized")
+    if _user_store.user_exists(body.org):
+        raise HTTPException(status_code=409, detail=f"org '{body.org}' already has credentials")
+    _user_store.create_user(body.org, body.password)
+    return {"org": body.org, "ok": True}
+
+
+@app.post("/api/auth/login")
+def auth_login(body: AuthLogin):
+    if get_auth_mode() != "jwt":
+        raise HTTPException(status_code=400, detail="login is only available in JWT auth mode")
+    from auth import _user_store
+    if not _user_store:
+        raise HTTPException(status_code=500, detail="user store not initialized")
+    if not _user_store.verify_user(body.org, body.password):
+        raise HTTPException(status_code=401, detail="invalid credentials")
+    token = create_token(body.org)
+    return {"org": body.org, "token": token}
 
 
 @app.post("/api/orgs/{msp}/admission")
@@ -298,17 +333,7 @@ def submit_fact_check(report_id: str, body: FactCheckSubmission, _org: str = Dep
     report = STORE.get_report(report_id)
     if not report:
         raise HTTPException(status_code=404, detail="report not found off-chain")
-    # Chain FIRST. The ledger owns the guards that can reject this — one
-    # fact-check per org, and only on a PENDING/UNDER_REVIEW report. Writing
-    # the off-chain document before the invoke meant a rejected submission
-    # still appended an entry to IPFS that the ledger never accepted, leaving
-    # the document permanently showing more fact-checks than the chain.
-    # Only the outcome goes on-chain — reasoning/support stay off-chain.
     chain_call(bridge_for(_org).submit_fact_check, report_id, body.outcome)
-    # Accepted: re-publish the full document as a new, immutable version (new
-    # CID) with this fact-check appended — old versions stay resolvable in
-    # IPFS, nothing is mutated in place. The ledger stores no pointer to the
-    # new version: the claim's id is itself the off-chain address.
     report = {
         **report,
         "fact_check_status": "Under_Review",
@@ -342,6 +367,10 @@ def finalize_report(report_id: str, _org: str = Depends(require_org)):
 @app.post("/api/reports/{report_id}/expire")
 def expire_report(report_id: str, _org: str = Depends(require_org)):
     chain_call(bridge_for(_org).expire_report, report_id)
+    report = STORE.get_report(report_id)
+    if report:
+        report = {**report, "fact_check_status": "Expired"}
+        STORE.save_report_version(report_id, report)
     return {"ok": True}
 
 
