@@ -1,0 +1,35 @@
+services:
+  submission-worker:
+    build: .
+    container_name: submission-worker
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_INPUT_TOPIC: claims.flagged
+      KAFKA_CONSUMER_GROUP: submission-worker
+      # blockchain_gateway is its own independent service/compose stack —
+      # host.docker.internal (below) resolves to the host from inside the
+      # container regardless of whether it's running dockerized there or
+      # directly on the host. Override BLOCKCHAIN_API_KEY with a real key
+      # from blockchain/scripts/bootstrap-keys.sh.
+      BLOCKCHAIN_API_BASE: ${BLOCKCHAIN_API_BASE:-http://host.docker.internal:8000}
+      BLOCKCHAIN_API_KEY: ${BLOCKCHAIN_API_KEY:-key-org1}
+      DEFAULT_LANGUAGE: ${DEFAULT_LANGUAGE:-eng}
+      OUTPUT_PATH: /data/failed_claims.jsonl
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - submission-data:/data
+    ports:
+      - "8001:8000"
+    networks:
+      - kafka_net
+    restart: unless-stopped
+
+networks:
+  # Owned by apps/kafka/docker-compose.yaml — start that (or a stack that
+  # includes it) first.
+  kafka_net:
+    external: true
+
+volumes:
+  submission-data:

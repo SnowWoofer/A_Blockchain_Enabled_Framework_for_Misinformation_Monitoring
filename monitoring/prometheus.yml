@@ -1,0 +1,11 @@
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: flagging-engine
+    static_configs:
+      - targets: ["flagging-engine:8000"]
+
+  - job_name: submission-worker
+    static_configs:
+      - targets: ["submission-worker:8000"]

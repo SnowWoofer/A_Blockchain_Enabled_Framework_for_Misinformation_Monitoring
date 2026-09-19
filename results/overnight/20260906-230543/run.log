@@ -1,0 +1,7 @@
+2026-09-06 23:05:43 >> Bringing up pipeline services (flagging-engine + kafka)...
+2026-09-06 23:05:44 >> Gateway currently reachable.
+2026-09-06 23:05:44 >> Dataset=1401 entries | sample steps: 100,200,500 | caliper steps: 100,200,500
+2026-09-06 23:05:44 >> /predict live on http://localhost:8004 (real AI verdicts)
+2026-09-06 23:05:44 == [outer] building fresh 20-org network ==
+2026-09-06 23:13:19 WARN: startup.sh failed for orgs=20 (see /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/results/overnight/20260906-230543/20_orgs/setup_20.log) — skipping this org size
+2026-09-06 23:13:34 == [outer] building fresh 15-org network ==

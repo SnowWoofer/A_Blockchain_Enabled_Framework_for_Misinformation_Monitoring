@@ -1,0 +1,274 @@
+>> [1/7] Ensuring Docker networks exist...
+>> [2/7] Provisioning 10-org Fabric network...
+>> Resetting any existing network (fresh ledger)...
+>> Starting the test network...
+[0;34mUsing docker and docker compose[0m
+[0;34mStarting nodes with CLI timeout of '5' tries and CLI delay of '3' seconds and using database 'couchdb' with crypto from 'cryptogen'[0m
+[0;34mLOCAL_VERSION=v2.5.16[0m
+[0;34mDOCKER_IMAGE_VERSION=v2.5.16[0m
+/home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/../bin/cryptogen
+[0;34mGenerating certificates using cryptogen tool[0m
+[0;34mCreating Org1 Identities[0m
++ cryptogen generate --config=./organizations/cryptogen/crypto-config-org1.yaml --output=organizations
+org1.example.com
++ res=0
+[0;34mCreating Org2 Identities[0m
++ cryptogen generate --config=./organizations/cryptogen/crypto-config-org2.yaml --output=organizations
+org2.example.com
++ res=0
+[0;34mCreating Orderer Org Identities[0m
++ cryptogen generate --config=./organizations/cryptogen/crypto-config-orderer.yaml --output=organizations
++ res=0
+[0;34mGenerating CCP files for Org1 and Org2[0m
+ Network fabric_test Creating 
+ Network fabric_test Created 
+ Volume compose_peer0.org2.example.com Creating 
+ Volume compose_peer0.org2.example.com Created 
+ Volume compose_orderer.example.com Creating 
+ Volume compose_orderer.example.com Created 
+ Volume compose_peer0.org1.example.com Creating 
+ Volume compose_peer0.org1.example.com Created 
+ Container couchdb0 Creating 
+ Container orderer.example.com Creating 
+ Container couchdb1 Creating 
+ Container couchdb1 Created 
+ Container peer0.org2.example.com Creating 
+ Container couchdb0 Created 
+ Container peer0.org1.example.com Creating 
+ Container orderer.example.com Created 
+ Container peer0.org2.example.com Created 
+ Container peer0.org1.example.com Created 
+ Container couchdb1 Starting 
+ Container couchdb0 Starting 
+ Container orderer.example.com Starting 
+ Container couchdb1 Started 
+ Container peer0.org2.example.com Starting 
+ Container couchdb0 Started 
+ Container peer0.org1.example.com Starting 
+ Container orderer.example.com Started 
+ Container peer0.org2.example.com Started 
+ Container peer0.org1.example.com Started 
+CONTAINER ID   IMAGE                                                                          COMMAND                  CREATED          STATUS                         PORTS                                                                                                                                                                                          NAMES
+5c8ca67eb4d4   hyperledger/fabric-peer:latest                                                 "peer node start"        1 second ago     Up Less than a second          0.0.0.0:7051->7051/tcp, [::]:7051->7051/tcp, 0.0.0.0:9444->9444/tcp, [::]:9444->9444/tcp                                                                                                       peer0.org1.example.com
+ae572ead711b   hyperledger/fabric-peer:latest                                                 "peer node start"        1 second ago     Up Less than a second          0.0.0.0:9051->9051/tcp, [::]:9051->9051/tcp, 7051/tcp, 0.0.0.0:9445->9445/tcp, [::]:9445->9445/tcp                                                                                             peer0.org2.example.com
+425073bdeaf1   couchdb:3.4.2                                                                  "tini -- /docker-ent…"   1 second ago     Up Less than a second          4369/tcp, 9100/tcp, 0.0.0.0:5984->5984/tcp, [::]:5984->5984/tcp                                                                                                                                couchdb0
+a98f542f1180   couchdb:3.4.2                                                                  "tini -- /docker-ent…"   1 second ago     Up Less than a second          4369/tcp, 9100/tcp, 0.0.0.0:7984->5984/tcp, [::]:7984->5984/tcp                                                                                                                                couchdb1
+80a143e2c37b   hyperledger/fabric-orderer:latest                                              "orderer"                1 second ago     Up Less than a second          0.0.0.0:7050->7050/tcp, [::]:7050->7050/tcp, 0.0.0.0:7053->7053/tcp, [::]:7053->7053/tcp, 0.0.0.0:9443->9443/tcp, [::]:9443->9443/tcp                                                          orderer.example.com
+72876e8f9ea6   ipfs/kubo:latest                                                               "/sbin/tini -- /usr/…"   3 minutes ago    Up 3 minutes (healthy)         0.0.0.0:4001->4001/tcp, [::]:4001->4001/tcp, 0.0.0.0:5001->5001/tcp, 0.0.0.0:4001->4001/udp, [::]:5001->5001/tcp, [::]:4001->4001/udp, 8081/tcp, 0.0.0.0:8081->8080/tcp, [::]:8081->8080/tcp   ipfs-node
+34a1048baf24   ipfs/kubo:latest                                                               "/sbin/tini -- /usr/…"   3 minutes ago    Restarting (1) 6 seconds ago                                                                                                                                                                                                  ipfs-node-1
+753350a6049c   ipfs/kubo:latest                                                               "/sbin/tini -- /usr/…"   3 minutes ago    Up 3 minutes (healthy)         4001/udp, 8081/tcp, 0.0.0.0:4201->4001/tcp, [::]:4201->4001/tcp, 0.0.0.0:5201->5001/tcp, [::]:5201->5001/tcp, 0.0.0.0:8281->8080/tcp, [::]:8281->8080/tcp                                      ipfs-node-2
+5d9b99a21c77   475028403263                                                                   "/bin/sh -c '#(nop) …"   4 minutes ago    Created                                                                                                                                                                                                                       eloquent_keldysh
+a974055bec19   59df55a19220                                                                   "/bin/sh -c '#(nop) …"   4 minutes ago    Created                                                                                                                                                                                                                       quirky_herschel
+137108180ebd   e39bc1648fb1                                                                   "/bin/sh -c '#(nop) …"   4 minutes ago    Created                                                                                                                                                                                                                       elegant_merkle
+b1642c333275   049b58a73d60                                                                   "/bin/sh -c '#(nop) …"   4 minutes ago    Created                                                                                                                                                                                                                       determined_mclaren
+5a4589f96f98   4d9f8452cafc                                                                   "/bin/sh -c '#(nop) …"   5 minutes ago    Created                                                                                                                                                                                                                       elastic_taussig
+a9dc40eb9886   ea8ef586be83                                                                   "/bin/sh -c '#(nop) …"   5 minutes ago    Created                                                                                                                                                                                                                       admiring_jackson
+423825f4d88d   eb1e9826a24a                                                                   "/bin/sh -c '#(nop) …"   6 minutes ago    Created                                                                                                                                                                                                                       interesting_wilson
+08c779da4857   9bf33c787fda                                                                   "/bin/sh -c '#(nop) …"   6 minutes ago    Created                                                                                                                                                                                                                       sharp_diffie
+1f9cd25d8397   41cb93260506                                                                   "/bin/sh -c '#(nop) …"   7 minutes ago    Created                                                                                                                                                                                                                       distracted_keldysh
+6e3e3248b8b3   08e7c48cc6b8                                                                   "/bin/sh -c '#(nop) …"   7 minutes ago    Created                                                                                                                                                                                                                       agitated_shockley
+db4d4b3145d2   5fefb44d24b1                                                                   "/bin/sh -c '#(nop) …"   7 minutes ago    Created                                                                                                                                                                                                                       blissful_tharp
+3345da30ecb1   8ebf1c66dea3                                                                   "/bin/sh -c '#(nop) …"   7 minutes ago    Created                                                                                                                                                                                                                       jovial_tesla
+24b905dd3d4b   4b64ec18e9fb                                                                   "/bin/sh -c '#(nop) …"   8 minutes ago    Created                                                                                                                                                                                                                       pensive_burnell
+5006aa9207b2   3d40e29ad88c                                                                   "/bin/sh -c '#(nop) …"   8 minutes ago    Created                                                                                                                                                                                                                       zen_hodgkin
+65de5db99e1d   a394185f8373                                                                   "/bin/sh -c '#(nop) …"   9 minutes ago    Created                                                                                                                                                                                                                       recursing_hawking
+cf7ad0cc00a9   eaf8ee0776eb                                                                   "/bin/sh -c '#(nop) …"   9 minutes ago    Created                                                                                                                                                                                                                       flamboyant_faraday
+c59155f6a1eb   92a112399b9e                                                                   "/bin/sh -c '#(nop) …"   11 minutes ago   Created                                                                                                                                                                                                                       pedantic_merkle
+5733d845a57f   66eb37c2bfda                                                                   "/bin/sh -c '#(nop) …"   11 minutes ago   Created                                                                                                                                                                                                                       upbeat_borg
+0cf0078cfc7d   ce6c808c562a                                                                   "/bin/sh -c '#(nop) …"   12 minutes ago   Created                                                                                                                                                                                                                       jovial_herschel
+53cc18c3459c   0b35cf4eb945                                                                   "/bin/sh -c '#(nop) …"   12 minutes ago   Created                                                                                                                                                                                                                       priceless_pare
+b38ebe7650ac   a_blockchain_enabled_framework_for_misinformation_monitoring-kafka             "entrypoint.sh"          14 minutes ago   Up 14 minutes (healthy)        9092-9093/tcp, 0.0.0.0:9094->9094/tcp, [::]:9094->9094/tcp                                                                                                                                     kafka
+aca2934199f7   a_blockchain_enabled_framework_for_misinformation_monitoring-flagging-engine   "uvicorn app.main:ap…"   14 minutes ago   Up 12 minutes                  0.0.0.0:8004->8000/tcp, [::]:8004->8000/tcp                                                                                                                                                    flagging-engine
+>> Creating channel mychannel...
+[0;34mUsing docker and docker compose[0m
+[0;34mCreating channel 'mychannel'.[0m
+[0;34mIf network is not up, starting nodes with CLI timeout of '5' tries and CLI delay of '3' seconds and using database 'leveldb [0m
+[0;34mBringing up network[0m
+[0;34mLOCAL_VERSION=v2.5.16[0m
+[0;34mDOCKER_IMAGE_VERSION=v2.5.16[0m
+time="2026-09-07T17:40:39+02:00" level=warning msg="Found orphan containers (couchdb0, couchdb1) for this project. If you removed or renamed this service in your compose file, you can run this command with the --remove-orphans flag to clean it up."
+ Container orderer.example.com Running 
+ Container peer0.org1.example.com Recreate 
+ Container peer0.org2.example.com Recreate 
+ Container peer0.org1.example.com Recreated 
+ Container peer0.org2.example.com Recreated 
+ Container peer0.org1.example.com Starting 
+ Container peer0.org2.example.com Starting 
+ Container peer0.org1.example.com Started 
+ Container peer0.org2.example.com Started 
+CONTAINER ID   IMAGE                                                                          COMMAND                  CREATED          STATUS                          PORTS                                                                                                                                                                                          NAMES
+63f974045477   hyperledger/fabric-peer:latest                                                 "peer node start"        1 second ago     Up Less than a second           0.0.0.0:9051->9051/tcp, [::]:9051->9051/tcp, 7051/tcp, 0.0.0.0:9445->9445/tcp, [::]:9445->9445/tcp                                                                                             peer0.org2.example.com
+1d68d332b209   hyperledger/fabric-peer:latest                                                 "peer node start"        1 second ago     Up Less than a second           0.0.0.0:7051->7051/tcp, [::]:7051->7051/tcp, 0.0.0.0:9444->9444/tcp, [::]:9444->9444/tcp                                                                                                       peer0.org1.example.com
+425073bdeaf1   couchdb:3.4.2                                                                  "tini -- /docker-ent…"   5 seconds ago    Up 4 seconds                    4369/tcp, 9100/tcp, 0.0.0.0:5984->5984/tcp, [::]:5984->5984/tcp                                                                                                                                couchdb0
+a98f542f1180   couchdb:3.4.2                                                                  "tini -- /docker-ent…"   5 seconds ago    Up 4 seconds                    4369/tcp, 9100/tcp, 0.0.0.0:7984->5984/tcp, [::]:7984->5984/tcp                                                                                                                                couchdb1
+80a143e2c37b   hyperledger/fabric-orderer:latest                                              "orderer"                5 seconds ago    Up 4 seconds                    0.0.0.0:7050->7050/tcp, [::]:7050->7050/tcp, 0.0.0.0:7053->7053/tcp, [::]:7053->7053/tcp, 0.0.0.0:9443->9443/tcp, [::]:9443->9443/tcp                                                          orderer.example.com
+72876e8f9ea6   ipfs/kubo:latest                                                               "/sbin/tini -- /usr/…"   3 minutes ago    Up 3 minutes (healthy)          0.0.0.0:4001->4001/tcp, [::]:4001->4001/tcp, 0.0.0.0:5001->5001/tcp, 0.0.0.0:4001->4001/udp, [::]:5001->5001/tcp, [::]:4001->4001/udp, 8081/tcp, 0.0.0.0:8081->8080/tcp, [::]:8081->8080/tcp   ipfs-node
+34a1048baf24   ipfs/kubo:latest                                                               "/sbin/tini -- /usr/…"   3 minutes ago    Restarting (1) 10 seconds ago                                                                                                                                                                                                  ipfs-node-1
+753350a6049c   ipfs/kubo:latest                                                               "/sbin/tini -- /usr/…"   3 minutes ago    Up 3 minutes (healthy)          4001/udp, 8081/tcp, 0.0.0.0:4201->4001/tcp, [::]:4201->4001/tcp, 0.0.0.0:5201->5001/tcp, [::]:5201->5001/tcp, 0.0.0.0:8281->8080/tcp, [::]:8281->8080/tcp                                      ipfs-node-2
+5d9b99a21c77   475028403263                                                                   "/bin/sh -c '#(nop) …"   4 minutes ago    Created                                                                                                                                                                                                                        eloquent_keldysh
+a974055bec19   59df55a19220                                                                   "/bin/sh -c '#(nop) …"   4 minutes ago    Created                                                                                                                                                                                                                        quirky_herschel
+137108180ebd   e39bc1648fb1                                                                   "/bin/sh -c '#(nop) …"   4 minutes ago    Created                                                                                                                                                                                                                        elegant_merkle
+b1642c333275   049b58a73d60                                                                   "/bin/sh -c '#(nop) …"   4 minutes ago    Created                                                                                                                                                                                                                        determined_mclaren
+5a4589f96f98   4d9f8452cafc                                                                   "/bin/sh -c '#(nop) …"   5 minutes ago    Created                                                                                                                                                                                                                        elastic_taussig
+a9dc40eb9886   ea8ef586be83                                                                   "/bin/sh -c '#(nop) …"   5 minutes ago    Created                                                                                                                                                                                                                        admiring_jackson
+423825f4d88d   eb1e9826a24a                                                                   "/bin/sh -c '#(nop) …"   6 minutes ago    Created                                                                                                                                                                                                                        interesting_wilson
+08c779da4857   9bf33c787fda                                                                   "/bin/sh -c '#(nop) …"   6 minutes ago    Created                                                                                                                                                                                                                        sharp_diffie
+1f9cd25d8397   41cb93260506                                                                   "/bin/sh -c '#(nop) …"   7 minutes ago    Created                                                                                                                                                                                                                        distracted_keldysh
+6e3e3248b8b3   08e7c48cc6b8                                                                   "/bin/sh -c '#(nop) …"   7 minutes ago    Created                                                                                                                                                                                                                        agitated_shockley
+db4d4b3145d2   5fefb44d24b1                                                                   "/bin/sh -c '#(nop) …"   7 minutes ago    Created                                                                                                                                                                                                                        blissful_tharp
+3345da30ecb1   8ebf1c66dea3                                                                   "/bin/sh -c '#(nop) …"   7 minutes ago    Created                                                                                                                                                                                                                        jovial_tesla
+24b905dd3d4b   4b64ec18e9fb                                                                   "/bin/sh -c '#(nop) …"   8 minutes ago    Created                                                                                                                                                                                                                        pensive_burnell
+5006aa9207b2   3d40e29ad88c                                                                   "/bin/sh -c '#(nop) …"   8 minutes ago    Created                                                                                                                                                                                                                        zen_hodgkin
+65de5db99e1d   a394185f8373                                                                   "/bin/sh -c '#(nop) …"   9 minutes ago    Created                                                                                                                                                                                                                        recursing_hawking
+cf7ad0cc00a9   eaf8ee0776eb                                                                   "/bin/sh -c '#(nop) …"   9 minutes ago    Created                                                                                                                                                                                                                        flamboyant_faraday
+c59155f6a1eb   92a112399b9e                                                                   "/bin/sh -c '#(nop) …"   11 minutes ago   Created                                                                                                                                                                                                                        pedantic_merkle
+5733d845a57f   66eb37c2bfda                                                                   "/bin/sh -c '#(nop) …"   11 minutes ago   Created                                                                                                                                                                                                                        upbeat_borg
+0cf0078cfc7d   ce6c808c562a                                                                   "/bin/sh -c '#(nop) …"   12 minutes ago   Created                                                                                                                                                                                                                        jovial_herschel
+53cc18c3459c   0b35cf4eb945                                                                   "/bin/sh -c '#(nop) …"   12 minutes ago   Created                                                                                                                                                                                                                        priceless_pare
+b38ebe7650ac   a_blockchain_enabled_framework_for_misinformation_monitoring-kafka             "entrypoint.sh"          14 minutes ago   Up 14 minutes (healthy)         9092-9093/tcp, 0.0.0.0:9094->9094/tcp, [::]:9094->9094/tcp                                                                                                                                     kafka
+aca2934199f7   a_blockchain_enabled_framework_for_misinformation_monitoring-flagging-engine   "uvicorn app.main:ap…"   14 minutes ago   Up 12 minutes                   0.0.0.0:8004->8000/tcp, [::]:8004->8000/tcp                                                                                                                                                    flagging-engine
+[0;34mUsing docker and docker compose[0m
+[0;34mGenerating channel genesis block 'mychannel.block'[0m
+[0;34mUsing organization 1[0m
+/home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/../bin/configtxgen
++ '[' 0 -eq 1 ']'
++ configtxgen -profile ChannelUsingRaft -outputBlock ./channel-artifacts/mychannel.block -channelID mychannel
+[34m2026-09-07 17:40:41.385 SAST 0001 INFO[0m [common.tools.configtxgen] [34;1mmain[0m -> Loading configuration
+[34m2026-09-07 17:40:41.389 SAST 0002 INFO[0m [common.tools.configtxgen.localconfig] [34;1mcompleteInitialization[0m -> orderer type: etcdraft
+[34m2026-09-07 17:40:41.389 SAST 0003 INFO[0m [common.tools.configtxgen.localconfig] [34;1mcompleteInitialization[0m -> Orderer.EtcdRaft.Options unset, setting to tick_interval:"500ms" election_tick:10 heartbeat_tick:1 max_inflight_blocks:5 snapshot_interval_size:16777216 
+[34m2026-09-07 17:40:41.389 SAST 0004 INFO[0m [common.tools.configtxgen.localconfig] [34;1mLoad[0m -> Loaded configuration: /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/configtx/configtx.yaml
+[34m2026-09-07 17:40:41.390 SAST 0005 INFO[0m [common.tools.configtxgen] [34;1mdoOutputBlock[0m -> Generating genesis block
+[34m2026-09-07 17:40:41.390 SAST 0006 INFO[0m [common.tools.configtxgen] [34;1mdoOutputBlock[0m -> Creating application channel genesis block
+[34m2026-09-07 17:40:41.391 SAST 0007 INFO[0m [common.tools.configtxgen] [34;1mdoOutputBlock[0m -> Writing genesis block
++ res=0
+[0;34mCreating channel mychannel[0m
+[0;34mAdding orderers[0m
++ . scripts/orderer.sh mychannel
++ '[' 0 -eq 1 ']'
++ res=0
+Status: 201
+{
+	"name": "mychannel",
+	"url": "/participation/v1/channels/mychannel",
+	"consensusRelation": "consenter",
+	"status": "active",
+	"height": 1
+}
+
+[0;32mChannel 'mychannel' created[0m
+[0;34mJoining org1 peer to the channel...[0m
+[0;34mUsing organization 1[0m
++ peer channel join -b ./channel-artifacts/mychannel.block
++ res=0
+[34m2026-09-07 17:40:49.863 SAST 0001 INFO[0m [channelCmd] [34;1mInitCmdFactory[0m -> Endorser and orderer connections initialized
+[34m2026-09-07 17:40:49.935 SAST 0002 INFO[0m [channelCmd] [34;1mexecuteJoin[0m -> Successfully submitted proposal to join channel
+[0;34mJoining org2 peer to the channel...[0m
+[0;34mUsing organization 2[0m
++ peer channel join -b ./channel-artifacts/mychannel.block
++ res=0
+[34m2026-09-07 17:40:52.985 SAST 0001 INFO[0m [channelCmd] [34;1mInitCmdFactory[0m -> Endorser and orderer connections initialized
+[34m2026-09-07 17:40:53.048 SAST 0002 INFO[0m [channelCmd] [34;1mexecuteJoin[0m -> Successfully submitted proposal to join channel
+[0;34mSetting anchor peer for org1...[0m
+[0;34mUsing organization 1[0m
+[0;34mFetching channel config for channel mychannel[0m
+[0;34mUsing organization 1[0m
+[0;34mFetching the most recent configuration block for the channel[0m
+++ peer channel fetch config /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/config_block.pb -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com -c mychannel --tls --cafile /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/tlsca/tlsca.example.com-cert.pem
+[34m2026-09-07 17:40:53.097 SAST 0001 INFO[0m [channelCmd] [34;1mInitCmdFactory[0m -> Endorser and orderer connections initialized
+[34m2026-09-07 17:40:53.099 SAST 0002 INFO[0m [cli.common] [34;1mreadBlock[0m -> Received block: 0
+[34m2026-09-07 17:40:53.099 SAST 0003 INFO[0m [channelCmd] [34;1mfetch[0m -> Retrieving last config block: 0
+[34m2026-09-07 17:40:53.100 SAST 0004 INFO[0m [cli.common] [34;1mreadBlock[0m -> Received block: 0
+[0;34mDecoding config block to JSON and isolating config to /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/Org1MSPconfig.json[0m
+++ configtxlator proto_decode --input /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/config_block.pb --type common.Block --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/config_block.json
+++ jq '.data.data[0].payload.data.config' /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/config_block.json
+++ res=0
+[0;34mGenerating anchor peer update transaction for Org1 on channel mychannel[0m
+++ jq '.channel_group.groups.Application.groups.Org1MSP.values += {"AnchorPeers":{"mod_policy": "Admins","value":{"anchor_peers": [{"host": "peer0.org1.example.com","port": 7051}]},"version": "0"}}' /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/Org1MSPconfig.json
+++ res=0
+++ configtxlator proto_encode --input /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/Org1MSPconfig.json --type common.Config --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/original_config.pb
+++ configtxlator proto_encode --input /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/Org1MSPmodified_config.json --type common.Config --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/modified_config.pb
+++ configtxlator compute_update --channel_id mychannel --original /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/original_config.pb --updated /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/modified_config.pb --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/config_update.pb
+++ configtxlator proto_decode --input /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/config_update.pb --type common.ConfigUpdate --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/config_update.json
+++ jq .
++++ cat /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/config_update.json
+++ echo '{"payload":{"header":{"channel_header":{"channel_id":"mychannel", "type":2}},"data":{"config_update":{' '"channel_id":' '"mychannel",' '"isolated_data":' '{},' '"read_set":' '{' '"groups":' '{' '"Application":' '{' '"groups":' '{' '"Org1MSP":' '{' '"groups":' '{},' '"mod_policy":' '"",' '"policies":' '{' '"Admins":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Endorsement":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Readers":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Writers":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '}' '},' '"values":' '{' '"MSP":' '{' '"mod_policy":' '"",' '"value":' null, '"version":' '"0"' '}' '},' '"version":' '"0"' '}' '},' '"mod_policy":' '"",' '"policies":' '{},' '"values":' '{},' '"version":' '"0"' '}' '},' '"mod_policy":' '"",' '"policies":' '{},' '"values":' '{},' '"version":' '"0"' '},' '"write_set":' '{' '"groups":' '{' '"Application":' '{' '"groups":' '{' '"Org1MSP":' '{' '"groups":' '{},' '"mod_policy":' '"Admins",' '"policies":' '{' '"Admins":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Endorsement":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Readers":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Writers":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '}' '},' '"values":' '{' '"AnchorPeers":' '{' '"mod_policy":' '"Admins",' '"value":' '{' '"anchor_peers":' '[' '{' '"host":' '"peer0.org1.example.com",' '"port":' 7051 '}' ']' '},' '"version":' '"0"' '},' '"MSP":' '{' '"mod_policy":' '"",' '"value":' null, '"version":' '"0"' '}' '},' '"version":' '"1"' '}' '},' '"mod_policy":' '"",' '"policies":' '{},' '"values":' '{},' '"version":' '"0"' '}' '},' '"mod_policy":' '"",' '"policies":' '{},' '"values":' '{},' '"version":' '"0"' '}' '}}}}'
+++ configtxlator proto_encode --input /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/config_update_in_envelope.json --type common.Envelope --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/Org1MSPanchors.tx
+[34m2026-09-07 17:40:53.253 SAST 0001 INFO[0m [channelCmd] [34;1mInitCmdFactory[0m -> Endorser and orderer connections initialized
+[34m2026-09-07 17:40:53.262 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+[0;32mAnchor peer set for org 'Org1MSP' on channel 'mychannel'[0m
+[0;34mSetting anchor peer for org2...[0m
+[0;34mUsing organization 2[0m
+[0;34mFetching channel config for channel mychannel[0m
+[0;34mUsing organization 2[0m
+[0;34mFetching the most recent configuration block for the channel[0m
+++ peer channel fetch config /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/config_block.pb -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com -c mychannel --tls --cafile /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/tlsca/tlsca.example.com-cert.pem
+[34m2026-09-07 17:40:53.306 SAST 0001 INFO[0m [channelCmd] [34;1mInitCmdFactory[0m -> Endorser and orderer connections initialized
+[34m2026-09-07 17:40:53.308 SAST 0002 INFO[0m [cli.common] [34;1mreadBlock[0m -> Received block: 1
+[34m2026-09-07 17:40:53.308 SAST 0003 INFO[0m [channelCmd] [34;1mfetch[0m -> Retrieving last config block: 1
+[34m2026-09-07 17:40:53.309 SAST 0004 INFO[0m [cli.common] [34;1mreadBlock[0m -> Received block: 1
+[0;34mDecoding config block to JSON and isolating config to /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/Org2MSPconfig.json[0m
+++ configtxlator proto_decode --input /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/config_block.pb --type common.Block --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/config_block.json
+++ jq '.data.data[0].payload.data.config' /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/config_block.json
+++ res=0
+[0;34mGenerating anchor peer update transaction for Org2 on channel mychannel[0m
+++ jq '.channel_group.groups.Application.groups.Org2MSP.values += {"AnchorPeers":{"mod_policy": "Admins","value":{"anchor_peers": [{"host": "peer0.org2.example.com","port": 9051}]},"version": "0"}}' /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/Org2MSPconfig.json
+++ res=0
+++ configtxlator proto_encode --input /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/Org2MSPconfig.json --type common.Config --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/original_config.pb
+++ configtxlator proto_encode --input /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/Org2MSPmodified_config.json --type common.Config --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/modified_config.pb
+++ configtxlator compute_update --channel_id mychannel --original /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/original_config.pb --updated /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/modified_config.pb --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/config_update.pb
+++ configtxlator proto_decode --input /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/config_update.pb --type common.ConfigUpdate --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/config_update.json
+++ jq .
++++ cat /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/config_update.json
+++ echo '{"payload":{"header":{"channel_header":{"channel_id":"mychannel", "type":2}},"data":{"config_update":{' '"channel_id":' '"mychannel",' '"isolated_data":' '{},' '"read_set":' '{' '"groups":' '{' '"Application":' '{' '"groups":' '{' '"Org2MSP":' '{' '"groups":' '{},' '"mod_policy":' '"",' '"policies":' '{' '"Admins":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Endorsement":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Readers":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Writers":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '}' '},' '"values":' '{' '"MSP":' '{' '"mod_policy":' '"",' '"value":' null, '"version":' '"0"' '}' '},' '"version":' '"0"' '}' '},' '"mod_policy":' '"",' '"policies":' '{},' '"values":' '{},' '"version":' '"0"' '}' '},' '"mod_policy":' '"",' '"policies":' '{},' '"values":' '{},' '"version":' '"0"' '},' '"write_set":' '{' '"groups":' '{' '"Application":' '{' '"groups":' '{' '"Org2MSP":' '{' '"groups":' '{},' '"mod_policy":' '"Admins",' '"policies":' '{' '"Admins":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Endorsement":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Readers":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Writers":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '}' '},' '"values":' '{' '"AnchorPeers":' '{' '"mod_policy":' '"Admins",' '"value":' '{' '"anchor_peers":' '[' '{' '"host":' '"peer0.org2.example.com",' '"port":' 9051 '}' ']' '},' '"version":' '"0"' '},' '"MSP":' '{' '"mod_policy":' '"",' '"value":' null, '"version":' '"0"' '}' '},' '"version":' '"1"' '}' '},' '"mod_policy":' '"",' '"policies":' '{},' '"values":' '{},' '"version":' '"0"' '}' '},' '"mod_policy":' '"",' '"policies":' '{},' '"values":' '{},' '"version":' '"0"' '}' '}}}}'
+++ configtxlator proto_encode --input /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/config_update_in_envelope.json --type common.Envelope --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/Org2MSPanchors.tx
+[34m2026-09-07 17:40:53.433 SAST 0001 INFO[0m [channelCmd] [34;1mInitCmdFactory[0m -> Endorser and orderer connections initialized
+[34m2026-09-07 17:40:53.443 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+[0;32mAnchor peer set for org 'Org2MSP' on channel 'mychannel'[0m
+[0;32mChannel 'mychannel' joined[0m
+>> Deploying misinformation v2.2 (go)...
+[0;34mUsing docker and docker compose[0m
+[0;34mdeploying chaincode on channel 'mychannel'[0m
+executing with the following
+- CHANNEL_NAME: [0;32mmychannel[0m
+- CC_NAME: [0;32mmisinformation[0m
+- CC_SRC_PATH: [0;32m/home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/chaincode/misinformation/go[0m
+- CC_SRC_LANGUAGE: [0;32mgo[0m
+- CC_VERSION: [0;32m2.2[0m
+- CC_SEQUENCE: [0;32m1[0m
+- CC_END_POLICY: [0;32mNA[0m
+- CC_COLL_CONFIG: [0;32mNA[0m
+- CC_INIT_FCN: [0;32mNA[0m
+- DELAY: [0;32m3[0m
+- MAX_RETRY: [0;32m5[0m
+- VERBOSE: [0;32mfalse[0m
+executing with the following
+- CC_NAME: [0;32mmisinformation[0m
+- CC_SRC_PATH: [0;32m/home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/chaincode/misinformation/go[0m
+- CC_SRC_LANGUAGE: [0;32mgo[0m
+- CC_VERSION: [0;32m2.2[0m
+[0;34mVendoring Go dependencies at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/chaincode/misinformation/go[0m
+~/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/chaincode/misinformation/go ~/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network
+~/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network
+[0;32mFinished vendoring Go dependencies[0m
++ '[' false = true ']'
++ peer lifecycle chaincode package misinformation.tar.gz --path /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/chaincode/misinformation/go --lang golang --label misinformation_2.2
++ res=0
+[0;32mChaincode is packaged[0m
+[0;34mInstalling chaincode on peer0.org1...[0m
+[0;34mUsing organization 1[0m
++ peer lifecycle chaincode queryinstalled --output json
++ jq -r 'try (.installed_chaincodes[].package_id)'
++ grep '^misinformation_2.2:c5b4a2a8397e6acf3be6e185c01a647a1a1e3c076f614469e4678729b54ce09d$'
++ test 1 -ne 0
++ peer lifecycle chaincode install misinformation.tar.gz
++ res=0
+[34m2026-09-07 17:41:40.351 SAST 0001 INFO[0m [cli.lifecycle.chaincode] [34;1msubmitInstallProposal[0m -> Installed remotely: response:<status:200 payload:"\nSmisinformation_2.2:c5b4a2a8397e6acf3be6e185c01a647a1a1e3c076f614469e4678729b54ce09d\022\022misinformation_2.2" > 
+[34m2026-09-07 17:41:40.351 SAST 0002 INFO[0m [cli.lifecycle.chaincode] [34;1msubmitInstallProposal[0m -> Chaincode code package identifier: misinformation_2.2:c5b4a2a8397e6acf3be6e185c01a647a1a1e3c076f614469e4678729b54ce09d
+[0;32mChaincode is installed on peer0.org1[0m
+[0;34mInstall chaincode on peer0.org2...[0m
+[0;34mUsing organization 2[0m
++ peer lifecycle chaincode queryinstalled --output json
++ jq -r 'try (.installed_chaincodes[].package_id)'
++ grep '^misinformation_2.2:c5b4a2a8397e6acf3be6e185c01a647a1a1e3c076f614469e4678729b54ce09d$'
++ test 1 -ne 0
++ peer lifecycle chaincode install misinformation.tar.gz

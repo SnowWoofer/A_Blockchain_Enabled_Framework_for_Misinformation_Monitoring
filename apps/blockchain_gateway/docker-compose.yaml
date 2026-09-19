@@ -1,0 +1,20 @@
+services:
+  blockchain-gateway:
+    build: .
+    image: misinfo-blockchain-gateway:latest
+    container_name: blockchain-gateway
+    environment:
+      # Force the official Gateway SDK sidecar
+      - FABRIC_BACKEND=gateway
+      - FABRIC_GATEWAY_URL=http://host.docker.internal:9100
+      - IPFS_GATEWAY_URL=http://host.docker.internal:9101
+      - OFFCHAIN_DB=/app/data/offchain.db
+      - ORGS=${ORGS_LIST}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      # Bind mount
+      - ./app/v1-0-0/api:/app/data
+    ports:
+      - "8000:8000"
+    restart: unless-stopped

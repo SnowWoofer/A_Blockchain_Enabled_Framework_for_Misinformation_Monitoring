@@ -1,15 +1,5 @@
 #!/usr/bin/env bash
-# gen-caliper-config.sh — regenerate the Caliper Fabric connection profile
-# for an N-organization consortium, and optionally scale benchmark rounds.
-#
-#   ./gen-caliper-config.sh                    # default: org1..org3, samples=50
-#   ./gen-caliper-config.sh --orgs 10          # 10 orgs, default samples
-#   ./gen-caliper-config.sh --samples 100      # 3 orgs, scaled samples
-#   ./gen-caliper-config.sh --orgs 6 --samples 75
-#
-# Writes:
-#   - networks/fabric/ccp.json (connection profile)
-#   - benchmarks/misinformation-benchmark.yaml (scaled benchmark config)
+# gen-caliper-config.sh, regenerate the Caliper Fabric connection profile
 
 set -euo pipefail
 
@@ -42,9 +32,9 @@ fi
 mkdir -p "$(dirname "${OUT_CCP}")"
 mkdir -p "$(dirname "${OUT_BENCH}")"
 
-# Scale factor: base samples=50 gives 500 writes / 1000 reads
+# Scale factor: base samples=50 gives 500 writes / 500 reads
 WRITES=$((SAMPLES * 10))
-READS=$((SAMPLES * 20))
+READS=$((SAMPLES * 10))
 
 python3 - "${N}" > "${OUT_CCP}" <<'PY'
 import json, sys
@@ -107,7 +97,7 @@ config = {
                 "description": "Anchor synthetic misinformation reports on-chain",
                 "txNumber": writes,
                 "rateControl": {"type": "fixed-rate", "opts": {"tps": 25}},
-                "workload": {"module": "workload/submitReport.js", "arguments": {"contractId": "misinformation", "language": "eng"}},
+                "workload": {"module": "workload/submitReport.js", "arguments": {"contractId": "misinformation"}},
             },
             {
                 "label": "query-all-reports-read",

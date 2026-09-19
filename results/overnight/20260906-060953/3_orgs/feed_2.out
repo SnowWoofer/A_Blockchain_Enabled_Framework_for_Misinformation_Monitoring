@@ -1,0 +1,26 @@
+Samples: 2 | AI: 1 | Random: 1 | Reject-pct: 25% (0 reports) | Orgs: 3 (on-chain) | Mode: direct
+
+  [   1/2] OK za-elec-ink-009       org=org1      label=0  conf=1.00  fc=2  2067ms
+  [   2/2] OK df6f80_sa-elections-  org=org2      label=1  conf=0.57  fc=2  2058ms
+
+================================================================
+  total samples:    2
+  AI-processed:     1  (50%)
+  random-pool:      1  (50%)
+  submitted:        2
+  accepted:         2  (100.0%)
+  rejected:         0  (0.0%)
+
+  by org:
+    org1          1 submitted
+    org2          1 submitted
+
+  fact-checks:
+    YES votes:  4
+    NO votes:   0
+
+  avg latency:  2062.2ms
+  p50/p95:      2066.6 / 2066.6ms
+================================================================
+  Output: /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/results/overnight/20260906-060953/3_orgs/feed_2.csv
+================================================================

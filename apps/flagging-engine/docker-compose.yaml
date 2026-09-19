@@ -1,0 +1,31 @@
+# Laptop profile (cpu/int8) is the default; for the 5090 server profile, override
+# the build arg and environment (see app/config.py) or run:
+#   docker compose -f apps/flagging-engine/docker-compose.yaml build --build-arg TORCH_INDEX_URL=https://download.pytorch.org/whl/cu124
+#   TORCH_DEVICE=cuda MODEL_QUANTIZATION=fp16 MAX_BATCH_SIZE=64 MAX_QUEUE_DELAY_MS=5 docker compose -f apps/flagging-engine/docker-compose.yaml up -d
+services:
+  flagging-engine:
+    build:
+      context: .
+      args:
+        TORCH_INDEX_URL: ${TORCH_INDEX_URL:-https://download.pytorch.org/whl/cpu}
+    container_name: flagging-engine
+    environment:
+      TORCH_DEVICE: ${TORCH_DEVICE:-cpu}
+      MODEL_QUANTIZATION: ${MODEL_QUANTIZATION:-int8}
+      MAX_BATCH_SIZE: ${MAX_BATCH_SIZE:-4}
+      MAX_QUEUE_DELAY_MS: ${MAX_QUEUE_DELAY_MS:-50}
+      KAFKA_ENABLED: "true"
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_INPUT_TOPIC: claims.raw
+      KAFKA_OUTPUT_TOPIC: claims.flagged
+    ports:
+      - "8004:8000"
+    networks:
+      - kafka_net
+    restart: unless-stopped
+
+networks:
+  # Owned by apps/kafka/docker-compose.yaml — start that (or a stack that
+  # includes it) first.
+  kafka_net:
+    external: true

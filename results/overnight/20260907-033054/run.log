@@ -1,0 +1,88 @@
+2026-09-07 03:30:54 >> Bringing up pipeline services (flagging-engine + kafka)...
+2026-09-07 03:30:55 >> Gateway currently reachable.
+2026-09-07 03:30:55 >> Dataset=1401 entries | sample steps: 10,50,100,150 | caliper steps: 200,800,1400
+2026-09-07 03:30:55 >> /predict live on http://localhost:8004 (real AI verdicts)
+2026-09-07 03:30:55 == [outer] building fresh 20-org network (attempt 1/3) ==
+2026-09-07 03:50:41 >> gate OK: 20 orgs live on-chain
+2026-09-07 04:00:38       feed_samples S=10 done in 597s (ok)
+2026-09-07 04:00:38       summary:   total samples:    10   submitted:        10   accepted:         8  (80.0%)   rejected:         2  (20.0%)   avg latency:  2156.9ms   p50/p95:      2153.4 / 2182.5ms 
+2026-09-07 04:00:38       appended 10 rows (org_count=20) to /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/results/local/real_loads.csv
+2026-09-07 04:52:01       feed_samples S=50 done in 3083s (ok)
+2026-09-07 04:52:01       summary:   total samples:    50   submitted:        50   accepted:         38  (76.0%)   rejected:         12  (24.0%)   avg latency:  2153.7ms   p50/p95:      2153.1 / 2175.8ms 
+2026-09-07 04:52:01       appended 50 rows (org_count=20) to /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/results/local/real_loads.csv
+2026-09-07 06:29:01       feed_samples S=100 done in 5820s (ok)
+2026-09-07 06:29:01       summary:   total samples:    100   submitted:        100   accepted:         75  (75.0%)   rejected:         25  (25.0%)   avg latency:  2157.8ms   p50/p95:      2151.1 / 2208.9ms 
+2026-09-07 06:29:01       appended 100 rows (org_count=20) to /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/results/local/real_loads.csv
+2026-09-07 08:46:26       feed_samples S=150 done in 8245s (ok)
+2026-09-07 08:46:26       summary:   total samples:    150   submitted:        150   accepted:         112  (74.7%)   rejected:         38  (25.3%)   avg latency:  2151.8ms   p50/p95:      2150.4 / 2171.1ms 
+2026-09-07 08:46:26       appended 150 rows (org_count=20) to /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/results/local/real_loads.csv
+2026-09-07 08:46:26 == [outer] building fresh 15-org network (attempt 1/3) ==
+2026-09-07 08:59:09 >> gate OK: 15 orgs live on-chain
+2026-09-07 09:06:16       feed_samples S=10 done in 427s (ok)
+2026-09-07 09:06:16       summary:   total samples:    10   submitted:        10   accepted:         8  (80.0%)   rejected:         2  (20.0%)   avg latency:  2152.0ms   p50/p95:      2152.3 / 2170.3ms 
+2026-09-07 09:06:16       appended 10 rows (org_count=15) to /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/results/local/real_loads.csv
+2026-09-07 09:39:38       feed_samples S=50 done in 2002s (ok)
+2026-09-07 09:39:38       summary:   total samples:    50   submitted:        50   accepted:         38  (76.0%)   rejected:         12  (24.0%)   avg latency:  2146.2ms   p50/p95:      2147.2 / 2167.9ms 
+2026-09-07 09:39:38       appended 50 rows (org_count=15) to /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/results/local/real_loads.csv
+2026-09-07 10:54:12       feed_samples S=100 done in 4473s (ok)
+2026-09-07 10:54:12       summary:   total samples:    100   submitted:        100   accepted:         75  (75.0%)   rejected:         25  (25.0%)   avg latency:  2146.9ms   p50/p95:      2145.4 / 2169.1ms 
+2026-09-07 10:54:12       appended 100 rows (org_count=15) to /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/results/local/real_loads.csv
+2026-09-07 13:13:07 >> Bringing up pipeline services (flagging-engine + kafka)...
+2026-09-07 13:13:08 WARN: gateway not reachable yet (HTTP 400) — the outer loop builds the network via startup.sh before benchmarking
+2026-09-07 13:13:08 >> Dataset=1401 entries | sample steps: 10,50,100,150 | caliper steps: 200,800,1400
+2026-09-07 13:13:08 >> /predict live on http://localhost:8004 (real AI verdicts)
+2026-09-07 13:13:08 == [outer] building fresh 20-org network (attempt 1/3) ==
+2026-09-07 13:22:05 WARN: attempt 1 failed for orgs=20 (see /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/results/overnight/20260907-033054/20_orgs/setup_20_a1.log)
+2026-09-07 13:22:05 >> retrying in 30s...
+2026-09-07 13:22:36 == [outer] building fresh 20-org network (attempt 2/3) ==
+2026-09-07 13:39:27 WARN: attempt 2 failed for orgs=20 (see /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/results/overnight/20260907-033054/20_orgs/setup_20_a2.log)
+2026-09-07 13:39:29 >> retrying in 30s...
+2026-09-07 13:40:02 == [outer] building fresh 20-org network (attempt 3/3) ==
+2026-09-07 13:49:35 WARN: attempt 3 failed for orgs=20 (see /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/results/overnight/20260907-033054/20_orgs/setup_20_a3.log)
+2026-09-07 13:49:35 WARN: startup.sh failed for orgs=20 after 3 attempts — skipping this org size
+2026-09-07 13:49:35 == [outer] building fresh 15-org network (attempt 1/3) ==
+2026-09-07 14:05:51 >> gate OK: 15 orgs live on-chain
+2026-09-07 14:05:51       feed S=10: resume skip (existing /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/results/overnight/20260907-033054/15_orgs/feed_10.csv)
+2026-09-07 14:05:51       feed_samples S=10 done in 0s (ok)
+2026-09-07 14:05:51       summary:   total samples:    10   submitted:        10   accepted:         8  (80.0%)   rejected:         2  (20.0%)   avg latency:  2152.0ms   p50/p95:      2152.3 / 2170.3ms 
+2026-09-07 14:05:51       feed S=50: resume skip (existing /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/results/overnight/20260907-033054/15_orgs/feed_50.csv)
+2026-09-07 14:05:51       feed_samples S=50 done in 0s (ok)
+2026-09-07 14:05:51       summary:   total samples:    50   submitted:        50   accepted:         38  (76.0%)   rejected:         12  (24.0%)   avg latency:  2146.2ms   p50/p95:      2147.2 / 2167.9ms 
+2026-09-07 14:05:51       feed S=100: resume skip (existing /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/results/overnight/20260907-033054/15_orgs/feed_100.csv)
+2026-09-07 14:05:51       feed_samples S=100 done in 0s (ok)
+2026-09-07 14:05:52       summary:   total samples:    100   submitted:        100   accepted:         75  (75.0%)   rejected:         25  (25.0%)   avg latency:  2146.9ms   p50/p95:      2145.4 / 2169.1ms 
+2026-09-07 16:12:41       feed_samples S=150 done in 7609s (ok)
+2026-09-07 16:12:41       summary:   total samples:    150   submitted:        150   accepted:         112  (74.7%)   rejected:         38  (25.3%)   avg latency:  2139.3ms   p50/p95:      2131.5 / 2162.3ms 
+2026-09-07 16:12:41       appended 150 rows (org_count=15) to /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/results/local/real_loads.csv
+2026-09-07 16:12:41 == [outer] building fresh 10-org network (attempt 1/3) ==
+2026-09-07 16:24:49 WARN: attempt 1 failed for orgs=10 (see /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/results/overnight/20260907-033054/10_orgs/setup_10_a1.log)
+2026-09-07 16:24:49 >> retrying in 30s...
+2026-09-07 16:25:21 == [outer] building fresh 10-org network (attempt 2/3) ==
+2026-09-07 16:36:57 WARN: attempt 2 failed for orgs=10 (see /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/results/overnight/20260907-033054/10_orgs/setup_10_a2.log)
+2026-09-07 16:36:57 >> retrying in 30s...
+2026-09-07 16:37:27 == [outer] building fresh 10-org network (attempt 3/3) ==
+2026-09-07 16:50:15 WARN: attempt 3 failed for orgs=10 (see /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/results/overnight/20260907-033054/10_orgs/setup_10_a3.log)
+2026-09-07 16:50:15 WARN: startup.sh failed for orgs=10 after 3 attempts — skipping this org size
+2026-09-07 16:50:15 == [outer] building fresh 5-org network (attempt 1/3) ==
+2026-09-07 16:57:36 WARN: attempt 1 failed for orgs=5 (see /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/results/overnight/20260907-033054/5_orgs/setup_5_a1.log)
+2026-09-07 16:57:36 >> retrying in 30s...
+2026-09-07 16:58:08 == [outer] building fresh 5-org network (attempt 2/3) ==
+2026-09-07 17:05:31 WARN: attempt 2 failed for orgs=5 (see /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/results/overnight/20260907-033054/5_orgs/setup_5_a2.log)
+2026-09-07 17:05:31 >> retrying in 30s...
+2026-09-07 17:06:03 == [outer] building fresh 5-org network (attempt 3/3) ==
+2026-09-07 17:13:30 WARN: attempt 3 failed for orgs=5 (see /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/results/overnight/20260907-033054/5_orgs/setup_5_a3.log)
+2026-09-07 17:13:30 WARN: startup.sh failed for orgs=5 after 3 attempts — skipping this org size
+2026-09-07 17:13:30 == [outer] building fresh 3-org network (attempt 1/3) ==
+2026-09-07 17:19:02 WARN: attempt 1 failed for orgs=3 (see /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/results/overnight/20260907-033054/3_orgs/setup_3_a1.log)
+2026-09-07 17:19:02 >> retrying in 30s...
+2026-09-07 17:19:34 == [outer] building fresh 3-org network (attempt 2/3) ==
+2026-09-07 17:25:03 FATAL: sweep aborted (exit 130) after 15116s — results/logs in /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/results/overnight/20260907-033054
+2026-09-07 17:26:14 >> Bringing up pipeline services (flagging-engine + kafka)...
+2026-09-07 17:26:16 WARN: gateway not reachable yet (HTTP 000) — the outer loop builds the network via startup.sh before benchmarking
+2026-09-07 17:26:16 >> Dataset=1401 entries | sample steps: 10,50,100,150 | caliper steps: 200,800,1400
+2026-09-07 17:26:16 WARN: /predict unreachable on http://localhost:8004 — feed_samples will fall back to seeded random labels
+2026-09-07 17:26:16 == [outer] building fresh 10-org network (attempt 1/3) ==
+2026-09-07 17:39:49 WARN: attempt 1 failed for orgs=10 (see /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/results/overnight/20260907-033054/10_orgs/setup_10_a1.log)
+2026-09-07 17:39:49 >> retrying in 30s...
+2026-09-07 17:40:21 == [outer] building fresh 10-org network (attempt 2/3) ==
+2026-09-07 17:42:17 FATAL: sweep aborted (exit 130) after 963s — results/logs in /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/results/overnight/20260907-033054

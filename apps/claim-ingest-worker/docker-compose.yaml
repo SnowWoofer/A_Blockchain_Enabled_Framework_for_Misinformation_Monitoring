@@ -1,0 +1,18 @@
+services:
+  claim-ingest-worker:
+    build: .
+    container_name: claim-ingest-worker
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_OUTPUT_TOPIC: claims.raw
+    ports:
+      - "8003:8000"
+    networks:
+      - kafka_net
+    restart: unless-stopped
+
+networks:
+  # Owned by apps/kafka/docker-compose.yaml — start that (or a stack that
+  # includes it) first.
+  kafka_net:
+    external: true

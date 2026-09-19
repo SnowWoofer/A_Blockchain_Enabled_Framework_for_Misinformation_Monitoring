@@ -1,0 +1,85 @@
+Samples: 50 | AI: 25 | Random: 25 | Reject-pct: 25% (12 reports) | Orgs: 15 (on-chain) | Mode: direct
+
+  [   1/50] REJ za-elec-ink-009       org=org1      label=0  conf=1.00  fc=14  2143ms
+  [   2/50] REJ df6f80_sa-elections-  org=org1      label=0  conf=1.00  fc=14  2150ms
+  [   3/50] REJ df6f80_sa-elections-  org=org1      label=1  conf=1.00  fc=14  2158ms
+  [   4/50] REJ f2d1c8_gen-samples-v  org=org1      label=0  conf=1.00  fc=14  2145ms
+  [   5/50] REJ f2d1c8_gen-samples-v  org=org1      label=0  conf=1.00  fc=14  2155ms
+  [   6/50] REJ f2d1c8_gen-samples-v  org=org1      label=0  conf=1.00  fc=13  2168ms
+  [   7/50] REJ df6f80_sa-elections-  org=org1      label=1  conf=1.00  fc=14  2136ms
+  [   8/50] REJ df6f80_sa-elections-  org=org1      label=0  conf=1.00  fc=12  2150ms
+  [   9/50] REJ za-elec-topo-05       org=org1      label=1  conf=1.00  fc=11  2138ms
+  [  10/50] REJ kzn-mun-fin-006       org=org1      label=0  conf=1.00  fc=13  2147ms
+  [  11/50] REJ df6f80_sa-elections-  org=org1      label=1  conf=1.00  fc=14  2139ms
+  [  12/50] REJ za-elec-2026-01       org=org1      label=1  conf=1.00  fc=10  2150ms
+  [  13/50] OK f2d1c8_sa-elections-  org=org1      label=1  conf=1.00  fc=14  2133ms
+  [  14/50] OK df6f80_sa-elections-  org=org1      label=0  conf=1.00  fc=14  2144ms
+  [  15/50] OK df6f80_sa-elections-  org=org1      label=1  conf=1.00  fc=14  2151ms
+  [  16/50] OK df6f80_sa-elections-  org=org1      label=1  conf=1.00  fc=13  2138ms
+  [  17/50] OK df6f80_sa-elections-  org=org1      label=1  conf=1.00  fc=14  2134ms
+  [  18/50] OK f2d1c8_gen-samples-v  org=org1      label=1  conf=1.00  fc=13  2143ms
+  [  19/50] OK f2d1c8_sa-elections-  org=org1      label=1  conf=1.00  fc=13  2151ms
+  [  20/50] OK za-elec-2026-08       org=org1      label=1  conf=0.75  fc=14  2126ms
+  [  21/50] OK df6f80_sa-elections-  org=org1      label=1  conf=1.00  fc=14  2133ms
+  [  22/50] OK sd-2024-009           org=org1      label=1  conf=1.00  fc=13  2136ms
+  [  23/50] OK df6f80_sa-elections-  org=org1      label=1  conf=1.00  fc=14  2134ms
+  [  24/50] OK za-elec-m04           org=org1      label=1  conf=1.00  fc=14  2152ms
+  [  25/50] OK f2d1c8_sa-elections-  org=org1      label=0  conf=1.00  fc=13  2131ms
+  [  26/50] OK f2d1c8_gen-samples-v  org=org11     label=0  conf=0.58  fc=14  2142ms
+  [  27/50] OK f2d1c8_sa-elections-  org=org7      label=1  conf=0.71  fc=14  2151ms
+  [  28/50] OK za-elec-2026-009      org=org9      label=0  conf=0.54  fc=14  2151ms
+  [  29/50] OK f2d1c8_gen-samples-v  org=org13     label=1  conf=0.88  fc=14  2149ms
+  [  30/50] OK df6f80_gen-samples-v  org=org7      label=1  conf=0.86  fc=14  2134ms
+  [  31/50] OK df6f80_sa-elections-  org=org3      label=0  conf=0.88  fc=13  2149ms
+  [  32/50] OK f2d1c8_sa-elections-  org=org11     label=0  conf=0.71  fc=14  2137ms
+  [  33/50] OK f2d1c8_sa-elections-  org=org9      label=1  conf=0.84  fc=14  2143ms
+  [  34/50] OK df6f80_sa-elections-  org=org8      label=1  conf=0.65  fc=14  2138ms
+  [  35/50] OK df6f80_sa-elections-  org=org15     label=0  conf=0.72  fc=14  2152ms
+  [  36/50] OK f2d1c8_sa-elections-  org=org8      label=0  conf=0.77  fc=14  2158ms
+  [  37/50] OK df6f80_sa-elections-  org=org3      label=1  conf=1.00  fc=14  2174ms
+  [  38/50] OK f2d1c8_sa-elections-  org=org11     label=0  conf=0.92  fc=13  2158ms
+  [  39/50] OK df6f80_sa-elections-  org=org8      label=0  conf=0.91  fc=14  2130ms
+  [  40/50] OK f2d1c8_sa-elections-  org=org15     label=0  conf=0.93  fc=14  2137ms
+  [  41/50] OK f2d1c8_sa-elections-  org=org10     label=1  conf=0.57  fc=14  2153ms
+  [  42/50] OK za-elec-2026-09       org=org6      label=0  conf=0.99  fc=14  2144ms
+  [  43/50] OK f2d1c8_gen-samples-v  org=org12     label=0  conf=0.68  fc=14  2147ms
+  [  44/50] OK df6f80_sa-elections-  org=org14     label=0  conf=0.97  fc=14  2168ms
+  [  45/50] OK f2d1c8_sa-elections-  org=org10     label=1  conf=0.81  fc=14  2146ms
+  [  46/50] OK kzn-2021-008          org=org15     label=0  conf=0.83  fc=14  2149ms
+  [  47/50] OK df6f80_sa-elections-  org=org4      label=1  conf=0.67  fc=14  2157ms
+  [  48/50] OK f2d1c8_sa-elections-  org=org6      label=0  conf=0.51  fc=14  2150ms
+  [  49/50] OK df6f80_sa-elections-  org=org9      label=0  conf=0.75  fc=14  2150ms
+  [  50/50] OK mf-elec-10            org=org7      label=1  conf=0.86  fc=12  2156ms
+
+================================================================
+  total samples:    50
+  AI-processed:     25  (50%)
+  random-pool:      25  (50%)
+  submitted:        50
+  accepted:         38  (76.0%)
+  rejected:         12  (24.0%)
+
+  by org:
+    org1          25 submitted
+    org11         3 submitted
+    org7          3 submitted
+    org9          3 submitted
+    org8          3 submitted
+    org15         3 submitted
+    org3          2 submitted
+    org10         2 submitted
+    org6          2 submitted
+    org13         1 submitted
+    org12         1 submitted
+    org14         1 submitted
+    org4          1 submitted
+
+  fact-checks:
+    YES votes:  465
+    NO votes:   215
+
+  avg latency:  2146.2ms
+  p50/p95:      2147.2 / 2167.9ms
+================================================================
+  Output: /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/results/overnight/20260907-033054/15_orgs/feed_50.csv
+================================================================

@@ -1,0 +1,3 @@
+2026-09-06 23:22:26 >> Bringing up pipeline services (flagging-engine + kafka)...
+2026-09-06 23:22:26 ERROR: docker compose up failed
+2026-09-06 23:22:26 FATAL: sweep aborted (exit 1) after 0s — results/logs in /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/results/overnight/20260906-232226

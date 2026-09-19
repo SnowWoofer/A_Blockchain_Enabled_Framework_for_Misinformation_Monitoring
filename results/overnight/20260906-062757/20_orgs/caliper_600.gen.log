@@ -1,0 +1,3 @@
+>> Caliper connection profile written for org1..20: /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/benchmarks/caliper/networks/fabric/ccp.json
+>> Caliper benchmark config written (writes=6000, reads=12000): /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/benchmarks/caliper/benchmarks/misinformation-benchmark.yaml
+>> NOTE: if N > 3, also extend networks/fabric/test-network.yaml with the extra organizations.

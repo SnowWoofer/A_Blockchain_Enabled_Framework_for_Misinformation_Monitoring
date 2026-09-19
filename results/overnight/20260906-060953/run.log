@@ -1,0 +1,14 @@
+2026-09-06 06:09:53 >> Gateway currently reachable.
+2026-09-06 06:09:53 >> Dataset=1401 entries | sample steps: 2 | caliper steps: 2
+2026-09-06 06:09:53 >> /predict live on http://localhost:8004 (real AI verdicts)
+2026-09-06 06:09:53 == [outer] using existing network (--no-setup), expected 3 orgs ==
+2026-09-06 06:09:53 >> gate OK: 3 orgs live on-chain
+2026-09-06 06:10:05       feed_samples S=2 done in 12s (ok)
+2026-09-06 06:10:05       summary:   total samples:    2   submitted:        2   accepted:         2  (100.0%)   rejected:         0  (0.0%)   avg latency:  2062.2ms   p50/p95:      2066.6 / 2066.6ms 
+2026-09-06 06:10:05       appended 2 rows (org_count=3) to /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/results/local/real_loads.csv
+2026-09-06 06:10:05       caliper S=2 (writes=20 @25tps, reads=40 @50tps)
+2026-09-06 06:10:40       caliper rows (org_count=3) merged into /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/results/local/caliper.csv
+2026-09-06 06:10:40 >> Summary table: /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/results/overnight/20260906-060953/summary.csv
+2026-09-06 06:10:40     orgs,samples,feed_submitted,feed_accepted,feed_rejected,feed_avg_latency_ms,feed_p95_ms,feed_wall_s,http_requests,http_ok,http_throughput_rps,caliper_write_tps,caliper_read_tps,status
+2026-09-06 06:10:40     3,2,2,2,0,2062.2,2066.6,12,0,0,0,,,ok
+2026-09-06 06:10:40 DONE: sweep finished in 47s — results in /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/results/overnight/20260906-060953

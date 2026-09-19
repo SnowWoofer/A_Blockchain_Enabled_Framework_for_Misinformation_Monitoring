@@ -1,0 +1,5 @@
+2026-09-06 05:41:37 >> Bringing up pipeline services (flagging-engine + kafka)...
+2026-09-06 05:41:37 WARN: gateway not reachable yet (HTTP 400) — the outer loop builds the network via startup.sh before benchmarking
+2026-09-06 05:41:37 >> Dataset=1401 entries | sample steps: 100,300,700,1400 | caliper steps: 300,1400
+2026-09-06 05:41:37 >> /predict live on http://localhost:8004 (real AI verdicts)
+2026-09-06 05:41:37 == [outer] building fresh 25-org network ==

@@ -1,0 +1,286 @@
+>> Building Caliper image (installs CLI + binds official Fabric Gateway SDK)...
+ Image misinfo-caliper:latest Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 749B done
+#1 DONE 0.0s
+
+#2 [internal] load build definition from Dockerfile
+#2 transferring dockerfile: 569B done
+#2 DONE 0.0s
+
+#3 [internal] load metadata for docker.io/library/node:20-bookworm-slim
+#3 DONE 1.2s
+
+#4 [internal] load .dockerignore
+#4 transferring context: 2B done
+#4 DONE 0.0s
+
+#5 [1/3] FROM docker.io/library/node:20-bookworm-slim@sha256:2cf067cfed83d5ea958367df9f966191a942351a2df77d6f0193e162b5febfc0
+#5 resolve docker.io/library/node:20-bookworm-slim@sha256:2cf067cfed83d5ea958367df9f966191a942351a2df77d6f0193e162b5febfc0 0.0s done
+#5 DONE 0.0s
+
+#6 [2/3] WORKDIR /caliper
+#6 CACHED
+
+#7 [3/3] RUN npm install --only=prod @hyperledger/caliper-cli@0.7.1     && npx caliper bind --caliper-bind-sut fabric:fabric-gateway
+#7 CACHED
+
+#8 exporting to image
+#8 exporting layers done
+#8 exporting manifest sha256:e11af2578fe7db26207b5afc7ecd67ade8f8d9877578329936492004cdb3ad86 done
+#8 exporting config sha256:48f96c0416ca81a4148f3fbcb52308ee4fd01d7a03a49bbbe28bcd0e93a9a82b done
+#8 exporting attestation manifest sha256:271d6dde1033401a6d2eba39726c1d17425bda8c43cbd9a8f3676bf1df5ab644 0.0s done
+#8 exporting manifest list sha256:bd1dbcbb2c341d18105c379c54c5a48565841319330d04a8d086bcd03e120f6f 0.0s done
+#8 naming to docker.io/library/misinfo-caliper:latest
+#8 naming to docker.io/library/misinfo-caliper:latest done
+#8 unpacking to docker.io/library/misinfo-caliper:latest done
+#8 DONE 0.1s
+
+#9 resolving provenance for metadata file
+#9 DONE 0.0s
+ Image misinfo-caliper:latest Built 
+>> Running benchmark suite: submit-report-write + query-all-reports-read
+ Container misinfo-caliper Creating 
+ Container misinfo-caliper Created 
+Attaching to misinfo-caliper
+ Container misinfo-caliper Starting 
+ Container misinfo-caliper Started 
+misinfo-caliper  | 2026.09.06-04:16:57.368 info  [caliper] [cli-launch-manager] 	Set workspace path: /caliper/workspace
+misinfo-caliper  | 2026.09.06-04:16:57.369 info  [caliper] [cli-launch-manager] 	Set benchmark configuration path: /caliper/workspace/benchmarks/misinformation-benchmark.yaml
+misinfo-caliper  | 2026.09.06-04:16:57.369 info  [caliper] [cli-launch-manager] 	Set network configuration path: /caliper/workspace/networks/fabric/test-network.yaml
+misinfo-caliper  | 2026.09.06-04:16:57.369 info  [caliper] [cli-launch-manager] 	Set SUT type: fabric
+misinfo-caliper  | 2026.09.06-04:16:57.390 info  [caliper] [benchmark-validator] 	No observer specified, will default to `none`
+misinfo-caliper  | 2026.09.06-04:16:57.391 info  [caliper] [caliper-engine] 	Starting benchmark flow
+misinfo-caliper  | 2026.09.06-04:16:57.391 info  [caliper] [caliper-engine] 	Network configuration attribute "caliper.command.start" is not present, skipping start command
+misinfo-caliper  | 2026.09.06-04:16:57.542 info  [caliper] [FabricConnectorFactory] 	Initializing peer gateway connector compatible with installed fabric-gateway SDK: 1.7.1
+misinfo-caliper  | 2026.09.06-04:16:57.552 info  [caliper] [IdentityManager] 	Adding Admin (admin=true) as Admin for organization Org1MSP
+misinfo-caliper  | 2026.09.06-04:16:57.556 info  [caliper] [connectors/peer-gateway/PeerGateway] 	Fabric-Gateway SDK version: 1.7.1 for Peer-Gateway connector; TLS based on Org1MSP: server
+misinfo-caliper  | 2026.09.06-04:16:57.556 info  [caliper] [caliper-engine] 	Executed "init" step in 0.002 seconds
+misinfo-caliper  | 2026.09.06-04:16:57.557 warn  [caliper] [connectors/peer-gateway/PeerGateway] 	Install smart contract not available for the Fabric Peer Gateway connector
+misinfo-caliper  | 2026.09.06-04:16:57.557 info  [caliper] [caliper-engine] 	Executed "install" step in 0.001 seconds
+misinfo-caliper  | 2026.09.06-04:16:57.560 info  [caliper] [monitor.js] 	No resource monitors specified
+misinfo-caliper  | 2026.09.06-04:16:57.562 info  [caliper] [default-observer] 	Observer interval set to 5000 milliseconds
+misinfo-caliper  | 2026.09.06-04:16:57.565 info  [caliper] [round-orchestrator] 	Preparing worker connections
+misinfo-caliper  | 2026.09.06-04:16:57.566 info  [caliper] [worker-orchestrator] 	Launching worker 1 of 2
+misinfo-caliper  | 2026.09.06-04:16:57.571 info  [caliper] [worker-orchestrator] 	Launching worker 2 of 2
+misinfo-caliper  | 2026.09.06-04:16:57.574 info  [caliper] [worker-orchestrator] 	Messenger not configured, entering configure phase...
+misinfo-caliper  | 2026.09.06-04:16:57.575 info  [caliper] [worker-orchestrator] 	No existing workers detected, entering worker launch phase...
+misinfo-caliper  | 2026.09.06-04:16:57.575 info  [caliper] [worker-orchestrator] 	Waiting for 2 workers to be connected...
+misinfo-caliper  | 2026.09.06-04:16:57.875 info  [caliper] [cli-launch-worker] 	Set workspace path: /caliper/workspace
+misinfo-caliper  | 2026.09.06-04:16:57.876 info  [caliper] [cli-launch-worker] 	Set benchmark configuration path: /caliper/workspace/benchmarks/misinformation-benchmark.yaml
+misinfo-caliper  | 2026.09.06-04:16:57.876 info  [caliper] [cli-launch-worker] 	Set network configuration path: /caliper/workspace/networks/fabric/test-network.yaml
+misinfo-caliper  | 2026.09.06-04:16:57.876 info  [caliper] [cli-launch-worker] 	Set SUT type: fabric
+misinfo-caliper  | 2026.09.06-04:16:57.887 info  [caliper] [cli-launch-worker] 	Set workspace path: /caliper/workspace
+misinfo-caliper  | 2026.09.06-04:16:57.887 info  [caliper] [cli-launch-worker] 	Set benchmark configuration path: /caliper/workspace/benchmarks/misinformation-benchmark.yaml
+misinfo-caliper  | 2026.09.06-04:16:57.888 info  [caliper] [cli-launch-worker] 	Set network configuration path: /caliper/workspace/networks/fabric/test-network.yaml
+misinfo-caliper  | 2026.09.06-04:16:57.888 info  [caliper] [cli-launch-worker] 	Set SUT type: fabric
+misinfo-caliper  | 2026.09.06-04:16:57.934 info  [caliper] [worker-orchestrator] 	2 workers connected, progressing to worker assignment phase.
+misinfo-caliper  | 2026.09.06-04:16:57.934 info  [caliper] [worker-orchestrator] 	Workers currently unassigned, awaiting index assignment...
+misinfo-caliper  | 2026.09.06-04:16:57.935 info  [caliper] [worker-orchestrator] 	Waiting for 2 workers to be assigned...
+misinfo-caliper  | 2026.09.06-04:16:57.978 info  [caliper] [worker-orchestrator] 	2 workers assigned, progressing to worker initialization phase.
+misinfo-caliper  | 2026.09.06-04:16:57.979 info  [caliper] [worker-orchestrator] 	Waiting for 2 workers to be ready...
+misinfo-caliper  | 2026.09.06-04:16:57.979 info  [caliper] [worker-message-handler] 	Initializing Worker#0...
+misinfo-caliper  | 2026.09.06-04:16:57.980 info  [caliper] [worker-message-handler] 	Initializing Worker#1...
+misinfo-caliper  | 2026.09.06-04:16:58.123 info  [caliper] [FabricConnectorFactory] 	Initializing peer gateway connector compatible with installed fabric-gateway SDK: 1.7.1
+misinfo-caliper  | 2026.09.06-04:16:58.126 info  [caliper] [FabricConnectorFactory] 	Initializing peer gateway connector compatible with installed fabric-gateway SDK: 1.7.1
+misinfo-caliper  | 2026.09.06-04:16:58.128 info  [caliper] [IdentityManager] 	Adding Admin (admin=true) as Admin for organization Org1MSP
+misinfo-caliper  | 2026.09.06-04:16:58.131 info  [caliper] [worker-message-handler] 	Worker#0 initialized
+misinfo-caliper  | 2026.09.06-04:16:58.131 info  [caliper] [IdentityManager] 	Adding Admin (admin=true) as Admin for organization Org1MSP
+misinfo-caliper  | 2026.09.06-04:16:58.133 info  [caliper] [worker-message-handler] 	Worker#1 initialized
+misinfo-caliper  | 2026.09.06-04:16:58.133 info  [caliper] [worker-orchestrator] 	2 workers ready, progressing to test preparation phase.
+misinfo-caliper  | 2026.09.06-04:16:58.133 info  [caliper] [round-orchestrator] 	Started round 1 (submit-report-write)
+misinfo-caliper  | 2026.09.06-04:16:58.134 info  [caliper] [worker-message-handler] 	Preparing Worker#0 for Round#0
+misinfo-caliper  | 2026.09.06-04:16:58.134 info  [caliper] [worker-message-handler] 	Preparing Worker#1 for Round#0
+misinfo-caliper  | 2026.09.06-04:16:58.171 info  [caliper] [connectors/peer-gateway/PeerGateway] 	Generating contract map for user Admin
+misinfo-caliper  | 2026.09.06-04:16:58.171 info  [caliper] [caliper-worker] 	Info: worker 0 prepare test phase for round 0 is starting...
+misinfo-caliper  | 2026.09.06-04:16:58.172 info  [caliper] [connectors/peer-gateway/PeerGateway] 	Generating contract map for user Admin
+misinfo-caliper  | 2026.09.06-04:16:58.172 info  [caliper] [connectors/peer-gateway/PeerGateway] 	disconnecting gateway for user Admin
+misinfo-caliper  | 2026.09.06-04:16:58.173 info  [caliper] [connectors/peer-gateway/PeerGateway] 	disconnecting gRpc client at peer peer0.org1.example.com
+misinfo-caliper  | 2026.09.06-04:16:58.173 info  [caliper] [caliper-worker] 	Info: worker 1 prepare test phase for round 0 is starting...
+misinfo-caliper  | 2026.09.06-04:16:58.173 info  [caliper] [caliper-worker] 	Info: worker 0 prepare test phase for round 0 is completed
+misinfo-caliper  | 2026.09.06-04:16:58.174 info  [caliper] [worker-message-handler] 	Worker#0 prepared for Round#0
+misinfo-caliper  | 2026.09.06-04:16:58.175 info  [caliper] [connectors/peer-gateway/PeerGateway] 	disconnecting gateway for user Admin
+misinfo-caliper  | 2026.09.06-04:16:58.175 info  [caliper] [connectors/peer-gateway/PeerGateway] 	disconnecting gRpc client at peer peer0.org1.example.com
+misinfo-caliper  | 2026.09.06-04:16:58.176 info  [caliper] [caliper-worker] 	Info: worker 1 prepare test phase for round 0 is completed
+misinfo-caliper  | 2026.09.06-04:16:58.176 info  [caliper] [worker-message-handler] 	Worker#1 prepared for Round#0
+misinfo-caliper  | 2026.09.06-04:16:58.176 info  [caliper] [worker-orchestrator] 	2 workers prepared, progressing to test phase.
+misinfo-caliper  | 2026.09.06-04:16:58.177 info  [caliper] [round-orchestrator] 	Monitors successfully started
+misinfo-caliper  | 2026.09.06-04:16:58.177 info  [caliper] [worker-message-handler] 	Worker#0 is starting Round#0
+misinfo-caliper  | 2026.09.06-04:16:58.178 info  [caliper] [worker-message-handler] 	Worker#1 is starting Round#0
+misinfo-caliper  | 2026.09.06-04:16:58.182 info  [caliper] [connectors/peer-gateway/PeerGateway] 	Generating contract map for user Admin
+misinfo-caliper  | 2026.09.06-04:16:58.182 info  [caliper] [connectors/peer-gateway/PeerGateway] 	Generating contract map for user Admin
+misinfo-caliper  | 2026.09.06-04:16:58.183 info  [caliper] [caliper-worker] 	Worker #1 starting workload loop
+misinfo-caliper  | 2026.09.06-04:16:58.184 info  [caliper] [caliper-worker] 	Worker #0 starting workload loop
+misinfo-caliper  | 2026.09.06-04:17:00.010 info  [caliper] [connectors/peer-gateway/PeerGateway] 	disconnecting gateway for user Admin
+misinfo-caliper  | 2026.09.06-04:17:00.010 info  [caliper] [connectors/peer-gateway/PeerGateway] 	disconnecting gateway for user Admin
+misinfo-caliper  | 2026.09.06-04:17:00.010 info  [caliper] [connectors/peer-gateway/PeerGateway] 	disconnecting gRpc client at peer peer0.org1.example.com
+misinfo-caliper  | 2026.09.06-04:17:00.010 info  [caliper] [connectors/peer-gateway/PeerGateway] 	disconnecting gRpc client at peer peer0.org1.example.com
+misinfo-caliper  | 2026.09.06-04:17:00.010 info  [caliper] [worker-message-handler] 	Worker#0 finished Round#0
+misinfo-caliper  | 2026.09.06-04:17:00.010 info  [caliper] [worker-message-handler] 	Worker#1 finished Round#0
+misinfo-caliper  | 2026.09.06-04:17:05.019 info  [caliper] [default-observer] 	Resetting txCount indicator count
+misinfo-caliper  | 2026.09.06-04:17:05.020 info  [caliper] [report-builder] 	### Test result ###
+misinfo-caliper  | 2026.09.06-04:17:05.023 info  [caliper] [report-builder] 	
+misinfo-caliper  | +---------------------+------+------+-----------------+-----------------+-----------------+-----------------+------------------+
+misinfo-caliper  | | Name                | Succ | Fail | Send Rate (TPS) | Max Latency (s) | Min Latency (s) | Avg Latency (s) | Throughput (TPS) |
+misinfo-caliper  | |---------------------|------|------|-----------------|-----------------|-----------------|-----------------|------------------|
+misinfo-caliper  | | submit-report-write | 20   | 0    | 27.9            | 0.36            | 0.04            | 0.20            | 26.4             |
+misinfo-caliper  | +---------------------+------+------+-----------------+-----------------+-----------------+-----------------+------------------+
+misinfo-caliper  | 
+misinfo-caliper  | 2026.09.06-04:17:05.023 info  [caliper] [round-orchestrator] 	Finished round 1 (submit-report-write) in 0.826 seconds
+misinfo-caliper  | 2026.09.06-04:17:05.023 info  [caliper] [monitor.js] 	Stopping all monitors
+misinfo-caliper  | 2026.09.06-04:17:05.023 info  [caliper] [round-orchestrator] 	Waiting 5 seconds for the next round...
+misinfo-caliper  | 2026.09.06-04:17:10.025 info  [caliper] [round-orchestrator] 	Started round 2 (query-all-reports-read)
+misinfo-caliper  | 2026.09.06-04:17:10.026 info  [caliper] [worker-message-handler] 	Preparing Worker#0 for Round#1
+misinfo-caliper  | 2026.09.06-04:17:10.026 info  [caliper] [worker-message-handler] 	Preparing Worker#1 for Round#1
+misinfo-caliper  | 2026.09.06-04:17:10.035 info  [caliper] [connectors/peer-gateway/PeerGateway] 	Generating contract map for user Admin
+misinfo-caliper  | 2026.09.06-04:17:10.035 info  [caliper] [connectors/peer-gateway/PeerGateway] 	Generating contract map for user Admin
+misinfo-caliper  | 2026.09.06-04:17:10.035 info  [caliper] [caliper-worker] 	Info: worker 1 prepare test phase for round 1 is starting...
+misinfo-caliper  | 2026.09.06-04:17:10.035 info  [caliper] [caliper-worker] 	Info: worker 0 prepare test phase for round 1 is starting...
+misinfo-caliper  | 2026.09.06-04:17:10.036 info  [caliper] [connectors/peer-gateway/PeerGateway] 	disconnecting gateway for user Admin
+misinfo-caliper  | 2026.09.06-04:17:10.036 info  [caliper] [connectors/peer-gateway/PeerGateway] 	disconnecting gateway for user Admin
+misinfo-caliper  | 2026.09.06-04:17:10.036 info  [caliper] [connectors/peer-gateway/PeerGateway] 	disconnecting gRpc client at peer peer0.org1.example.com
+misinfo-caliper  | 2026.09.06-04:17:10.036 info  [caliper] [connectors/peer-gateway/PeerGateway] 	disconnecting gRpc client at peer peer0.org1.example.com
+misinfo-caliper  | 2026.09.06-04:17:10.037 info  [caliper] [caliper-worker] 	Info: worker 0 prepare test phase for round 1 is completed
+misinfo-caliper  | 2026.09.06-04:17:10.037 info  [caliper] [caliper-worker] 	Info: worker 1 prepare test phase for round 1 is completed
+misinfo-caliper  | 2026.09.06-04:17:10.037 info  [caliper] [worker-message-handler] 	Worker#0 prepared for Round#1
+misinfo-caliper  | 2026.09.06-04:17:10.037 info  [caliper] [worker-message-handler] 	Worker#1 prepared for Round#1
+misinfo-caliper  | 2026.09.06-04:17:10.037 info  [caliper] [worker-orchestrator] 	2 workers prepared, progressing to test phase.
+misinfo-caliper  | 2026.09.06-04:17:10.038 info  [caliper] [round-orchestrator] 	Monitors successfully started
+misinfo-caliper  | 2026.09.06-04:17:10.038 info  [caliper] [worker-message-handler] 	Worker#0 is starting Round#1
+misinfo-caliper  | 2026.09.06-04:17:10.038 info  [caliper] [worker-message-handler] 	Worker#1 is starting Round#1
+misinfo-caliper  | 2026.09.06-04:17:10.040 info  [caliper] [connectors/peer-gateway/PeerGateway] 	Generating contract map for user Admin
+misinfo-caliper  | 2026.09.06-04:17:10.040 info  [caliper] [connectors/peer-gateway/PeerGateway] 	Generating contract map for user Admin
+misinfo-caliper  | 2026.09.06-04:17:10.041 info  [caliper] [caliper-worker] 	Worker #1 starting workload loop
+misinfo-caliper  | 2026.09.06-04:17:10.041 info  [caliper] [caliper-worker] 	Worker #0 starting workload loop
+misinfo-caliper  | 2026.09.06-04:17:11.905 info  [caliper] [connectors/peer-gateway/PeerGateway] 	disconnecting gateway for user Admin
+misinfo-caliper  | 2026.09.06-04:17:11.905 info  [caliper] [connectors/peer-gateway/PeerGateway] 	disconnecting gateway for user Admin
+misinfo-caliper  | 2026.09.06-04:17:11.905 info  [caliper] [connectors/peer-gateway/PeerGateway] 	disconnecting gRpc client at peer peer0.org1.example.com
+misinfo-caliper  | 2026.09.06-04:17:11.905 info  [caliper] [connectors/peer-gateway/PeerGateway] 	disconnecting gRpc client at peer peer0.org1.example.com
+misinfo-caliper  | 2026.09.06-04:17:11.905 info  [caliper] [worker-message-handler] 	Worker#0 finished Round#1
+misinfo-caliper  | 2026.09.06-04:17:11.905 info  [caliper] [worker-message-handler] 	Worker#1 finished Round#1
+misinfo-caliper  | 2026.09.06-04:17:16.907 info  [caliper] [default-observer] 	Resetting txCount indicator count
+misinfo-caliper  | 2026.09.06-04:17:16.908 info  [caliper] [report-builder] 	### Test result ###
+misinfo-caliper  | 2026.09.06-04:17:16.908 info  [caliper] [report-builder] 	
+misinfo-caliper  | +------------------------+------+------+-----------------+-----------------+-----------------+-----------------+------------------+
+misinfo-caliper  | | Name                   | Succ | Fail | Send Rate (TPS) | Max Latency (s) | Min Latency (s) | Avg Latency (s) | Throughput (TPS) |
+misinfo-caliper  | |------------------------|------|------|-----------------|-----------------|-----------------|-----------------|------------------|
+misinfo-caliper  | | query-all-reports-read | 40   | 0    | 52.7            | 0.04            | 0.02            | 0.02            | 51.5             |
+misinfo-caliper  | +------------------------+------+------+-----------------+-----------------+-----------------+-----------------+------------------+
+misinfo-caliper  | 
+misinfo-caliper  | 2026.09.06-04:17:16.909 info  [caliper] [round-orchestrator] 	Finished round 2 (query-all-reports-read) in 0.862 seconds
+misinfo-caliper  | 2026.09.06-04:17:16.909 info  [caliper] [monitor.js] 	Stopping all monitors
+misinfo-caliper  | 2026.09.06-04:17:16.909 info  [caliper] [report-builder] 	### All test results ###
+misinfo-caliper  | 2026.09.06-04:17:16.910 info  [caliper] [report-builder] 	
+misinfo-caliper  | +------------------------+------+------+-----------------+-----------------+-----------------+-----------------+------------------+
+misinfo-caliper  | | Name                   | Succ | Fail | Send Rate (TPS) | Max Latency (s) | Min Latency (s) | Avg Latency (s) | Throughput (TPS) |
+misinfo-caliper  | |------------------------|------|------|-----------------|-----------------|-----------------|-----------------|------------------|
+misinfo-caliper  | | submit-report-write    | 20   | 0    | 27.9            | 0.36            | 0.04            | 0.20            | 26.4             |
+misinfo-caliper  | |------------------------|------|------|-----------------|-----------------|-----------------|-----------------|------------------|
+misinfo-caliper  | | query-all-reports-read | 40   | 0    | 52.7            | 0.04            | 0.02            | 0.02            | 51.5             |
+misinfo-caliper  | +------------------------+------+------+-----------------+-----------------+-----------------+-----------------+------------------+
+misinfo-caliper  | 
+misinfo-caliper  | 2026.09.06-04:17:16.917 info  [caliper] [report-builder] 	Generated report with path /caliper/workspace/report.html
+misinfo-caliper  | 2026.09.06-04:17:16.918 info  [caliper] [monitor.js] 	Stopping all monitors
+misinfo-caliper  | 2026.09.06-04:17:16.918 info  [caliper] [worker-orchestrator] 	Sending exit message to connected workers
+misinfo-caliper  | 2026.09.06-04:17:16.918 info  [caliper] [round-orchestrator] 	Benchmark finished in 18.785 seconds. Total rounds: 2. Successful rounds: 2. Failed rounds: 0.
+misinfo-caliper  | 2026.09.06-04:17:16.918 info  [caliper] [caliper-engine] 	Network configuration attribute "caliper.command.end" is not present, skipping end command
+misinfo-caliper  | 2026.09.06-04:17:16.918 info  [caliper] [cli-launch-manager] 	Benchmark successfully finished!
+misinfo-caliper  | 2026.09.06-04:17:16.918 info  [caliper] [worker-message-handler] 	Worker#1 is exiting
+misinfo-caliper  | 2026.09.06-04:17:16.918 info  [caliper] [worker-message-handler] 	Worker#0 is exiting
+misinfo-caliper  | npm notice
+misinfo-caliper  | npm notice New major version of npm available! 10.8.2 -> 12.0.2
+misinfo-caliper  | npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.0.2
+misinfo-caliper  | npm notice To update run: npm install -g npm@12.0.2
+misinfo-caliper  | npm notice
+[Kmisinfo-caliper exited with code 0 (restarting)
+ Compose Stopping Aborting on container exit...
+ Container misinfo-caliper Stopping 
+misinfo-caliper  | 2026.09.06-04:17:17.749 info  [caliper] [cli-launch-manager] 	Set workspace path: /caliper/workspace
+misinfo-caliper  | 2026.09.06-04:17:17.750 info  [caliper] [cli-launch-manager] 	Set benchmark configuration path: /caliper/workspace/benchmarks/misinformation-benchmark.yaml
+misinfo-caliper  | 2026.09.06-04:17:17.750 info  [caliper] [cli-launch-manager] 	Set network configuration path: /caliper/workspace/networks/fabric/test-network.yaml
+misinfo-caliper  | 2026.09.06-04:17:17.750 info  [caliper] [cli-launch-manager] 	Set SUT type: fabric
+misinfo-caliper  | 2026.09.06-04:17:17.766 info  [caliper] [benchmark-validator] 	No observer specified, will default to `none`
+misinfo-caliper  | 2026.09.06-04:17:17.766 info  [caliper] [caliper-engine] 	Starting benchmark flow
+misinfo-caliper  | 2026.09.06-04:17:17.766 info  [caliper] [caliper-engine] 	Network configuration attribute "caliper.command.start" is not present, skipping start command
+misinfo-caliper  | 2026.09.06-04:17:17.089 info  [caliper] [FabricConnectorFactory] 	Initializing peer gateway connector compatible with installed fabric-gateway SDK: 1.7.1
+misinfo-caliper  | 2026.09.06-04:17:17.095 info  [caliper] [IdentityManager] 	Adding Admin (admin=true) as Admin for organization Org1MSP
+misinfo-caliper  | 2026.09.06-04:17:17.097 info  [caliper] [connectors/peer-gateway/PeerGateway] 	Fabric-Gateway SDK version: 1.7.1 for Peer-Gateway connector; TLS based on Org1MSP: server
+misinfo-caliper  | 2026.09.06-04:17:17.097 info  [caliper] [caliper-engine] 	Executed "init" step in 0.001 seconds
+misinfo-caliper  | 2026.09.06-04:17:17.097 warn  [caliper] [connectors/peer-gateway/PeerGateway] 	Install smart contract not available for the Fabric Peer Gateway connector
+misinfo-caliper  | 2026.09.06-04:17:17.097 info  [caliper] [caliper-engine] 	Executed "install" step in 0 seconds
+misinfo-caliper  | 2026.09.06-04:17:17.099 info  [caliper] [monitor.js] 	No resource monitors specified
+misinfo-caliper  | 2026.09.06-04:17:17.100 info  [caliper] [default-observer] 	Observer interval set to 5000 milliseconds
+misinfo-caliper  | 2026.09.06-04:17:17.102 info  [caliper] [round-orchestrator] 	Preparing worker connections
+misinfo-caliper  | 2026.09.06-04:17:17.103 info  [caliper] [worker-orchestrator] 	Launching worker 1 of 2
+misinfo-caliper  | 2026.09.06-04:17:17.106 info  [caliper] [worker-orchestrator] 	Launching worker 2 of 2
+misinfo-caliper  | 2026.09.06-04:17:17.107 info  [caliper] [worker-orchestrator] 	Messenger not configured, entering configure phase...
+misinfo-caliper  | 2026.09.06-04:17:17.108 info  [caliper] [worker-orchestrator] 	No existing workers detected, entering worker launch phase...
+misinfo-caliper  | 2026.09.06-04:17:17.108 info  [caliper] [worker-orchestrator] 	Waiting for 2 workers to be connected...
+misinfo-caliper  | 2026.09.06-04:17:17.302 info  [caliper] [cli-launch-worker] 	Set workspace path: /caliper/workspace
+misinfo-caliper  | 2026.09.06-04:17:17.303 info  [caliper] [cli-launch-worker] 	Set benchmark configuration path: /caliper/workspace/benchmarks/misinformation-benchmark.yaml
+misinfo-caliper  | 2026.09.06-04:17:17.303 info  [caliper] [cli-launch-worker] 	Set network configuration path: /caliper/workspace/networks/fabric/test-network.yaml
+misinfo-caliper  | 2026.09.06-04:17:17.303 info  [caliper] [cli-launch-worker] 	Set SUT type: fabric
+misinfo-caliper  | 2026.09.06-04:17:17.306 info  [caliper] [cli-launch-worker] 	Set workspace path: /caliper/workspace
+misinfo-caliper  | 2026.09.06-04:17:17.307 info  [caliper] [cli-launch-worker] 	Set benchmark configuration path: /caliper/workspace/benchmarks/misinformation-benchmark.yaml
+misinfo-caliper  | 2026.09.06-04:17:17.307 info  [caliper] [cli-launch-worker] 	Set network configuration path: /caliper/workspace/networks/fabric/test-network.yaml
+misinfo-caliper  | 2026.09.06-04:17:17.307 info  [caliper] [cli-launch-worker] 	Set SUT type: fabric
+misinfo-caliper  | 2026.09.06-04:17:17.337 info  [caliper] [worker-orchestrator] 	2 workers connected, progressing to worker assignment phase.
+misinfo-caliper  | 2026.09.06-04:17:17.337 info  [caliper] [worker-orchestrator] 	Workers currently unassigned, awaiting index assignment...
+misinfo-caliper  | 2026.09.06-04:17:17.338 info  [caliper] [worker-orchestrator] 	Waiting for 2 workers to be assigned...
+misinfo-caliper  | 2026.09.06-04:17:17.361 info  [caliper] [worker-orchestrator] 	2 workers assigned, progressing to worker initialization phase.
+misinfo-caliper  | 2026.09.06-04:17:17.362 info  [caliper] [worker-orchestrator] 	Waiting for 2 workers to be ready...
+misinfo-caliper  | 2026.09.06-04:17:17.362 info  [caliper] [worker-message-handler] 	Initializing Worker#1...
+misinfo-caliper  | 2026.09.06-04:17:17.363 info  [caliper] [worker-message-handler] 	Initializing Worker#0...
+misinfo-caliper  | 2026.09.06-04:17:17.452 info  [caliper] [FabricConnectorFactory] 	Initializing peer gateway connector compatible with installed fabric-gateway SDK: 1.7.1
+misinfo-caliper  | 2026.09.06-04:17:17.457 info  [caliper] [IdentityManager] 	Adding Admin (admin=true) as Admin for organization Org1MSP
+misinfo-caliper  | 2026.09.06-04:17:17.459 info  [caliper] [worker-message-handler] 	Worker#1 initialized
+misinfo-caliper  | 2026.09.06-04:17:17.460 info  [caliper] [FabricConnectorFactory] 	Initializing peer gateway connector compatible with installed fabric-gateway SDK: 1.7.1
+misinfo-caliper  | 2026.09.06-04:17:17.466 info  [caliper] [IdentityManager] 	Adding Admin (admin=true) as Admin for organization Org1MSP
+misinfo-caliper  | 2026.09.06-04:17:17.467 info  [caliper] [worker-message-handler] 	Worker#0 initialized
+misinfo-caliper  | 2026.09.06-04:17:17.468 info  [caliper] [worker-orchestrator] 	2 workers ready, progressing to test preparation phase.
+misinfo-caliper  | 2026.09.06-04:17:17.468 info  [caliper] [round-orchestrator] 	Started round 1 (submit-report-write)
+misinfo-caliper  | 2026.09.06-04:17:17.469 info  [caliper] [worker-message-handler] 	Preparing Worker#0 for Round#0
+misinfo-caliper  | 2026.09.06-04:17:17.469 info  [caliper] [worker-message-handler] 	Preparing Worker#1 for Round#0
+misinfo-caliper  | 2026.09.06-04:17:17.497 info  [caliper] [connectors/peer-gateway/PeerGateway] 	Generating contract map for user Admin
+misinfo-caliper  | 2026.09.06-04:17:17.497 info  [caliper] [connectors/peer-gateway/PeerGateway] 	Generating contract map for user Admin
+misinfo-caliper  | 2026.09.06-04:17:17.497 info  [caliper] [caliper-worker] 	Info: worker 0 prepare test phase for round 0 is starting...
+misinfo-caliper  | 2026.09.06-04:17:17.497 info  [caliper] [caliper-worker] 	Info: worker 1 prepare test phase for round 0 is starting...
+misinfo-caliper  | 2026.09.06-04:17:17.498 info  [caliper] [connectors/peer-gateway/PeerGateway] 	disconnecting gateway for user Admin
+misinfo-caliper  | 2026.09.06-04:17:17.498 info  [caliper] [connectors/peer-gateway/PeerGateway] 	disconnecting gRpc client at peer peer0.org1.example.com
+misinfo-caliper  | 2026.09.06-04:17:17.499 info  [caliper] [caliper-worker] 	Info: worker 1 prepare test phase for round 0 is completed
+misinfo-caliper  | 2026.09.06-04:17:17.499 info  [caliper] [worker-message-handler] 	Worker#1 prepared for Round#0
+misinfo-caliper  | 2026.09.06-04:17:17.499 info  [caliper] [connectors/peer-gateway/PeerGateway] 	disconnecting gateway for user Admin
+misinfo-caliper  | 2026.09.06-04:17:17.499 info  [caliper] [connectors/peer-gateway/PeerGateway] 	disconnecting gRpc client at peer peer0.org1.example.com
+misinfo-caliper  | 2026.09.06-04:17:17.500 info  [caliper] [caliper-worker] 	Info: worker 0 prepare test phase for round 0 is completed
+misinfo-caliper  | 2026.09.06-04:17:17.500 info  [caliper] [worker-message-handler] 	Worker#0 prepared for Round#0
+misinfo-caliper  | 2026.09.06-04:17:17.500 info  [caliper] [worker-orchestrator] 	2 workers prepared, progressing to test phase.
+misinfo-caliper  | 2026.09.06-04:17:17.500 info  [caliper] [round-orchestrator] 	Monitors successfully started
+misinfo-caliper  | 2026.09.06-04:17:17.501 info  [caliper] [worker-message-handler] 	Worker#0 is starting Round#0
+misinfo-caliper  | 2026.09.06-04:17:17.501 info  [caliper] [worker-message-handler] 	Worker#1 is starting Round#0
+misinfo-caliper  | 2026.09.06-04:17:17.505 info  [caliper] [connectors/peer-gateway/PeerGateway] 	Generating contract map for user Admin
+misinfo-caliper  | 2026.09.06-04:17:17.505 info  [caliper] [connectors/peer-gateway/PeerGateway] 	Generating contract map for user Admin
+misinfo-caliper  | 2026.09.06-04:17:17.506 info  [caliper] [caliper-worker] 	Worker #0 starting workload loop
+misinfo-caliper  | 2026.09.06-04:17:17.506 info  [caliper] [caliper-worker] 	Worker #1 starting workload loop
+misinfo-caliper  | 2026.09.06-04:17:19.331 info  [caliper] [connectors/peer-gateway/PeerGateway] 	disconnecting gateway for user Admin
+misinfo-caliper  | 2026.09.06-04:17:19.331 info  [caliper] [connectors/peer-gateway/PeerGateway] 	disconnecting gRpc client at peer peer0.org1.example.com
+misinfo-caliper  | 2026.09.06-04:17:19.331 info  [caliper] [worker-message-handler] 	Worker#1 finished Round#0
+misinfo-caliper  | 2026.09.06-04:17:19.332 info  [caliper] [connectors/peer-gateway/PeerGateway] 	disconnecting gateway for user Admin
+misinfo-caliper  | 2026.09.06-04:17:19.332 info  [caliper] [connectors/peer-gateway/PeerGateway] 	disconnecting gRpc client at peer peer0.org1.example.com
+misinfo-caliper  | 2026.09.06-04:17:19.332 info  [caliper] [worker-message-handler] 	Worker#0 finished Round#0
+misinfo-caliper  | 2026.09.06-04:17:24.350 info  [caliper] [default-observer] 	Resetting txCount indicator count
+misinfo-caliper  | 2026.09.06-04:17:24.351 info  [caliper] [report-builder] 	### Test result ###
+misinfo-caliper  | 2026.09.06-04:17:24.354 info  [caliper] [report-builder] 	
+misinfo-caliper  | +---------------------+------+------+-----------------+-----------------+-----------------+-----------------+------------------+
+misinfo-caliper  | | Name                | Succ | Fail | Send Rate (TPS) | Max Latency (s) | Min Latency (s) | Avg Latency (s) | Throughput (TPS) |
+misinfo-caliper  | |---------------------|------|------|-----------------|-----------------|-----------------|-----------------|------------------|
+misinfo-caliper  | | submit-report-write | 20   | 0    | 27.9            | 0.36            | 0.04            | 0.20            | 26.5             |
+misinfo-caliper  | +---------------------+------+------+-----------------+-----------------+-----------------+-----------------+------------------+
+misinfo-caliper  | 
+misinfo-caliper  | 2026.09.06-04:17:24.354 info  [caliper] [round-orchestrator] 	Finished round 1 (submit-report-write) in 0.824 seconds
+misinfo-caliper  | 2026.09.06-04:17:24.354 info  [caliper] [monitor.js] 	Stopping all monitors
+misinfo-caliper  | 2026.09.06-04:17:24.354 info  [caliper] [round-orchestrator] 	Waiting 5 seconds for the next round...
+ Container misinfo-caliper Stopped 
+[Kmisinfo-caliper exited with code 137
+
+>> Benchmark complete — HTML report: benchmarks/caliper/report.html
+  Per-run results: /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/results/overnight/20260906-061641/3_orgs/caliper_2/run.csv
