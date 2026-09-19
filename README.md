@@ -515,10 +515,10 @@ TORCH_DEVICE=cuda MODEL_QUANTIZATION=fp16 MAX_BATCH_SIZE=64 MAX_QUEUE_DELAY_MS=5
 CID=<report_id_from_csv>                       # CSV column report_id == IPFS CID
 
 # on-chain record (status, consensus, votes)   — the ledger
-curl -s -H "X-API-Key: key-org1" "http://localhost:8000/api/reports/$CID/chain"
+curl -s -H "X-API-Key: key-org1" "http://localhost8000/api/reports/$CID/chain"
 
 # the report blob itself                       — the IPFS gateway (kubo :8081)
-curl -s "http://localhost:8081/ipfs/$CID"
+curl -sL "http://localhost:8081/ipfs/$CID"
 
 # tamper-evidence check                        — hash + URI consistency
 curl -s -H "X-API-Key: key-org1" "http://localhost:8000/api/reports/$CID/verify"
@@ -526,6 +526,219 @@ curl -s -H "X-API-Key: key-org1" "http://localhost:8000/api/reports/$CID/verify"
 # full transaction history                     — Fabric GetHistoryForKey
 curl -s -H "X-API-Key: key-org1" "http://localhost:8000/api/reports/$CID/history"
 ```
+
+### Interpreting the `/chain` response
+
+Returns the current on-chain record for a report. Example:
+
+```json
+{
+  "id": "QmcA77cXb4koDoaeAw256dC7dSH3rrUMtM2rnsidispdJy",
+  "content_hash": "73fa64843dd22e8b413d4c7f5c35946ba661632fbd887eec542cabf636072672",
+  "inference_label": "0",
+  "confidence": 0.573802,
+  "model_version": "afro-xlmr-large-76L-misinfo-v1",
+  "timestamp": "2026-09-18T22:47:32.509320Z",
+  "submitted_by": "Org2MSP",
+  "fact_check_deadline": "2026-09-21T22:47:32Z",
+  "status": "FINAL",
+  "fact_checks": [
+    {"checker_msp": "Org3MSP", "outcome": "1", "txid": "09a21022..."},
+    {"checker_msp": "Org1MSP", "outcome": "1", "txid": "e8e338c0..."}
+  ],
+  "final_label": "1",
+  "finalized_by": "Org1MSP",
+  "finalized_at": "2026-09-18T22:47:36Z"
+}
+```
+
+| Field | What it tells you |
+|-------|-------------------|
+| `id` | IPFS CID — the report's globally unique identifier |
+| `content_hash` | SHA-256 of `{source, inference}` — used for tamper detection |
+| `inference_label` | ML model's initial guess: `"0"` = non-misinfo, `"1"` = misinfo |
+| `confidence` | Model certainty (0.0–1.0) — values below 0.6 indicate uncertainty |
+| `model_version` | Which ML model produced the inference |
+| `submitted_by` | MSP ID of the org that submitted the report |
+| `fact_check_deadline` | 72h voting window — after this the report can be expired |
+| `status` | Lifecycle state (see below) |
+| `fact_checks` | Array of org verdicts — each entry is one org's vote |
+| `final_label` | Consensus result: `"0"` = verified non-misinfo, `"1"` = verified misinfo |
+| `finalized_by` | Org that triggered finalization |
+| `finalized_at` | When finalization occurred |
+
+**Status values:** `PENDING` (no votes yet) → `UNDER_REVIEW` (≥1 vote) → `FINAL` (consensus reached) or `REJECTED` (mathematically impossible to reach consensus) or `EXPIRED` (deadline passed).
+
+**What to look for:**
+- `status: FINAL` with `final_label: "1"` = content verified as **misinformation**
+- `status: FINAL` with `final_label: "0"` = content verified as **non-misinformation**
+- `status: REJECTED` = fact-checkers couldn't reach 2/3 consensus — report is permanently marked as inconclusive
+- `fact_checks` length < 2 with `status: UNDER_REVIEW` = still waiting for more votes
+- `confidence` near 0.5 = the ML model was uncertain (borderline case)
+- `content_hash` should match the IPFS document's `content_hash` (check with `/verify`)
+
+### Interpreting the `/ipfs/{CID}` response
+
+Returns the raw report document stored in IPFS. This is the off-chain blob containing the full claim text and AI analysis. Example:
+
+```json
+{
+  "msg_id": "feed_25243384512c",
+  "source": {
+    "platform": "ai_scout",
+    "content": "I-akhawunti esemthethweni ye-IEC ithe ward yethu ibhekene nokucishwa KAMANZI ngesikhathi sovoto...",
+    "published_at": ""
+  },
+  "inference": {
+    "label": "0",
+    "confidence": 0.956888,
+    "model_version": "afro-xlmr-large-76L-misinfo-v1",
+    "inference_timestamp": "2026-09-18T22:47:38.840403Z"
+  },
+  "submitter": {
+    "org_mspid": "Org2MSP",
+    "submitted_at": "2026-09-18T22:47:38.840424Z"
+  },
+  "fact_check_status": "Pending",
+  "fact_checks": [],
+  "content_hash": "b7887c5d5849729bf4e4a8b60f1a8bbdd648fda326045240cfeb531202acc5f9"
+}
+```
+
+| Field | What it tells you |
+|-------|-------------------|
+| `msg_id` | Claim identity carried from the ingest pipeline (NOT the report's own ID) |
+| `source.content` | The original claim text being evaluated |
+| `source.platform` | Where the claim originated (`ai_scout`, `twitter`, `facebook`, etc.) |
+| `source.published_at` | When the claim was originally published (may be empty) |
+| `inference.label` | ML model's classification: `"0"` = non-misinfo, `"1"` = misinfo |
+| `inference.confidence` | Model confidence score (0.0–1.0) |
+| `inference.model_version` | Which ML model produced the inference |
+| `inference.inference_timestamp` | When the inference was made |
+| `submitter.org_mspid` | MSP ID of the org that submitted the report |
+| `submitter.submitted_at` | When the report was submitted |
+| `fact_check_status` | Lifecycle: `Pending` → `Under_Review` → `Verified_Misinformation` / `Verified_Non_Misinformation` |
+| `fact_checks` | Array of fact-check entries (empty until orgs vote) |
+| `content_hash` | SHA-256 of `{source, inference}` — should match the on-chain value |
+
+When populated, each `fact_checks` entry contains:
+
+| Field | What it tells you |
+|-------|-------------------|
+| `checker_msp` | MSP ID of the fact-checking org |
+| `outcome` | Verdict: `"0"` = non-misinfo, `"1"` = misinfo |
+| `reasoning` | Free-text explanation (off-chain only, not on the ledger) |
+| `support` | List of supporting URLs/references |
+| `timestamp` | When the fact-check was submitted |
+
+**Note:** The IPFS document evolves over time — each fact-check and finalization creates a new immutable IPFS object (new CID). Old versions remain permanently resolvable. The `report_id` field is deliberately excluded from the IPFS blob (it is the CID itself).
+
+**What to look for:**
+- `fact_checks[].reasoning` gives the human-readable justification (not available on-chain)
+- `fact_checks[].support` provides evidence URLs for the verdict
+- `content_hash` must match the on-chain `content_hash` — if not, the off-chain copy was tampered with
+- `fact_check_status` should align with the on-chain `status` and `final_label`
+
+### Interpreting the `/verify` response
+
+Returns a tamper-evidence check comparing the off-chain IPFS document against the on-chain hash. Example:
+
+```json
+{
+  "report_id": "QmcA77cXb4koDoaeAw256dC7dSH3rrUMtM2rnsidispdJy",
+  "off_chain_intact": true,
+  "matches_on_chain": true,
+  "verified": true,
+  "explanation": "The off-chain copy is unmodified AND its hash matches the immutable, consortium-voted hash stored on the ledger."
+}
+```
+
+| Field | What it tells you |
+|-------|-------------------|
+| `off_chain_intact` | `true` = IPFS document hasn't been modified (re-hashed content matches stored `content_hash`) |
+| `matches_on_chain` | `true` = IPFS `content_hash` equals the blockchain-anchored `content_hash` |
+| `verified` | `true` = both checks pass — document is authentic and unmodified |
+| `explanation` | Human-readable summary of the verification result |
+
+**What to look for:**
+- `verified: true` = the report is trustworthy — the off-chain document matches what was anchored on the blockchain
+- `off_chain_intact: false` = the IPFS document was modified after submission (tampered)
+- `matches_on_chain: false` = the off-chain copy was replaced with a different document entirely
+- Both `false` = complete mismatch — the off-chain document is not the one that was submitted
+
+### Interpreting the `/history` response
+
+Returns the full transaction history for a report — every time it was modified on-chain. Example:
+
+```json
+[
+  {
+    "tx_id": "81a69f38e7944b91fe64922ac6625ca45fb8b60eb85fc8b635bccc926d216ff3",
+    "timestamp": "2026-09-18T22:47:32Z",
+    "is_delete": false,
+    "record": {
+      "id": "QmcA77cXb4koDoaeAw256dC7dSH3rrUMtM2rnsidispdJy",
+      "status": "PENDING",
+      "inference_label": "0",
+      "confidence": 0.573802,
+      "submitted_by": "Org2MSP",
+      "fact_checks": []
+    }
+  },
+  {
+    "tx_id": "09a210221c66d7ef67375784e21d21b923ae1f1f97ba3eb1a518d9a6329a39f8",
+    "timestamp": "2026-09-18T22:47:34Z",
+    "is_delete": false,
+    "record": {
+      "id": "QmcA77cXb4koDoaeAw256dC7dSH3rrUMtM2rnsidispdJy",
+      "status": "UNDER_REVIEW",
+      "fact_checks": [
+        {"checker_msp": "Org3MSP", "outcome": "1", "txid": "09a21022..."}
+      ]
+    }
+  },
+  {
+    "tx_id": "e8e338c062c6f5c0d2fc22d3617c8f33efbe54df9337035d0aa20d16ad17eb25",
+    "timestamp": "2026-09-18T22:47:36Z",
+    "is_delete": false,
+    "record": {
+      "id": "QmcA77cXb4koDoaeAw256dC7dSH3rrUMtM2rnsidispdJy",
+      "status": "FINAL",
+      "fact_checks": [
+        {"checker_msp": "Org3MSP", "outcome": "1", "txid": "09a21022..."},
+        {"checker_msp": "Org1MSP", "outcome": "1", "txid": "e8e338c0..."}
+      ],
+      "final_label": "1",
+      "finalized_by": "Org1MSP",
+      "finalized_at": "2026-09-18T22:47:36Z"
+    }
+  }
+]
+```
+
+| Field | What it tells you |
+|-------|-------------------|
+| `tx_id` | Unique Fabric transaction ID for this ledger write |
+| `timestamp` | Blockchain timestamp (from the ordering service) |
+| `is_delete` | `false` for all normal entries (reports are never deleted) |
+| `record` | Full report state snapshot after this transaction |
+
+**Lifecycle walkthrough (example above):**
+
+| Entry | Time | What happened | Status | Fact-checks |
+|-------|------|---------------|--------|-------------|
+| 1st | `22:47:32` | `Org2MSP` submits content. ML model predicts non-misinfo (57% confidence). | `PENDING` | 0 |
+| 2nd | `22:47:34` | `Org3MSP` submits verdict: **1** (misinformation). | `UNDER_REVIEW` | 1 (Org3MSP) |
+| 3rd | `22:47:36` | `Org1MSP` submits verdict: **1** (misinformation). 2/2 votes = consensus. `Org1MSP` finalizes. | `FINAL` | 2 (Org3MSP, Org1MSP) |
+
+**What to look for:**
+- Entries are in **chronological order** — first entry is the original submission
+- The **last entry's** `record.status` is the current on-chain status
+- `record.fact_checks` grows with each entry — each new vote is appended
+- If `record.status` is `UNDER_REVIEW` and `fact_checks` length < required votes, more fact-checking is pending
+- The gap between timestamps shows how fast consensus was reached (seconds vs hours)
+- `final_label` only appears in the entry where finalization occurred
+- If `is_delete: true` appears, the key was deleted from the ledger (does not happen in normal operation)
 
 ## API quick reference
 
