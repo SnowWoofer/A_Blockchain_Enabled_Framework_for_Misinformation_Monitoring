@@ -31,7 +31,7 @@ The system has **two layers** that run independently:
   * `RegisterOrg` / `RequestOrgAdmission` / `VoteOnOrgAdmission` / `FinalizeOrgAdmission` — org governance (admission needs 2/3 of registered orgs)
 * **Fabric Gateway SDK sidecar** (`:9100`): Node.js wrapper around `@hyperledger/fabric-gateway`
 * **IPFS Gateway** (`:9101`): thin add/cat bridge over kubo
-* **Blockchain Gateway** (`:8000`): FastAPI, the only thing orgs talk to. API-key auth, IPFS storage, chaincode invocation
+* **Blockchain Gateway** (`:8000`): FastAPI, the only thing orgs talk to. Dual auth (API-key for benchmarks, JWT for demos), IPFS storage, chaincode invocation
 
 ### Application pipeline (`docker compose up -d --build`)
 
@@ -179,6 +179,43 @@ blockchain/scripts/bootstrap-keys.sh org1 org2 org3 ... orgN
 
 `startup.sh` bootstraps keys for every org automatically; this is only needed
 for a clean manual setup.
+
+### Auth mode (optional)
+
+The gateway supports two authentication modes controlled by the `AUTH_MODE` environment variable:
+
+|Mode|Auth method|Use case|
+|-|-|-|
+|`bootstrap` (default)|API keys via `X-API-Key` header|Benchmarks, load testing|
+|`jwt`|JWT tokens via `Authorization: Bearer` header|Demos, onboarding flows|
+
+**Environment variables:**
+
+|Variable|Default|Description|
+|-|-|-|
+|`AUTH_MODE`|`bootstrap`|`bootstrap` or `jwt`|
+|`JWT_SECRET`|random per process|Secret key for signing JWT tokens|
+|`JWT_EXPIRY_S`|`86400`|Token expiry in seconds (24 hours)|
+
+To use JWT mode:
+
+```bash
+export AUTH_MODE=jwt
+export JWT_SECRET=my-secret-key    # optional, auto-generated if not set
+
+# Register a user
+curl -X POST http://localhost:8000/api/auth/register \
+  -d '{"org":"org1","password":"secret123"}'
+
+# Login and get a token
+TOKEN=$(curl -X POST http://localhost:8000/api/auth/login \
+  -d '{"org":"org1","password":"secret123"}' | jq -r '.token')
+
+# Use the token
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8000/api/status
+```
+
+Benchmark harnesses (`feed_samples.py`, `load-http.py`) use the bootstrap API-key system and are unaffected by `AUTH_MODE`.
 
 ## Run it end to end
 
@@ -742,7 +779,7 @@ Returns the full transaction history for a report — every time it was modified
 
 ## API quick reference
 
-All endpoints require `-H "X-API-Key: <key>"`.
+All endpoints require authentication. In bootstrap mode (default), use `-H "X-API-Key: <key>"`. In JWT mode, use `-H "Authorization: Bearer <token>"` after logging in via `/api/auth/login`.
 
 ### Blockchain gateway (`:8000`)
 
@@ -760,6 +797,8 @@ All endpoints require `-H "X-API-Key: <key>"`.
 |`POST /api/reports/{id}/expire`|Expire a report past its voting deadline|
 |`POST /api/orgs/apply`, `/api/orgs/{msp}/admission`, `/vote`, `/finalize`|New-org admission workflow|
 |`GET /api/orgs`, `GET /api/orgs/{msp}/admission`|Registered orgs / admission status|
+|`POST /api/auth/register`|Register user credentials (JWT mode only, body: `org`, `password`)|
+|`POST /api/auth/login`|Login and get JWT token (JWT mode only, body: `org`, `password`)|
 
 ### Claim Ingest Worker (`:8003`)
 
@@ -827,6 +866,10 @@ docker compose -f blockchain/explorer/docker-compose.yaml down   # or down -v to
 |IPFS nodes crash-loop with `Error: lock /data/ipfs/repo.lock: permission denied`|The named IPFS volume carries ownership from an earlier container generation. `docker rm -f` does **not** remove volumes: run `docker compose down -v --remove-orphans` (also wipes app-layer state + IPFS volumes; legacy standalone `ipfs-data` may survive) then purge + rebuild from `startup.sh`.|
 |Runs stop silently after a Windows reboot / lid-close / sleep|WSL terminates detached processes; `feed_samples.py` writes its CSV **only on step completion**, so a killed run banks nothing — replay the same seed (`--seed 100`) and identical samples are re-fed. No corruption, partial steps are simply lost.|
 |Builds fail intermittently (keepalive ACK timeouts, high load, `ipfs … did not become ready`) with swap exhausted|Restore swap: `sudo fallocate -l 8G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile`. Note `sudo -n` (non-interactive) fails on this box — run such commands in an interactive shell.|
+|`/api/auth/register` or `/api/auth/login` returns 400|`AUTH_MODE` is not set to `jwt`. Set `export AUTH_MODE=jwt` and restart the gateway.|
+|JWT auth: all endpoints return 401 "missing Authorization header"|After login, pass the token as `-H "Authorization: Bearer <token>"`.|
+|JWT auth: 401 "invalid or expired token"|Token expired (default 24h). Re-login via `/api/auth/login` to get a fresh token.|
+|Apply org returns 400 "not registered on-chain"|The target org must be registered via `RegisterOrg` before `apply_org` can generate its API key. |
 
 RPC API 
 

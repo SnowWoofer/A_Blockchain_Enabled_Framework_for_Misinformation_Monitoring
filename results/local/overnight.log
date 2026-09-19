@@ -1,0 +1,900 @@
+nohup: ignoring input
+
+========================================
+  ORGS=3
+========================================
+ea2a333d6205
+6f5769733194
+82b602bc5d35
+dc0cd35f4242
+ec42cc98a045
+1dcc1e47cb87
+3938a34b04a3
+cd32cbdf09c1
+98be2927f6c4
+b02535c813fa
+5c530793a153
+810da2201db4
+c8e201faa1cf
+91922c6b2b8d
+d16d7d033a68
+5d67a0dbd2bf
+c5d38d3de05e
+3b5413f7fde4
+969b2f87180c
+b969e4437328
+1334ea04ce13
+0ff7550dcf91
+cfc374bfc904
+445af2e7ca96
+91d4eb7dad2f
+c77b76fc31ac
+c86f14bb00c7
+a5f4c4babed7
+3d92f20a99c6
+4458402ae271
+50d1edd7a37d
+0828ae506dad
+489742d39dcc
+0ab791b3cfe4
+396960a0b1b4
+d3d65eaad18c
+4c1f3151fb35
+4beb1748a214
+3846e36009fa
+bd2be12d79a9
+e2fe7fd45cd7
+59be2265218a
+d601262578da
+12b38a1d8ccf
+a96e6b65ce96
+ab45c1114f45
+6e75079a034e
+9033176d4210
+9b09d4fd31a3
+70fe7137c6cb
+76bbf184c012
+7baf26047498
+ede53a217e0f
+2ef9a32cfef3
+3eb0aa216889
+2f2fb4dbb8a0
+da59bd560fd1
+25611fff08e7
+>> [1/7] Ensuring Docker networks exist...
+>> [2/7] Provisioning 3-org Fabric network...
+>> Resetting any existing network (fresh ledger)...
+>> Starting the test network...
+[0;34mUsing docker and docker compose[0m
+[0;34mStarting nodes with CLI timeout of '5' tries and CLI delay of '3' seconds and using database 'couchdb' with crypto from 'cryptogen'[0m
+[0;34mLOCAL_VERSION=v2.5.16[0m
+[0;34mDOCKER_IMAGE_VERSION=v2.5.16[0m
+/home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/../bin/cryptogen
+[0;34mGenerating certificates using cryptogen tool[0m
+[0;34mCreating Org1 Identities[0m
++ cryptogen generate --config=./organizations/cryptogen/crypto-config-org1.yaml --output=organizations
+org1.example.com
++ res=0
+[0;34mCreating Org2 Identities[0m
++ cryptogen generate --config=./organizations/cryptogen/crypto-config-org2.yaml --output=organizations
+org2.example.com
++ res=0
+[0;34mCreating Orderer Org Identities[0m
++ cryptogen generate --config=./organizations/cryptogen/crypto-config-orderer.yaml --output=organizations
++ res=0
+[0;34mGenerating CCP files for Org1 and Org2[0m
+ Network fabric_test Creating 
+ Network fabric_test Created 
+ Volume compose_orderer.example.com Creating 
+ Volume compose_orderer.example.com Created 
+ Volume compose_peer0.org1.example.com Creating 
+ Volume compose_peer0.org1.example.com Created 
+ Volume compose_peer0.org2.example.com Creating 
+ Volume compose_peer0.org2.example.com Created 
+ Container couchdb0 Creating 
+ Container couchdb1 Creating 
+ Container orderer.example.com Creating 
+ Container couchdb1 Created 
+ Container peer0.org2.example.com Creating 
+ Container couchdb0 Created 
+ Container peer0.org1.example.com Creating 
+ Container orderer.example.com Created 
+ Container peer0.org1.example.com Created 
+ Container peer0.org2.example.com Created 
+ Container couchdb1 Starting 
+ Container orderer.example.com Starting 
+ Container couchdb0 Starting 
+ Container couchdb0 Started 
+ Container peer0.org1.example.com Starting 
+ Container couchdb1 Started 
+ Container peer0.org2.example.com Starting 
+ Container orderer.example.com Started 
+ Container peer0.org1.example.com Started 
+ Container peer0.org2.example.com Started 
+CONTAINER ID   IMAGE                               COMMAND                  CREATED        STATUS                  PORTS                                                                                                                                   NAMES
+e46488c141a4   hyperledger/fabric-peer:latest      "peer node start"        1 second ago   Up Less than a second   0.0.0.0:7051->7051/tcp, [::]:7051->7051/tcp, 0.0.0.0:9444->9444/tcp, [::]:9444->9444/tcp                                                peer0.org1.example.com
+99db27ba4b41   hyperledger/fabric-peer:latest      "peer node start"        1 second ago   Up Less than a second   0.0.0.0:9051->9051/tcp, [::]:9051->9051/tcp, 7051/tcp, 0.0.0.0:9445->9445/tcp, [::]:9445->9445/tcp                                      peer0.org2.example.com
+029c2d43879b   couchdb:3.4.2                       "tini -- /docker-ent…"   1 second ago   Up Less than a second   4369/tcp, 9100/tcp, 0.0.0.0:5984->5984/tcp, [::]:5984->5984/tcp                                                                         couchdb0
+613e38489e08   couchdb:3.4.2                       "tini -- /docker-ent…"   1 second ago   Up Less than a second   4369/tcp, 9100/tcp, 0.0.0.0:7984->5984/tcp, [::]:7984->5984/tcp                                                                         couchdb1
+70f05fd9f246   hyperledger/fabric-orderer:latest   "orderer"                1 second ago   Up Less than a second   0.0.0.0:7050->7050/tcp, [::]:7050->7050/tcp, 0.0.0.0:7053->7053/tcp, [::]:7053->7053/tcp, 0.0.0.0:9443->9443/tcp, [::]:9443->9443/tcp   orderer.example.com
+>> Creating channel mychannel...
+[0;34mUsing docker and docker compose[0m
+[0;34mCreating channel 'mychannel'.[0m
+[0;34mIf network is not up, starting nodes with CLI timeout of '5' tries and CLI delay of '3' seconds and using database 'leveldb [0m
+[0;34mBringing up network[0m
+[0;34mLOCAL_VERSION=v2.5.16[0m
+[0;34mDOCKER_IMAGE_VERSION=v2.5.16[0m
+time="2026-09-19T03:53:53+02:00" level=warning msg="Found orphan containers (couchdb0, couchdb1) for this project. If you removed or renamed this service in your compose file, you can run this command with the --remove-orphans flag to clean it up."
+ Container orderer.example.com Running 
+ Container peer0.org1.example.com Recreate 
+ Container peer0.org2.example.com Recreate 
+ Container peer0.org1.example.com Recreated 
+ Container peer0.org2.example.com Recreated 
+ Container peer0.org2.example.com Starting 
+ Container peer0.org1.example.com Starting 
+ Container peer0.org1.example.com Started 
+ Container peer0.org2.example.com Started 
+CONTAINER ID   IMAGE                               COMMAND                  CREATED         STATUS                  PORTS                                                                                                                                   NAMES
+c88cb2c9c6cb   hyperledger/fabric-peer:latest      "peer node start"        1 second ago    Up Less than a second   0.0.0.0:9051->9051/tcp, [::]:9051->9051/tcp, 7051/tcp, 0.0.0.0:9445->9445/tcp, [::]:9445->9445/tcp                                      peer0.org2.example.com
+fa9332cffb3c   hyperledger/fabric-peer:latest      "peer node start"        2 seconds ago   Up Less than a second   0.0.0.0:7051->7051/tcp, [::]:7051->7051/tcp, 0.0.0.0:9444->9444/tcp, [::]:9444->9444/tcp                                                peer0.org1.example.com
+029c2d43879b   couchdb:3.4.2                       "tini -- /docker-ent…"   5 seconds ago   Up 4 seconds            4369/tcp, 9100/tcp, 0.0.0.0:5984->5984/tcp, [::]:5984->5984/tcp                                                                         couchdb0
+613e38489e08   couchdb:3.4.2                       "tini -- /docker-ent…"   5 seconds ago   Up 4 seconds            4369/tcp, 9100/tcp, 0.0.0.0:7984->5984/tcp, [::]:7984->5984/tcp                                                                         couchdb1
+70f05fd9f246   hyperledger/fabric-orderer:latest   "orderer"                5 seconds ago   Up 4 seconds            0.0.0.0:7050->7050/tcp, [::]:7050->7050/tcp, 0.0.0.0:7053->7053/tcp, [::]:7053->7053/tcp, 0.0.0.0:9443->9443/tcp, [::]:9443->9443/tcp   orderer.example.com
+[0;34mUsing docker and docker compose[0m
+[0;34mGenerating channel genesis block 'mychannel.block'[0m
+[0;34mUsing organization 1[0m
+/home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/../bin/configtxgen
++ '[' 0 -eq 1 ']'
++ configtxgen -profile ChannelUsingRaft -outputBlock ./channel-artifacts/mychannel.block -channelID mychannel
+[34m2026-09-19 03:53:55.430 SAST 0001 INFO[0m [common.tools.configtxgen] [34;1mmain[0m -> Loading configuration
+[34m2026-09-19 03:53:55.437 SAST 0002 INFO[0m [common.tools.configtxgen.localconfig] [34;1mcompleteInitialization[0m -> orderer type: etcdraft
+[34m2026-09-19 03:53:55.437 SAST 0003 INFO[0m [common.tools.configtxgen.localconfig] [34;1mcompleteInitialization[0m -> Orderer.EtcdRaft.Options unset, setting to tick_interval:"500ms" election_tick:10 heartbeat_tick:1 max_inflight_blocks:5 snapshot_interval_size:16777216 
+[34m2026-09-19 03:53:55.437 SAST 0004 INFO[0m [common.tools.configtxgen.localconfig] [34;1mLoad[0m -> Loaded configuration: /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/configtx/configtx.yaml
+[34m2026-09-19 03:53:55.438 SAST 0005 INFO[0m [common.tools.configtxgen] [34;1mdoOutputBlock[0m -> Generating genesis block
+[34m2026-09-19 03:53:55.438 SAST 0006 INFO[0m [common.tools.configtxgen] [34;1mdoOutputBlock[0m -> Creating application channel genesis block
+[34m2026-09-19 03:53:55.439 SAST 0007 INFO[0m [common.tools.configtxgen] [34;1mdoOutputBlock[0m -> Writing genesis block
++ res=0
+[0;34mCreating channel mychannel[0m
+[0;34mAdding orderers[0m
++ . scripts/orderer.sh mychannel
++ '[' 0 -eq 1 ']'
++ res=0
+Status: 201
+{
+	"name": "mychannel",
+	"url": "/participation/v1/channels/mychannel",
+	"consensusRelation": "consenter",
+	"status": "active",
+	"height": 1
+}
+
+[0;32mChannel 'mychannel' created[0m
+[0;34mJoining org1 peer to the channel...[0m
+[0;34mUsing organization 1[0m
++ peer channel join -b ./channel-artifacts/mychannel.block
++ res=0
+[34m2026-09-19 03:54:01.651 SAST 0001 INFO[0m [channelCmd] [34;1mInitCmdFactory[0m -> Endorser and orderer connections initialized
+[34m2026-09-19 03:54:01.737 SAST 0002 INFO[0m [channelCmd] [34;1mexecuteJoin[0m -> Successfully submitted proposal to join channel
+[0;34mJoining org2 peer to the channel...[0m
+[0;34mUsing organization 2[0m
++ peer channel join -b ./channel-artifacts/mychannel.block
++ res=0
+[34m2026-09-19 03:54:04.792 SAST 0001 INFO[0m [channelCmd] [34;1mInitCmdFactory[0m -> Endorser and orderer connections initialized
+[34m2026-09-19 03:54:04.869 SAST 0002 INFO[0m [channelCmd] [34;1mexecuteJoin[0m -> Successfully submitted proposal to join channel
+[0;34mSetting anchor peer for org1...[0m
+[0;34mUsing organization 1[0m
+[0;34mFetching channel config for channel mychannel[0m
+[0;34mUsing organization 1[0m
+[0;34mFetching the most recent configuration block for the channel[0m
+++ peer channel fetch config /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/config_block.pb -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com -c mychannel --tls --cafile /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/tlsca/tlsca.example.com-cert.pem
+[34m2026-09-19 03:54:04.919 SAST 0001 INFO[0m [channelCmd] [34;1mInitCmdFactory[0m -> Endorser and orderer connections initialized
+[34m2026-09-19 03:54:04.921 SAST 0002 INFO[0m [cli.common] [34;1mreadBlock[0m -> Received block: 0
+[34m2026-09-19 03:54:04.921 SAST 0003 INFO[0m [channelCmd] [34;1mfetch[0m -> Retrieving last config block: 0
+[34m2026-09-19 03:54:04.922 SAST 0004 INFO[0m [cli.common] [34;1mreadBlock[0m -> Received block: 0
+[0;34mDecoding config block to JSON and isolating config to /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/Org1MSPconfig.json[0m
+++ configtxlator proto_decode --input /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/config_block.pb --type common.Block --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/config_block.json
+++ jq '.data.data[0].payload.data.config' /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/config_block.json
+++ res=0
+[0;34mGenerating anchor peer update transaction for Org1 on channel mychannel[0m
+++ jq '.channel_group.groups.Application.groups.Org1MSP.values += {"AnchorPeers":{"mod_policy": "Admins","value":{"anchor_peers": [{"host": "peer0.org1.example.com","port": 7051}]},"version": "0"}}' /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/Org1MSPconfig.json
+++ res=0
+++ configtxlator proto_encode --input /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/Org1MSPconfig.json --type common.Config --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/original_config.pb
+++ configtxlator proto_encode --input /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/Org1MSPmodified_config.json --type common.Config --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/modified_config.pb
+++ configtxlator compute_update --channel_id mychannel --original /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/original_config.pb --updated /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/modified_config.pb --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/config_update.pb
+++ configtxlator proto_decode --input /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/config_update.pb --type common.ConfigUpdate --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/config_update.json
+++ jq .
++++ cat /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/config_update.json
+++ echo '{"payload":{"header":{"channel_header":{"channel_id":"mychannel", "type":2}},"data":{"config_update":{' '"channel_id":' '"mychannel",' '"isolated_data":' '{},' '"read_set":' '{' '"groups":' '{' '"Application":' '{' '"groups":' '{' '"Org1MSP":' '{' '"groups":' '{},' '"mod_policy":' '"",' '"policies":' '{' '"Admins":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Endorsement":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Readers":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Writers":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '}' '},' '"values":' '{' '"MSP":' '{' '"mod_policy":' '"",' '"value":' null, '"version":' '"0"' '}' '},' '"version":' '"0"' '}' '},' '"mod_policy":' '"",' '"policies":' '{},' '"values":' '{},' '"version":' '"0"' '}' '},' '"mod_policy":' '"",' '"policies":' '{},' '"values":' '{},' '"version":' '"0"' '},' '"write_set":' '{' '"groups":' '{' '"Application":' '{' '"groups":' '{' '"Org1MSP":' '{' '"groups":' '{},' '"mod_policy":' '"Admins",' '"policies":' '{' '"Admins":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Endorsement":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Readers":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Writers":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '}' '},' '"values":' '{' '"AnchorPeers":' '{' '"mod_policy":' '"Admins",' '"value":' '{' '"anchor_peers":' '[' '{' '"host":' '"peer0.org1.example.com",' '"port":' 7051 '}' ']' '},' '"version":' '"0"' '},' '"MSP":' '{' '"mod_policy":' '"",' '"value":' null, '"version":' '"0"' '}' '},' '"version":' '"1"' '}' '},' '"mod_policy":' '"",' '"policies":' '{},' '"values":' '{},' '"version":' '"0"' '}' '},' '"mod_policy":' '"",' '"policies":' '{},' '"values":' '{},' '"version":' '"0"' '}' '}}}}'
+++ configtxlator proto_encode --input /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/config_update_in_envelope.json --type common.Envelope --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/Org1MSPanchors.tx
+[34m2026-09-19 03:54:05.090 SAST 0001 INFO[0m [channelCmd] [34;1mInitCmdFactory[0m -> Endorser and orderer connections initialized
+[34m2026-09-19 03:54:05.099 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+[0;32mAnchor peer set for org 'Org1MSP' on channel 'mychannel'[0m
+[0;34mSetting anchor peer for org2...[0m
+[0;34mUsing organization 2[0m
+[0;34mFetching channel config for channel mychannel[0m
+[0;34mUsing organization 2[0m
+[0;34mFetching the most recent configuration block for the channel[0m
+++ peer channel fetch config /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/config_block.pb -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com -c mychannel --tls --cafile /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/tlsca/tlsca.example.com-cert.pem
+[34m2026-09-19 03:54:05.147 SAST 0001 INFO[0m [channelCmd] [34;1mInitCmdFactory[0m -> Endorser and orderer connections initialized
+[34m2026-09-19 03:54:05.149 SAST 0002 INFO[0m [cli.common] [34;1mreadBlock[0m -> Received block: 1
+[34m2026-09-19 03:54:05.149 SAST 0003 INFO[0m [channelCmd] [34;1mfetch[0m -> Retrieving last config block: 1
+[34m2026-09-19 03:54:05.150 SAST 0004 INFO[0m [cli.common] [34;1mreadBlock[0m -> Received block: 1
+[0;34mDecoding config block to JSON and isolating config to /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/Org2MSPconfig.json[0m
+++ configtxlator proto_decode --input /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/config_block.pb --type common.Block --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/config_block.json
+++ jq '.data.data[0].payload.data.config' /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/config_block.json
+++ res=0
+[0;34mGenerating anchor peer update transaction for Org2 on channel mychannel[0m
+++ jq '.channel_group.groups.Application.groups.Org2MSP.values += {"AnchorPeers":{"mod_policy": "Admins","value":{"anchor_peers": [{"host": "peer0.org2.example.com","port": 9051}]},"version": "0"}}' /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/Org2MSPconfig.json
+++ res=0
+++ configtxlator proto_encode --input /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/Org2MSPconfig.json --type common.Config --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/original_config.pb
+++ configtxlator proto_encode --input /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/Org2MSPmodified_config.json --type common.Config --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/modified_config.pb
+++ configtxlator compute_update --channel_id mychannel --original /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/original_config.pb --updated /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/modified_config.pb --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/config_update.pb
+++ configtxlator proto_decode --input /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/config_update.pb --type common.ConfigUpdate --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/config_update.json
+++ jq .
++++ cat /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/config_update.json
+++ echo '{"payload":{"header":{"channel_header":{"channel_id":"mychannel", "type":2}},"data":{"config_update":{' '"channel_id":' '"mychannel",' '"isolated_data":' '{},' '"read_set":' '{' '"groups":' '{' '"Application":' '{' '"groups":' '{' '"Org2MSP":' '{' '"groups":' '{},' '"mod_policy":' '"",' '"policies":' '{' '"Admins":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Endorsement":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Readers":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Writers":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '}' '},' '"values":' '{' '"MSP":' '{' '"mod_policy":' '"",' '"value":' null, '"version":' '"0"' '}' '},' '"version":' '"0"' '}' '},' '"mod_policy":' '"",' '"policies":' '{},' '"values":' '{},' '"version":' '"0"' '}' '},' '"mod_policy":' '"",' '"policies":' '{},' '"values":' '{},' '"version":' '"0"' '},' '"write_set":' '{' '"groups":' '{' '"Application":' '{' '"groups":' '{' '"Org2MSP":' '{' '"groups":' '{},' '"mod_policy":' '"Admins",' '"policies":' '{' '"Admins":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Endorsement":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Readers":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Writers":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '}' '},' '"values":' '{' '"AnchorPeers":' '{' '"mod_policy":' '"Admins",' '"value":' '{' '"anchor_peers":' '[' '{' '"host":' '"peer0.org2.example.com",' '"port":' 9051 '}' ']' '},' '"version":' '"0"' '},' '"MSP":' '{' '"mod_policy":' '"",' '"value":' null, '"version":' '"0"' '}' '},' '"version":' '"1"' '}' '},' '"mod_policy":' '"",' '"policies":' '{},' '"values":' '{},' '"version":' '"0"' '}' '},' '"mod_policy":' '"",' '"policies":' '{},' '"values":' '{},' '"version":' '"0"' '}' '}}}}'
+++ configtxlator proto_encode --input /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/config_update_in_envelope.json --type common.Envelope --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/Org2MSPanchors.tx
+[34m2026-09-19 03:54:05.281 SAST 0001 INFO[0m [channelCmd] [34;1mInitCmdFactory[0m -> Endorser and orderer connections initialized
+[34m2026-09-19 03:54:05.290 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+[0;32mAnchor peer set for org 'Org2MSP' on channel 'mychannel'[0m
+[0;32mChannel 'mychannel' joined[0m
+>> Deploying misinformation v2.2 (go)...
+[0;34mUsing docker and docker compose[0m
+[0;34mdeploying chaincode on channel 'mychannel'[0m
+executing with the following
+- CHANNEL_NAME: [0;32mmychannel[0m
+- CC_NAME: [0;32mmisinformation[0m
+- CC_SRC_PATH: [0;32m/home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/chaincode/misinformation/go[0m
+- CC_SRC_LANGUAGE: [0;32mgo[0m
+- CC_VERSION: [0;32m2.2[0m
+- CC_SEQUENCE: [0;32m1[0m
+- CC_END_POLICY: [0;32mNA[0m
+- CC_COLL_CONFIG: [0;32mNA[0m
+- CC_INIT_FCN: [0;32mNA[0m
+- DELAY: [0;32m3[0m
+- MAX_RETRY: [0;32m5[0m
+- VERBOSE: [0;32mfalse[0m
+executing with the following
+- CC_NAME: [0;32mmisinformation[0m
+- CC_SRC_PATH: [0;32m/home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/chaincode/misinformation/go[0m
+- CC_SRC_LANGUAGE: [0;32mgo[0m
+- CC_VERSION: [0;32m2.2[0m
+[0;34mVendoring Go dependencies at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/chaincode/misinformation/go[0m
+~/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/chaincode/misinformation/go ~/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network
+~/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network
+[0;32mFinished vendoring Go dependencies[0m
++ '[' false = true ']'
++ peer lifecycle chaincode package misinformation.tar.gz --path /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/chaincode/misinformation/go --lang golang --label misinformation_2.2
++ res=0
+[0;32mChaincode is packaged[0m
+[0;34mInstalling chaincode on peer0.org1...[0m
+[0;34mUsing organization 1[0m
++ peer lifecycle chaincode queryinstalled --output json
++ jq -r 'try (.installed_chaincodes[].package_id)'
++ grep '^misinformation_2.2:c5b4a2a8397e6acf3be6e185c01a647a1a1e3c076f614469e4678729b54ce09d$'
++ test 1 -ne 0
++ peer lifecycle chaincode install misinformation.tar.gz
++ res=0
+[34m2026-09-19 03:54:49.563 SAST 0001 INFO[0m [cli.lifecycle.chaincode] [34;1msubmitInstallProposal[0m -> Installed remotely: response:<status:200 payload:"\nSmisinformation_2.2:c5b4a2a8397e6acf3be6e185c01a647a1a1e3c076f614469e4678729b54ce09d\022\022misinformation_2.2" > 
+[34m2026-09-19 03:54:49.564 SAST 0002 INFO[0m [cli.lifecycle.chaincode] [34;1msubmitInstallProposal[0m -> Chaincode code package identifier: misinformation_2.2:c5b4a2a8397e6acf3be6e185c01a647a1a1e3c076f614469e4678729b54ce09d
+[0;32mChaincode is installed on peer0.org1[0m
+[0;34mInstall chaincode on peer0.org2...[0m
+[0;34mUsing organization 2[0m
++ peer lifecycle chaincode queryinstalled --output json
++ jq -r 'try (.installed_chaincodes[].package_id)'
++ grep '^misinformation_2.2:c5b4a2a8397e6acf3be6e185c01a647a1a1e3c076f614469e4678729b54ce09d$'
++ test 1 -ne 0
++ peer lifecycle chaincode install misinformation.tar.gz
++ res=0
+[34m2026-09-19 03:55:31.231 SAST 0001 INFO[0m [cli.lifecycle.chaincode] [34;1msubmitInstallProposal[0m -> Installed remotely: response:<status:200 payload:"\nSmisinformation_2.2:c5b4a2a8397e6acf3be6e185c01a647a1a1e3c076f614469e4678729b54ce09d\022\022misinformation_2.2" > 
+[34m2026-09-19 03:55:31.231 SAST 0002 INFO[0m [cli.lifecycle.chaincode] [34;1msubmitInstallProposal[0m -> Chaincode code package identifier: misinformation_2.2:c5b4a2a8397e6acf3be6e185c01a647a1a1e3c076f614469e4678729b54ce09d
+[0;32mChaincode is installed on peer0.org2[0m
+[0;34mUsing organization 1[0m
++ peer lifecycle chaincode queryinstalled --output json
++ jq -r 'try (.installed_chaincodes[].package_id)'
++ grep '^misinformation_2.2:c5b4a2a8397e6acf3be6e185c01a647a1a1e3c076f614469e4678729b54ce09d$'
++ res=0
+misinformation_2.2:c5b4a2a8397e6acf3be6e185c01a647a1a1e3c076f614469e4678729b54ce09d
+[0;32mQuery installed successful on peer0.org1 on channel[0m
+[0;34mUsing organization 1[0m
++ peer lifecycle chaincode approveformyorg -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --tls --cafile /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/tlsca/tlsca.example.com-cert.pem --channelID mychannel --name misinformation --version 2.2 --package-id misinformation_2.2:c5b4a2a8397e6acf3be6e185c01a647a1a1e3c076f614469e4678729b54ce09d --sequence 1
++ res=0
+[34m2026-09-19 03:55:33.391 SAST 0001 INFO[0m [chaincodeCmd] [34;1mClientWait[0m -> txid [cfd6f1cc9be792eb8b00d8098a8fd305b0dce2797885082c908fe03115c62fc4] committed with status (VALID) at localhost:7051
+[0;32mChaincode definition approved on peer0.org1 on channel 'mychannel'[0m
+[0;34mUsing organization 1[0m
+[0;34mChecking the commit readiness of the chaincode definition on peer0.org1 on channel 'mychannel'...[0m
+[0;34mAttempting to check the commit readiness of the chaincode definition on peer0.org1, Retry after 3 seconds.[0m
++ peer lifecycle chaincode checkcommitreadiness --channelID mychannel --name misinformation --version 2.2 --sequence 1 --output json
++ res=0
+{
+	"approvals": {
+		"Org1MSP": true,
+		"Org2MSP": false
+	}
+}
+[0;34mChecking the commit readiness of the chaincode definition successful on peer0.org1 on channel 'mychannel'[0m
+[0;34mUsing organization 2[0m
+[0;34mChecking the commit readiness of the chaincode definition on peer0.org2 on channel 'mychannel'...[0m
+[0;34mAttempting to check the commit readiness of the chaincode definition on peer0.org2, Retry after 3 seconds.[0m
++ peer lifecycle chaincode checkcommitreadiness --channelID mychannel --name misinformation --version 2.2 --sequence 1 --output json
++ res=0
+{
+	"approvals": {
+		"Org1MSP": true,
+		"Org2MSP": false
+	}
+}
+[0;34mChecking the commit readiness of the chaincode definition successful on peer0.org2 on channel 'mychannel'[0m
+[0;34mUsing organization 2[0m
++ peer lifecycle chaincode approveformyorg -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --tls --cafile /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/tlsca/tlsca.example.com-cert.pem --channelID mychannel --name misinformation --version 2.2 --package-id misinformation_2.2:c5b4a2a8397e6acf3be6e185c01a647a1a1e3c076f614469e4678729b54ce09d --sequence 1
++ res=0
+[34m2026-09-19 03:55:41.606 SAST 0001 INFO[0m [chaincodeCmd] [34;1mClientWait[0m -> txid [ee93fd1f21753f2590b873ad6c1169540404be12675cee7d2fe2d912be0db106] committed with status (VALID) at localhost:9051
+[0;32mChaincode definition approved on peer0.org2 on channel 'mychannel'[0m
+[0;34mUsing organization 1[0m
+[0;34mChecking the commit readiness of the chaincode definition on peer0.org1 on channel 'mychannel'...[0m
+[0;34mAttempting to check the commit readiness of the chaincode definition on peer0.org1, Retry after 3 seconds.[0m
++ peer lifecycle chaincode checkcommitreadiness --channelID mychannel --name misinformation --version 2.2 --sequence 1 --output json
++ res=0
+{
+	"approvals": {
+		"Org1MSP": true,
+		"Org2MSP": true
+	}
+}
+[0;34mChecking the commit readiness of the chaincode definition successful on peer0.org1 on channel 'mychannel'[0m
+[0;34mUsing organization 2[0m
+[0;34mChecking the commit readiness of the chaincode definition on peer0.org2 on channel 'mychannel'...[0m
+[0;34mAttempting to check the commit readiness of the chaincode definition on peer0.org2, Retry after 3 seconds.[0m
++ peer lifecycle chaincode checkcommitreadiness --channelID mychannel --name misinformation --version 2.2 --sequence 1 --output json
++ res=0
+{
+	"approvals": {
+		"Org1MSP": true,
+		"Org2MSP": true
+	}
+}
+[0;34mChecking the commit readiness of the chaincode definition successful on peer0.org2 on channel 'mychannel'[0m
+[0;34mUsing organization 1[0m
+[0;34mUsing organization 2[0m
++ peer lifecycle chaincode commit -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --tls --cafile /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/tlsca/tlsca.example.com-cert.pem --channelID mychannel --name misinformation --peerAddresses localhost:7051 --tlsRootCertFiles /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/tlsca/tlsca.org1.example.com-cert.pem --peerAddresses localhost:9051 --tlsRootCertFiles /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/tlsca/tlsca.org2.example.com-cert.pem --version 2.2 --sequence 1
++ res=0
+[34m2026-09-19 03:55:50.014 SAST 0001 INFO[0m [chaincodeCmd] [34;1mClientWait[0m -> txid [8883c99060d87bb746a3caaf186c5bb136007eff0464d565c3db22d5b28dab6d] committed with status (VALID) at localhost:7051
+[34m2026-09-19 03:55:50.023 SAST 0002 INFO[0m [chaincodeCmd] [34;1mClientWait[0m -> txid [8883c99060d87bb746a3caaf186c5bb136007eff0464d565c3db22d5b28dab6d] committed with status (VALID) at localhost:9051
+[0;32mChaincode definition committed on channel 'mychannel'[0m
+[0;34mUsing organization 1[0m
+[0;34mQuerying chaincode definition on peer0.org1 on channel 'mychannel'...[0m
+[0;34mAttempting to Query committed status on peer0.org1, Retry after 3 seconds.[0m
++ peer lifecycle chaincode querycommitted --channelID mychannel --name misinformation
++ res=0
+Committed chaincode definition for chaincode 'misinformation' on channel 'mychannel':
+Version: 2.2, Sequence: 1, Endorsement Plugin: escc, Validation Plugin: vscc, Approvals: [Org1MSP: true, Org2MSP: true]
+[0;32mQuery chaincode definition successful on peer0.org1 on channel 'mychannel'[0m
+[0;34mUsing organization 2[0m
+[0;34mQuerying chaincode definition on peer0.org2 on channel 'mychannel'...[0m
+[0;34mAttempting to Query committed status on peer0.org2, Retry after 3 seconds.[0m
++ peer lifecycle chaincode querycommitted --channelID mychannel --name misinformation
++ res=0
+Committed chaincode definition for chaincode 'misinformation' on channel 'mychannel':
+Version: 2.2, Sequence: 1, Endorsement Plugin: escc, Validation Plugin: vscc, Approvals: [Org1MSP: true, Org2MSP: true]
+[0;32mQuery chaincode definition successful on peer0.org2 on channel 'mychannel'[0m
+[0;34mChaincode initialization is not required[0m
+>> Bringing up org3 (addOrg3)...
+[0;34mUsing docker and docker compose[0m
+[0;34mAdding org3 to channel 'mychannel' with '10' seconds and CLI delay of '3' seconds and using database 'leveldb'[0m
+
+/home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../../bin/cryptogen
+[0;34mGenerating certificates using cryptogen tool[0m
+[0;34mCreating Org3 Identities[0m
++ cryptogen generate --config=org3-crypto.yaml --output=../organizations
+org3.example.com
++ res=0
+[0;34mGenerating CCP files for Org3[0m
+/home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../../bin/configtxgen
+[0;34mGenerating Org3 organization definition[0m
++ configtxgen -printOrg Org3MSP
+[34m2026-09-19 03:55:56.293 SAST 0001 INFO[0m [common.tools.configtxgen] [34;1mmain[0m -> Loading configuration
+[34m2026-09-19 03:55:56.295 SAST 0002 INFO[0m [common.tools.configtxgen.localconfig] [34;1mLoadTopLevel[0m -> Loaded configuration: /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/configtx.yaml
++ res=0
+[0;34mBringing up Org3 peer[0m
+ Volume compose_peer0.org3.example.com Creating 
+ Volume compose_peer0.org3.example.com Created 
+time="2026-09-19T03:55:56+02:00" level=warning msg="Found orphan containers (peer0.org2.example.com, peer0.org1.example.com, couchdb0, couchdb1, orderer.example.com) for this project. If you removed or renamed this service in your compose file, you can run this command with the --remove-orphans flag to clean it up."
+ Container peer0.org3.example.com Creating 
+ Container peer0.org3.example.com Created 
+ Container peer0.org3.example.com Starting 
+ Container peer0.org3.example.com Started 
+[0;34mGenerating and submitting config tx to add Org3[0m
+[0;34mCreating config transaction to add org3 to network[0m
+[0;34mUsing organization 1[0m
+[0;34mFetching the most recent configuration block for the channel[0m
+++ peer channel fetch config /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/config_block.pb -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com -c mychannel --tls --cafile /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../organizations/ordererOrganizations/example.com/tlsca/tlsca.example.com-cert.pem
+[34m2026-09-19 03:55:57.261 SAST 0001 INFO[0m [channelCmd] [34;1mInitCmdFactory[0m -> Endorser and orderer connections initialized
+[34m2026-09-19 03:55:57.265 SAST 0002 INFO[0m [cli.common] [34;1mreadBlock[0m -> Received block: 5
+[34m2026-09-19 03:55:57.265 SAST 0003 INFO[0m [channelCmd] [34;1mfetch[0m -> Retrieving last config block: 2
+[34m2026-09-19 03:55:57.267 SAST 0004 INFO[0m [cli.common] [34;1mreadBlock[0m -> Received block: 2
+[0;34mDecoding config block to JSON and isolating config to /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/config.json[0m
+++ configtxlator proto_decode --input /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/config_block.pb --type common.Block --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/config_block.json
+++ jq '.data.data[0].payload.data.config' /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/config_block.json
+++ res=0
+++ jq -s '.[0] * {"channel_group":{"groups":{"Application":{"groups": {"Org3MSP":.[1]}}}}}' /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/config.json /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../organizations/peerOrganizations/org3.example.com/org3.json
+++ configtxlator proto_encode --input /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/config.json --type common.Config --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/original_config.pb
+++ configtxlator proto_encode --input /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/modified_config.json --type common.Config --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/modified_config.pb
+++ configtxlator compute_update --channel_id mychannel --original /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/original_config.pb --updated /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/modified_config.pb --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/config_update.pb
+++ configtxlator proto_decode --input /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/config_update.pb --type common.ConfigUpdate --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/config_update.json
+++ jq .
++++ cat /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/config_update.json
+++ echo '{"payload":{"header":{"channel_header":{"channel_id":"mychannel", "type":2}},"data":{"config_update":{' '"channel_id":' '"mychannel",' '"isolated_data":' '{},' '"read_set":' '{' '"groups":' '{' '"Application":' '{' '"groups":' '{' '"Org1MSP":' '{' '"groups":' '{},' '"mod_policy":' '"",' '"policies":' '{},' '"values":' '{},' '"version":' '"1"' '},' '"Org2MSP":' '{' '"groups":' '{},' '"mod_policy":' '"",' '"policies":' '{},' '"values":' '{},' '"version":' '"1"' '}' '},' '"mod_policy":' '"",' '"policies":' '{' '"Admins":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Endorsement":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"LifecycleEndorsement":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Readers":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Writers":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '}' '},' '"values":' '{' '"Capabilities":' '{' '"mod_policy":' '"",' '"value":' null, '"version":' '"0"' '}' '},' '"version":' '"0"' '}' '},' '"mod_policy":' '"",' '"policies":' '{},' '"values":' '{},' '"version":' '"0"' '},' '"write_set":' '{' '"groups":' '{' '"Application":' '{' '"groups":' '{' '"Org1MSP":' '{' '"groups":' '{},' '"mod_policy":' '"",' '"policies":' '{},' '"values":' '{},' '"version":' '"1"' '},' '"Org2MSP":' '{' '"groups":' '{},' '"mod_policy":' '"",' '"policies":' '{},' '"values":' '{},' '"version":' '"1"' '},' '"Org3MSP":' '{' '"groups":' '{},' '"mod_policy":' '"Admins",' '"policies":' '{' '"Admins":' '{' '"mod_policy":' '"Admins",' '"policy":' '{' '"type":' 1, '"value":' '{' '"identities":' '[' '{' '"principal":' '{' '"msp_identifier":' '"Org3MSP",' '"role":' '"ADMIN"' '},' '"principal_classification":' '"ROLE"' '}' '],' '"rule":' '{' '"n_out_of":' '{' '"n":' 1, '"rules":' '[' '{' '"signed_by":' 0 '}' ']' '}' '},' '"version":' 0 '}' '},' '"version":' '"0"' '},' '"Endorsement":' '{' '"mod_policy":' '"Admins",' '"policy":' '{' '"type":' 1, '"value":' '{' '"identities":' '[' '{' '"principal":' '{' '"msp_identifier":' '"Org3MSP",' '"role":' '"PEER"' '},' '"principal_classification":' '"ROLE"' '}' '],' '"rule":' '{' '"n_out_of":' '{' '"n":' 1, '"rules":' '[' '{' '"signed_by":' 0 '}' ']' '}' '},' '"version":' 0 '}' '},' '"version":' '"0"' '},' '"Readers":' '{' '"mod_policy":' '"Admins",' '"policy":' '{' '"type":' 1, '"value":' '{' '"identities":' '[' '{' '"principal":' '{' '"msp_identifier":' '"Org3MSP",' '"role":' '"ADMIN"' '},' '"principal_classification":' '"ROLE"' '},' '{' '"principal":' '{' '"msp_identifier":' '"Org3MSP",' '"role":' '"PEER"' '},' '"principal_classification":' '"ROLE"' '},' '{' '"principal":' '{' '"msp_identifier":' '"Org3MSP",' '"role":' '"CLIENT"' '},' '"principal_classification":' '"ROLE"' '}' '],' '"rule":' '{' '"n_out_of":' '{' '"n":' 1, '"rules":' '[' '{' '"signed_by":' 0 '},' '{' '"signed_by":' 1 '},' '{' '"signed_by":' 2 '}' ']' '}' '},' '"version":' 0 '}' '},' '"version":' '"0"' '},' '"Writers":' '{' '"mod_policy":' '"Admins",' '"policy":' '{' '"type":' 1, '"value":' '{' '"identities":' '[' '{' '"principal":' '{' '"msp_identifier":' '"Org3MSP",' '"role":' '"ADMIN"' '},' '"principal_classification":' '"ROLE"' '},' '{' '"principal":' '{' '"msp_identifier":' '"Org3MSP",' '"role":' '"CLIENT"' '},' '"principal_classification":' '"ROLE"' '}' '],' '"rule":' '{' '"n_out_of":' '{' '"n":' 1, '"rules":' '[' '{' '"signed_by":' 0 '},' '{' '"signed_by":' 1 '}' ']' '}' '},' '"version":' 0 '}' '},' '"version":' '"0"' '}' '},' '"values":' '{' '"MSP":' '{' '"mod_policy":' '"Admins",' '"value":' '{' '"config":' '{' '"admins":' '[],' '"crypto_config":' '{' '"identity_identifier_hash_function":' '"SHA256",' '"signature_hash_family":' '"SHA2"' '},' '"fabric_node_ous":' '{' '"admin_ou_identifier":' '{' '"certificate":' '"LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUNVVENDQWZlZ0F3SUJBZ0lRSEFsb1dTR3QzeXEwQ2pOcTRBZzRUakFLQmdncWhrak9QUVFEQWpCek1Rc3cKQ1FZRFZRUUdFd0pWVXpFVE1CRUdBMVVFQ0JNS1EyRnNhV1p2Y201cFlURVdNQlFHQTFVRUJ4TU5VMkZ1SUVaeQpZVzVqYVhOamJ6RVpNQmNHQTFVRUNoTVFiM0puTXk1bGVHRnRjR3hsTG1OdmJURWNNQm9HQTFVRUF4TVRZMkV1CmIzSm5NeTVsZUdGdGNHeGxMbU52YlRBZUZ3MHlOakE1TVRrd01UVXhNREJhRncwek5qQTVNVFl3TVRVeE1EQmEKTUhNeEN6QUpCZ05WQkFZVEFsVlRNUk13RVFZRFZRUUlFd3BEWVd4cFptOXlibWxoTVJZd0ZBWURWUVFIRXcxVApZVzRnUm5KaGJtTnBjMk52TVJrd0Z3WURWUVFLRXhCdmNtY3pMbVY0WVcxd2JHVXVZMjl0TVJ3d0dnWURWUVFECkV4TmpZUzV2Y21jekxtVjRZVzF3YkdVdVkyOXRNRmt3RXdZSEtvWkl6ajBDQVFZSUtvWkl6ajBEQVFjRFFnQUUKWlhSTC8vQTk5MGoyR3JtSTVSYjlCdkp5dWo0eFdYY3pRUzNac0hQenFmMU9xREZ5VlZ5N3g4a1YwYXpFLzRHTQp5V2F0ZENKOFViMXg5ZFZMQnlDcmdLTnRNR3N3RGdZRFZSMFBBUUgvQkFRREFnR21NQjBHQTFVZEpRUVdNQlFHCkNDc0dBUVVGQndNQ0JnZ3JCZ0VGQlFjREFUQVBCZ05WSFJNQkFmOEVCVEFEQVFIL01Da0dBMVVkRGdRaUJDRGsKaWN6cGFqcEV5ZVREMmtoTHIyajlSbVNzdk8xRnRYN1FjdXdOaTA0dHJUQUtCZ2dxaGtqT1BRUURBZ05JQURCRgpBaUExZmk5R3NraHpkRlFJUVRtbU5Qd21wU3NNUm05ZUVuOHMwMzhxZFNxTE1BSWhBTkFGeGFlL3IrWlk1QXhwCjRRTVp2RTZTR0F1VXNVNWgyYjc3WE1SWE5BQkcKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=",' '"organizational_unit_identifier":' '"admin"' '},' '"client_ou_identifier":' '{' '"certificate":' '"LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUNVVENDQWZlZ0F3SUJBZ0lRSEFsb1dTR3QzeXEwQ2pOcTRBZzRUakFLQmdncWhrak9QUVFEQWpCek1Rc3cKQ1FZRFZRUUdFd0pWVXpFVE1CRUdBMVVFQ0JNS1EyRnNhV1p2Y201cFlURVdNQlFHQTFVRUJ4TU5VMkZ1SUVaeQpZVzVqYVhOamJ6RVpNQmNHQTFVRUNoTVFiM0puTXk1bGVHRnRjR3hsTG1OdmJURWNNQm9HQTFVRUF4TVRZMkV1CmIzSm5NeTVsZUdGdGNHeGxMbU52YlRBZUZ3MHlOakE1TVRrd01UVXhNREJhRncwek5qQTVNVFl3TVRVeE1EQmEKTUhNeEN6QUpCZ05WQkFZVEFsVlRNUk13RVFZRFZRUUlFd3BEWVd4cFptOXlibWxoTVJZd0ZBWURWUVFIRXcxVApZVzRnUm5KaGJtTnBjMk52TVJrd0Z3WURWUVFLRXhCdmNtY3pMbVY0WVcxd2JHVXVZMjl0TVJ3d0dnWURWUVFECkV4TmpZUzV2Y21jekxtVjRZVzF3YkdVdVkyOXRNRmt3RXdZSEtvWkl6ajBDQVFZSUtvWkl6ajBEQVFjRFFnQUUKWlhSTC8vQTk5MGoyR3JtSTVSYjlCdkp5dWo0eFdYY3pRUzNac0hQenFmMU9xREZ5VlZ5N3g4a1YwYXpFLzRHTQp5V2F0ZENKOFViMXg5ZFZMQnlDcmdLTnRNR3N3RGdZRFZSMFBBUUgvQkFRREFnR21NQjBHQTFVZEpRUVdNQlFHCkNDc0dBUVVGQndNQ0JnZ3JCZ0VGQlFjREFUQVBCZ05WSFJNQkFmOEVCVEFEQVFIL01Da0dBMVVkRGdRaUJDRGsKaWN6cGFqcEV5ZVREMmtoTHIyajlSbVNzdk8xRnRYN1FjdXdOaTA0dHJUQUtCZ2dxaGtqT1BRUURBZ05JQURCRgpBaUExZmk5R3NraHpkRlFJUVRtbU5Qd21wU3NNUm05ZUVuOHMwMzhxZFNxTE1BSWhBTkFGeGFlL3IrWlk1QXhwCjRRTVp2RTZTR0F1VXNVNWgyYjc3WE1SWE5BQkcKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=",' '"organizational_unit_identifier":' '"client"' '},' '"enable":' true, '"orderer_ou_identifier":' '{' '"certificate":' '"LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUNVVENDQWZlZ0F3SUJBZ0lRSEFsb1dTR3QzeXEwQ2pOcTRBZzRUakFLQmdncWhrak9QUVFEQWpCek1Rc3cKQ1FZRFZRUUdFd0pWVXpFVE1CRUdBMVVFQ0JNS1EyRnNhV1p2Y201cFlURVdNQlFHQTFVRUJ4TU5VMkZ1SUVaeQpZVzVqYVhOamJ6RVpNQmNHQTFVRUNoTVFiM0puTXk1bGVHRnRjR3hsTG1OdmJURWNNQm9HQTFVRUF4TVRZMkV1CmIzSm5NeTVsZUdGdGNHeGxMbU52YlRBZUZ3MHlOakE1TVRrd01UVXhNREJhRncwek5qQTVNVFl3TVRVeE1EQmEKTUhNeEN6QUpCZ05WQkFZVEFsVlRNUk13RVFZRFZRUUlFd3BEWVd4cFptOXlibWxoTVJZd0ZBWURWUVFIRXcxVApZVzRnUm5KaGJtTnBjMk52TVJrd0Z3WURWUVFLRXhCdmNtY3pMbVY0WVcxd2JHVXVZMjl0TVJ3d0dnWURWUVFECkV4TmpZUzV2Y21jekxtVjRZVzF3YkdVdVkyOXRNRmt3RXdZSEtvWkl6ajBDQVFZSUtvWkl6ajBEQVFjRFFnQUUKWlhSTC8vQTk5MGoyR3JtSTVSYjlCdkp5dWo0eFdYY3pRUzNac0hQenFmMU9xREZ5VlZ5N3g4a1YwYXpFLzRHTQp5V2F0ZENKOFViMXg5ZFZMQnlDcmdLTnRNR3N3RGdZRFZSMFBBUUgvQkFRREFnR21NQjBHQTFVZEpRUVdNQlFHCkNDc0dBUVVGQndNQ0JnZ3JCZ0VGQlFjREFUQVBCZ05WSFJNQkFmOEVCVEFEQVFIL01Da0dBMVVkRGdRaUJDRGsKaWN6cGFqcEV5ZVREMmtoTHIyajlSbVNzdk8xRnRYN1FjdXdOaTA0dHJUQUtCZ2dxaGtqT1BRUURBZ05JQURCRgpBaUExZmk5R3NraHpkRlFJUVRtbU5Qd21wU3NNUm05ZUVuOHMwMzhxZFNxTE1BSWhBTkFGeGFlL3IrWlk1QXhwCjRRTVp2RTZTR0F1VXNVNWgyYjc3WE1SWE5BQkcKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=",' '"organizational_unit_identifier":' '"orderer"' '},' '"peer_ou_identifier":' '{' '"certificate":' '"LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUNVVENDQWZlZ0F3SUJBZ0lRSEFsb1dTR3QzeXEwQ2pOcTRBZzRUakFLQmdncWhrak9QUVFEQWpCek1Rc3cKQ1FZRFZRUUdFd0pWVXpFVE1CRUdBMVVFQ0JNS1EyRnNhV1p2Y201cFlURVdNQlFHQTFVRUJ4TU5VMkZ1SUVaeQpZVzVqYVhOamJ6RVpNQmNHQTFVRUNoTVFiM0puTXk1bGVHRnRjR3hsTG1OdmJURWNNQm9HQTFVRUF4TVRZMkV1CmIzSm5NeTVsZUdGdGNHeGxMbU52YlRBZUZ3MHlOakE1TVRrd01UVXhNREJhRncwek5qQTVNVFl3TVRVeE1EQmEKTUhNeEN6QUpCZ05WQkFZVEFsVlRNUk13RVFZRFZRUUlFd3BEWVd4cFptOXlibWxoTVJZd0ZBWURWUVFIRXcxVApZVzRnUm5KaGJtTnBjMk52TVJrd0Z3WURWUVFLRXhCdmNtY3pMbVY0WVcxd2JHVXVZMjl0TVJ3d0dnWURWUVFECkV4TmpZUzV2Y21jekxtVjRZVzF3YkdVdVkyOXRNRmt3RXdZSEtvWkl6ajBDQVFZSUtvWkl6ajBEQVFjRFFnQUUKWlhSTC8vQTk5MGoyR3JtSTVSYjlCdkp5dWo0eFdYY3pRUzNac0hQenFmMU9xREZ5VlZ5N3g4a1YwYXpFLzRHTQp5V2F0ZENKOFViMXg5ZFZMQnlDcmdLTnRNR3N3RGdZRFZSMFBBUUgvQkFRREFnR21NQjBHQTFVZEpRUVdNQlFHCkNDc0dBUVVGQndNQ0JnZ3JCZ0VGQlFjREFUQVBCZ05WSFJNQkFmOEVCVEFEQVFIL01Da0dBMVVkRGdRaUJDRGsKaWN6cGFqcEV5ZVREMmtoTHIyajlSbVNzdk8xRnRYN1FjdXdOaTA0dHJUQUtCZ2dxaGtqT1BRUURBZ05JQURCRgpBaUExZmk5R3NraHpkRlFJUVRtbU5Qd21wU3NNUm05ZUVuOHMwMzhxZFNxTE1BSWhBTkFGeGFlL3IrWlk1QXhwCjRRTVp2RTZTR0F1VXNVNWgyYjc3WE1SWE5BQkcKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=",' '"organizational_unit_identifier":' '"peer"' '}' '},' '"intermediate_certs":' '[],' '"name":' '"Org3MSP",' '"organizational_unit_identifiers":' '[],' '"revocation_list":' '[],' '"root_certs":' '[' '"LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUNVVENDQWZlZ0F3SUJBZ0lRSEFsb1dTR3QzeXEwQ2pOcTRBZzRUakFLQmdncWhrak9QUVFEQWpCek1Rc3cKQ1FZRFZRUUdFd0pWVXpFVE1CRUdBMVVFQ0JNS1EyRnNhV1p2Y201cFlURVdNQlFHQTFVRUJ4TU5VMkZ1SUVaeQpZVzVqYVhOamJ6RVpNQmNHQTFVRUNoTVFiM0puTXk1bGVHRnRjR3hsTG1OdmJURWNNQm9HQTFVRUF4TVRZMkV1CmIzSm5NeTVsZUdGdGNHeGxMbU52YlRBZUZ3MHlOakE1TVRrd01UVXhNREJhRncwek5qQTVNVFl3TVRVeE1EQmEKTUhNeEN6QUpCZ05WQkFZVEFsVlRNUk13RVFZRFZRUUlFd3BEWVd4cFptOXlibWxoTVJZd0ZBWURWUVFIRXcxVApZVzRnUm5KaGJtTnBjMk52TVJrd0Z3WURWUVFLRXhCdmNtY3pMbVY0WVcxd2JHVXVZMjl0TVJ3d0dnWURWUVFECkV4TmpZUzV2Y21jekxtVjRZVzF3YkdVdVkyOXRNRmt3RXdZSEtvWkl6ajBDQVFZSUtvWkl6ajBEQVFjRFFnQUUKWlhSTC8vQTk5MGoyR3JtSTVSYjlCdkp5dWo0eFdYY3pRUzNac0hQenFmMU9xREZ5VlZ5N3g4a1YwYXpFLzRHTQp5V2F0ZENKOFViMXg5ZFZMQnlDcmdLTnRNR3N3RGdZRFZSMFBBUUgvQkFRREFnR21NQjBHQTFVZEpRUVdNQlFHCkNDc0dBUVVGQndNQ0JnZ3JCZ0VGQlFjREFUQVBCZ05WSFJNQkFmOEVCVEFEQVFIL01Da0dBMVVkRGdRaUJDRGsKaWN6cGFqcEV5ZVREMmtoTHIyajlSbVNzdk8xRnRYN1FjdXdOaTA0dHJUQUtCZ2dxaGtqT1BRUURBZ05JQURCRgpBaUExZmk5R3NraHpkRlFJUVRtbU5Qd21wU3NNUm05ZUVuOHMwMzhxZFNxTE1BSWhBTkFGeGFlL3IrWlk1QXhwCjRRTVp2RTZTR0F1VXNVNWgyYjc3WE1SWE5BQkcKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo="' '],' '"signing_identity":' null, '"tls_intermediate_certs":' '[],' '"tls_root_certs":' '[' '"LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUNWekNDQWYyZ0F3SUJBZ0lRWVhiTFVodU9rS0hWVmxkZWZEQm8zVEFLQmdncWhrak9QUVFEQWpCMk1Rc3cKQ1FZRFZRUUdFd0pWVXpFVE1CRUdBMVVFQ0JNS1EyRnNhV1p2Y201cFlURVdNQlFHQTFVRUJ4TU5VMkZ1SUVaeQpZVzVqYVhOamJ6RVpNQmNHQTFVRUNoTVFiM0puTXk1bGVHRnRjR3hsTG1OdmJURWZNQjBHQTFVRUF4TVdkR3h6ClkyRXViM0puTXk1bGVHRnRjR3hsTG1OdmJUQWVGdzB5TmpBNU1Ua3dNVFV4TURCYUZ3MHpOakE1TVRZd01UVXgKTURCYU1IWXhDekFKQmdOVkJBWVRBbFZUTVJNd0VRWURWUVFJRXdwRFlXeHBabTl5Ym1saE1SWXdGQVlEVlFRSApFdzFUWVc0Z1JuSmhibU5wYzJOdk1Sa3dGd1lEVlFRS0V4QnZjbWN6TG1WNFlXMXdiR1V1WTI5dE1SOHdIUVlEClZRUURFeFowYkhOallTNXZjbWN6TG1WNFlXMXdiR1V1WTI5dE1Ga3dFd1lIS29aSXpqMENBUVlJS29aSXpqMEQKQVFjRFFnQUVZRG5SREJtbEh0SnlHejlwM3VaZGtON0JIK2JldnlTVXNMb24xZ3NLWjVTTkgxd2twS0ZOcm81Zgp3VXg2YVdHcU52dUtKaERGai8rVi8xWFljL045QTZOdE1Hc3dEZ1lEVlIwUEFRSC9CQVFEQWdHbU1CMEdBMVVkCkpRUVdNQlFHQ0NzR0FRVUZCd01DQmdnckJnRUZCUWNEQVRBUEJnTlZIUk1CQWY4RUJUQURBUUgvTUNrR0ExVWQKRGdRaUJDQkZnbHhYVFN2MjdhTFVPTGJGVXdhOGVicmRzM0Z2LzQ5Q2tseVZuUVNjS1RBS0JnZ3Foa2pPUFFRRApBZ05JQURCRkFpQkttWThvUVVLSmNOdldMZzZ2d3h3QUVUUDcrUFFibzdzRmVzVlJ4VVJuUUFJaEFOVzhRRTkwCktYdTdpK1hqTnFGQ2xKV1BkY1d3NXlLRWpCdVhnT1dNMjI0RwotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg=="' ']' '},' '"type":' 0 '},' '"version":' '"0"' '}' '},' '"version":' '"0"' '}' '},' '"mod_policy":' '"Admins",' '"policies":' '{' '"Admins":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Endorsement":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"LifecycleEndorsement":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Readers":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Writers":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '}' '},' '"values":' '{' '"Capabilities":' '{' '"mod_policy":' '"",' '"value":' null, '"version":' '"0"' '}' '},' '"version":' '"1"' '}' '},' '"mod_policy":' '"",' '"policies":' '{},' '"values":' '{},' '"version":' '"0"' '}' '}}}}'
+++ configtxlator proto_encode --input /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/config_update_in_envelope.json --type common.Envelope --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/org3_update_in_envelope.pb
+[0;34mSigning config transaction[0m
+[0;34mUsing organization 1[0m
+++ peer channel signconfigtx -f /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/org3_update_in_envelope.pb
+[34m2026-09-19 03:55:57.435 SAST 0001 INFO[0m [channelCmd] [34;1mInitCmdFactory[0m -> Endorser and orderer connections initialized
+[0;34mSubmitting transaction from a different peer (peer0.org2) which also signs it[0m
+[0;34mUsing organization 2[0m
+++ peer channel update -f /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/org3_update_in_envelope.pb -c mychannel -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --tls --cafile /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../organizations/ordererOrganizations/example.com/tlsca/tlsca.example.com-cert.pem
+[34m2026-09-19 03:55:57.481 SAST 0001 INFO[0m [channelCmd] [34;1mInitCmdFactory[0m -> Endorser and orderer connections initialized
+[34m2026-09-19 03:55:57.494 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+[0;32mConfig transaction to add org3 to network submitted[0m
+[0;34mJoining Org3 peers to network[0m
+[0;34mUsing organization 3[0m
+Fetching channel config block from orderer...
+++ peer channel fetch 0 /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/mychannel.block -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com -c mychannel --tls --cafile /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../organizations/ordererOrganizations/example.com/tlsca/tlsca.example.com-cert.pem
+++ res=0
+[0;34mJoining org3 peer to the channel...[0m
+[0;34mUsing organization 3[0m
+++ peer channel join -b /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/mychannel.block
+++ res=0
+[34m2026-09-19 03:56:00.597 SAST 0001 INFO[0m [channelCmd] [34;1mInitCmdFactory[0m -> Endorser and orderer connections initialized
+[34m2026-09-19 03:56:00.671 SAST 0002 INFO[0m [channelCmd] [34;1mexecuteJoin[0m -> Successfully submitted proposal to join channel
+[0;34mSetting anchor peer for org3...[0m
+[0;34mUsing organization 3[0m
+[0;34mFetching channel config for channel mychannel[0m
+[0;34mUsing organization 3[0m
+[0;34mFetching the most recent configuration block for the channel[0m
++ peer channel fetch config /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/config_block.pb -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com -c mychannel --tls --cafile /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../organizations/ordererOrganizations/example.com/tlsca/tlsca.example.com-cert.pem
+[34m2026-09-19 03:56:00.724 SAST 0001 INFO[0m [channelCmd] [34;1mInitCmdFactory[0m -> Endorser and orderer connections initialized
+[34m2026-09-19 03:56:00.729 SAST 0002 INFO[0m [cli.common] [34;1mreadBlock[0m -> Received block: 6
+[34m2026-09-19 03:56:00.729 SAST 0003 INFO[0m [channelCmd] [34;1mfetch[0m -> Retrieving last config block: 6
+[34m2026-09-19 03:56:00.731 SAST 0004 INFO[0m [cli.common] [34;1mreadBlock[0m -> Received block: 6
+[0;34mDecoding config block to JSON and isolating config to /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/Org3MSPconfig.json[0m
++ configtxlator proto_decode --input /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/config_block.pb --type common.Block --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/config_block.json
++ jq '.data.data[0].payload.data.config' /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/config_block.json
++ res=0
+[0;34mGenerating anchor peer update transaction for Org3 on channel mychannel[0m
++ jq '.channel_group.groups.Application.groups.Org3MSP.values += {"AnchorPeers":{"mod_policy": "Admins","value":{"anchor_peers": [{"host": "peer0.org3.example.com","port": 11051}]},"version": "0"}}' /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/Org3MSPconfig.json
++ res=0
++ configtxlator proto_encode --input /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/Org3MSPconfig.json --type common.Config --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/original_config.pb
++ configtxlator proto_encode --input /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/Org3MSPmodified_config.json --type common.Config --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/modified_config.pb
++ configtxlator compute_update --channel_id mychannel --original /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/original_config.pb --updated /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/modified_config.pb --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/config_update.pb
++ configtxlator proto_decode --input /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/config_update.pb --type common.ConfigUpdate --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/config_update.json
++ jq .
+++ cat /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/config_update.json
++ echo '{"payload":{"header":{"channel_header":{"channel_id":"mychannel", "type":2}},"data":{"config_update":{' '"channel_id":' '"mychannel",' '"isolated_data":' '{},' '"read_set":' '{' '"groups":' '{' '"Application":' '{' '"groups":' '{' '"Org3MSP":' '{' '"groups":' '{},' '"mod_policy":' '"",' '"policies":' '{' '"Admins":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Endorsement":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Readers":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Writers":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '}' '},' '"values":' '{' '"MSP":' '{' '"mod_policy":' '"",' '"value":' null, '"version":' '"0"' '}' '},' '"version":' '"0"' '}' '},' '"mod_policy":' '"",' '"policies":' '{},' '"values":' '{},' '"version":' '"1"' '}' '},' '"mod_policy":' '"",' '"policies":' '{},' '"values":' '{},' '"version":' '"0"' '},' '"write_set":' '{' '"groups":' '{' '"Application":' '{' '"groups":' '{' '"Org3MSP":' '{' '"groups":' '{},' '"mod_policy":' '"Admins",' '"policies":' '{' '"Admins":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Endorsement":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Readers":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Writers":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '}' '},' '"values":' '{' '"AnchorPeers":' '{' '"mod_policy":' '"Admins",' '"value":' '{' '"anchor_peers":' '[' '{' '"host":' '"peer0.org3.example.com",' '"port":' 11051 '}' ']' '},' '"version":' '"0"' '},' '"MSP":' '{' '"mod_policy":' '"",' '"value":' null, '"version":' '"0"' '}' '},' '"version":' '"1"' '}' '},' '"mod_policy":' '"",' '"policies":' '{},' '"values":' '{},' '"version":' '"1"' '}' '},' '"mod_policy":' '"",' '"policies":' '{},' '"values":' '{},' '"version":' '"0"' '}' '}}}}'
++ configtxlator proto_encode --input /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/config_update_in_envelope.json --type common.Envelope --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/Org3MSPanchors.tx
+[34m2026-09-19 03:56:00.883 SAST 0001 INFO[0m [channelCmd] [34;1mInitCmdFactory[0m -> Endorser and orderer connections initialized
+[34m2026-09-19 03:56:00.893 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+[0;32mAnchor peer set for org 'Org3MSP' on channel 'mychannel'[0m
+[0;32mChannel 'mychannel' joined[0m
+[0;32mOrg3 peer successfully added to network[0m
+>> Switching to a 2-of-3 endorsement policy...
+>> Packaging chaincode misinformation v2.2...
+>> Package ID: misinformation_2.2:c5b4a2a8397e6acf3be6e185c01a647a1a1e3c076f614469e4678729b54ce09d
+>> Install on org1...
+>> Install on org2...
+>> Install on org3...
+>> Approve on org1...
+[34m2026-09-19 03:56:46.468 SAST 0001 INFO[0m [chaincodeCmd] [34;1mClientWait[0m -> txid [7d440e263659243d2d61d10403455448e5c11c05a8d6b33e5d7c840d8f65e88c] committed with status (VALID) at localhost:7051
+>> Approve on org2...
+[34m2026-09-19 03:56:48.614 SAST 0001 INFO[0m [chaincodeCmd] [34;1mClientWait[0m -> txid [2cc5413bea427f9350a4bbac645344b883ffd276d16adf0edfe7e1b03a0b14cc] committed with status (VALID) at localhost:9051
+>> Approve on org3...
+[34m2026-09-19 03:56:50.757 SAST 0001 INFO[0m [chaincodeCmd] [34;1mClientWait[0m -> txid [d31d72f98c08c8dd762faf8652ff8503ec44196166613d3bd204e5de984699a7] committed with status (VALID) at localhost:11051
+>> Checking commit readiness...
+}
+>> Committing with 2/3 endorsement policy...
+[34m2026-09-19 03:56:53.126 SAST 0002 INFO[0m [chaincodeCmd] [34;1mClientWait[0m -> txid [9b2a58631557ccc935e9695f3af67cc3d48b2b4c1c31f1b6212115359f2c40ee] committed with status (VALID) at localhost:9051
+[34m2026-09-19 03:56:53.130 SAST 0003 INFO[0m [chaincodeCmd] [34;1mClientWait[0m -> txid [9b2a58631557ccc935e9695f3af67cc3d48b2b4c1c31f1b6212115359f2c40ee] committed with status (VALID) at localhost:11051
+>> Query committed definition on each org...
+  org1: Endorsement Plugin: escc, Validation Plugin: vscc, Approvals: [Org1MSP: true, Org2MSP: true, Org3MSP: true]
+  org2: Endorsement Plugin: escc, Validation Plugin: vscc, Approvals: [Org1MSP: true, Org2MSP: true, Org3MSP: true]
+  org3: Endorsement Plugin: escc, Validation Plugin: vscc, Approvals: [Org1MSP: true, Org2MSP: true, Org3MSP: true]
+
+Org3 onboarded. Endorsement policy is now: OutOf(2, 'Org1MSP.member','Org2MSP.member','Org3MSP.member')
+>> Registering stakeholder orgs (1..3)...
+  org1: [34m2026-09-19 03:56:55.445 SAST 0003 INFO[0m [chaincodeCmd] [34;1mchaincodeInvokeOrQuery[0m -> Chaincode invoke successful. result: status:200 payload:"Org1MSP" 
+  org2: [34m2026-09-19 03:56:57.586 SAST 0003 INFO[0m [chaincodeCmd] [34;1mchaincodeInvokeOrQuery[0m -> Chaincode invoke successful. result: status:200 payload:"Org2MSP" 
+  org3: [34m2026-09-19 03:56:59.728 SAST 0003 INFO[0m [chaincodeCmd] [34;1mchaincodeInvokeOrQuery[0m -> Chaincode invoke successful. result: status:200 payload:"Org3MSP" 
+>> Register-org done (orgs 1..3).
+>> Explorer connection profile written for org1..3: /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/explorer/connection-profile/networkConfig.json
+
+>> Network up and chaincode misinformation committed (3-org, OutOf(2,...) policy).
+
+>> [3/7] Starting IPFS + IPFS Gateway...
+>> Starting IPFS swarm (ipfs-node ipfs-node-1 ipfs-node-2)...
+time="2026-09-19T03:57:00+02:00" level=warning msg="a network with name ipfs_net exists but was not created for project \"ipfs_gateway\".\nSet `external: true` to use an existing network"
+ Container ipfs-node-2 Creating 
+ Container ipfs-node-1 Creating 
+ Container ipfs-node Creating 
+ Container ipfs-node-1 Created 
+ Container ipfs-node-2 Created 
+ Container ipfs-node Created 
+ Container ipfs-node Starting 
+ Container ipfs-node-2 Starting 
+ Container ipfs-node-1 Starting 
+ Container ipfs-node Started 
+ Container ipfs-node-2 Started 
+ Container ipfs-node-1 Started 
+>> Waiting for the RPC APIs...
+   ready: http://localhost:5001
+   ready: http://localhost:5101
+   ready: http://localhost:5201
+>> Peering: ipfs-node dials ipfs-node-1 ipfs-node-2
+>> Restarting (replicas first, dialer last so it initiates)...
+>> ipfs-node outbound connections to replicas:
+   ipfs-node-1  outbound: 1
+   ipfs-node-2  outbound: 1
+>> Building + starting IPFS Gateway...
+ Image misinfo-ipfs-gateway:latest Building 
+ Image misinfo-ipfs-gateway:latest Built 
+time="2026-09-19T03:57:29+02:00" level=warning msg="a network with name ipfs_net exists but was not created for project \"ipfs_gateway\".\nSet `external: true` to use an existing network"
+ Container ipfs-node Running 
+ Container ipfs-gateway Creating 
+ Container ipfs-gateway Created 
+ Container ipfs-node Waiting 
+ Container ipfs-node Healthy 
+ Container ipfs-gateway Starting 
+ Container ipfs-gateway Started 
+#12 resolving provenance for metadata file
+#12 DONE 0.0s
+>> Waiting for health on :9101...
+>> IPFS Gateway ready: http://localhost:9101
+{"status":"ok","ipfs_available":true,"ipfs_version":"0.43.0"}
+>> [4/7] Bootstrapping API keys for org1..org3 (idempotent)...
+>> Writing API keys for: org1 org2 org3
+  org1  -> key-org1
+  org2  -> key-org2
+  org3  -> key-org3
+  stress-key -> org1 (demo/load driver)
+
+Keys are ready. Start the gateway with:
+  cd /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/scripts/../../apps/blockchain_gateway/app/v1-0-0/api
+  python3 -m uvicorn server:app --host 0.0.0.0 --port 8000
+>> [5/7] Starting Fabric Gateway SDK sidecar + blockchain gateway...
+>> Building + starting Fabric Gateway SDK service (official @hyperledger/fabric-gateway)...
+ Image misinfo-gateway:latest Building 
+ Image misinfo-gateway:latest Built 
+ Container fabric-gateway Creating 
+ Container fabric-gateway Created 
+ Container fabric-gateway Starting 
+ Container fabric-gateway Started 
+#12 resolving provenance for metadata file
+#12 DONE 0.0s
+>> Waiting for health on :9100...
+>> Gateway SDK service ready: http://localhost:9100
+{"status":"ok","sdk":"@hyperledger/fabric-gateway","channel":"mychannel","chaincode":"misinformation","gateway_peer":"peer0.org1.example.com","gateway_target":"peer0.org1.example.com:7051","identities":["org1","org2","org3"]}
+>> Point the API at it:  export FABRIC_BACKEND=gateway FABRIC_GATEWAY_URL=http://localhost:9100
+>>                       (or leave FABRIC_BACKEND=auto — it prefers this service automatically)
+>> Building + starting blockchain gateway...
+ Image misinfo-blockchain-gateway:latest Building 
+ Image misinfo-blockchain-gateway:latest Built 
+ Container blockchain-gateway Creating 
+ Container blockchain-gateway Created 
+ Container blockchain-gateway Starting 
+ Container blockchain-gateway Started 
+#13 resolving provenance for metadata file
+#13 DONE 0.0s
+>> Waiting for health on :8000...
+>> blockchain gateway ready: http://localhost:8000
+{"ipfs_available":true,"backend":"ipfs","crypto_style":"ecdsa","crypto_verify_ms":0.0}
+>> Checking API gateway reachability...
+>> [6/7] Quick validation load (orgs=3, test-samples=10)...
+[mode] fixed samples | base=http://localhost:8000 | total~10
+================================================================
+ requests   : 24  (24 ok / 0 failed)
+ elapsed    : 3.59s
+ throughput : 6.69 req/s
+ latency avg: 1550.9 ms
+ p50/p95/p99/max: 1437.6 / 3545.6 / 3545.8 / 3545.8 ms
+ status     : {200: 24}
+================================================================
+  Output: results/local/http.csv
+>> [7/7] Skipping Caliper (--skip-caliper).
+>> Done. Teardown with:  /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/scripts/deploy.sh down
+ Image a_blockchain_enabled_framework_for_misinformation_monitoring-kafka Building 
+ Image a_blockchain_enabled_framework_for_misinformation_monitoring-claim-ingest-worker Building 
+ Image a_blockchain_enabled_framework_for_misinformation_monitoring-flagging-engine Building 
+ Image a_blockchain_enabled_framework_for_misinformation_monitoring-submission-worker Building 
+ Image a_blockchain_enabled_framework_for_misinformation_monitoring-fact-checking-service Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 4.17kB done
+#1 DONE 0.0s
+
+#2 [submission-worker internal] load build definition from Dockerfile
+#2 transferring dockerfile: 286B done
+#2 DONE 0.1s
+
+#3 [fact-checking-service internal] load build definition from Dockerfile
+#3 transferring dockerfile: 286B done
+#3 DONE 0.1s
+
+#4 [claim-ingest-worker internal] load build definition from Dockerfile
+#4 transferring dockerfile: 286B done
+#4 DONE 0.1s
+
+#5 [submission-worker internal] load metadata for docker.io/library/python:3.11-slim
+#5 ...
+
+#6 [kafka internal] load build definition from Dockerfile
+#6 transferring dockerfile: 872B done
+#6 DONE 0.1s
+
+#7 [flagging-engine internal] load build definition from Dockerfile
+#7 transferring dockerfile: 1.05kB done
+#7 DONE 0.2s
+
+#5 [flagging-engine internal] load metadata for docker.io/library/python:3.11-slim
+#5 DONE 0.2s
+
+#8 [claim-ingest-worker internal] load .dockerignore
+#8 transferring context: 2B done
+#8 DONE 0.1s
+
+#9 [fact-checking-service internal] load .dockerignore
+#9 transferring context: 2B done
+#9 DONE 0.1s
+
+#10 [submission-worker internal] load .dockerignore
+#10 transferring context: 90B done
+#10 DONE 0.1s
+
+#11 [fact-checking-service internal] load build context
+#11 DONE 0.0s
+
+#12 [fact-checking-service 1/5] FROM docker.io/library/python:3.11-slim@sha256:9534e5a8e315485d4061ed659af0fd78a284c015f9b73661b41d6bab25604534
+#12 resolve docker.io/library/python:3.11-slim@sha256:9534e5a8e315485d4061ed659af0fd78a284c015f9b73661b41d6bab25604534
+#12 resolve docker.io/library/python:3.11-slim@sha256:9534e5a8e315485d4061ed659af0fd78a284c015f9b73661b41d6bab25604534 0.1s done
+#12 DONE 0.1s
+
+#13 [flagging-engine internal] load .dockerignore
+#13 transferring context: 84B done
+#13 DONE 0.1s
+
+#14 [claim-ingest-worker internal] load build context
+#14 transferring context: 156B done
+#14 DONE 0.1s
+
+#11 [fact-checking-service internal] load build context
+#11 transferring context: 234B done
+#11 DONE 0.1s
+
+#15 [submission-worker internal] load build context
+#15 transferring context: 225B done
+#15 DONE 0.1s
+
+#12 [flagging-engine 1/5] FROM docker.io/library/python:3.11-slim@sha256:9534e5a8e315485d4061ed659af0fd78a284c015f9b73661b41d6bab25604534
+#12 resolve docker.io/library/python:3.11-slim@sha256:9534e5a8e315485d4061ed659af0fd78a284c015f9b73661b41d6bab25604534 0.1s done
+#12 DONE 0.1s
+
+#16 [fact-checking-service 3/5] COPY requirements.txt .
+#16 CACHED
+
+#17 [fact-checking-service 4/5] RUN pip install -r requirements.txt
+#17 CACHED
+
+#18 [claim-ingest-worker 4/5] RUN pip install -r requirements.txt
+#18 CACHED
+
+#19 [claim-ingest-worker 3/5] COPY requirements.txt .
+#19 CACHED
+
+#20 [claim-ingest-worker 5/5] COPY app ./app
+#20 CACHED
+
+#21 [fact-checking-service 5/5] COPY app ./app
+#21 CACHED
+
+#22 [submission-worker 3/5] COPY requirements.txt .
+#22 CACHED
+
+#23 [submission-worker 4/5] RUN pip install -r requirements.txt
+#23 CACHED
+
+#24 [submission-worker 5/5] COPY app ./app
+#24 CACHED
+
+#25 [flagging-engine internal] load build context
+#25 transferring context: 818B done
+#25 DONE 0.0s
+
+#26 [flagging-engine 2/5] WORKDIR /app
+#26 CACHED
+
+#27 [flagging-engine 4/7] COPY requirements.txt .
+#27 CACHED
+
+#28 [flagging-engine 3/7] RUN pip install torch --index-url https://download.pytorch.org/whl/cpu
+#28 CACHED
+
+#29 [flagging-engine 6/7] COPY app ./app
+#29 CACHED
+
+#30 [flagging-engine 5/7] RUN pip install -r requirements.txt
+#30 CACHED
+
+#31 [flagging-engine 7/7] COPY model ./model
+#31 CACHED
+
+#32 [submission-worker] exporting to image
+#32 exporting layers done
+#32 exporting manifest sha256:fb6849d663a532acc0e16d88d1ebffccb8e379cdc5b454dfc652f3a9e80485b9 0.0s done
+#32 exporting config sha256:125a850b451ac2987e5d1c178f424864cfc6015b085c2365503acaa8c40c54b6
+#32 exporting config sha256:125a850b451ac2987e5d1c178f424864cfc6015b085c2365503acaa8c40c54b6 0.0s done
+#32 exporting attestation manifest sha256:4735607f5fb980f42a6b121c780f3aff7b2a1a173fdd5166a8510018d334102b
+#32 exporting attestation manifest sha256:4735607f5fb980f42a6b121c780f3aff7b2a1a173fdd5166a8510018d334102b 0.3s done
+#32 exporting manifest list sha256:093c7c16ed5f35b277d0cbbd48697199974cd52bd2b4bfaa4892d5b1e43181d9
+#32 exporting manifest list sha256:093c7c16ed5f35b277d0cbbd48697199974cd52bd2b4bfaa4892d5b1e43181d9 0.2s done
+#32 naming to docker.io/library/a_blockchain_enabled_framework_for_misinformation_monitoring-submission-worker:latest 0.0s done
+#32 unpacking to docker.io/library/a_blockchain_enabled_framework_for_misinformation_monitoring-submission-worker:latest 0.0s done
+#32 DONE 0.8s
+
+#33 [claim-ingest-worker] exporting to image
+#33 exporting layers done
+#33 exporting manifest sha256:d92d984d21da7234462b6195ce648f5ab042b211cf4e5f9e0398a431d20991e9 0.0s done
+#33 exporting config sha256:a77732418c66d460a3d56b876042c5c214988961d40f5a36bab686f898ddaebd 0.0s done
+#33 exporting attestation manifest sha256:71d93e54ee0b85ed29ac698b1b651a70815123239fd904aeea6fea122d30e1d4 0.2s done
+#33 exporting manifest list sha256:09e6a2c0f7cb01a03ee5f3955bf7bb8d17c94bd0e2e2f007fbd7b5fcf7b5b9bb 0.1s done
+#33 naming to docker.io/library/a_blockchain_enabled_framework_for_misinformation_monitoring-claim-ingest-worker:latest 0.1s done
+#33 unpacking to docker.io/library/a_blockchain_enabled_framework_for_misinformation_monitoring-claim-ingest-worker:latest 0.2s done
+#33 DONE 0.8s
+
+#34 [fact-checking-service] exporting to image
+#34 exporting layers done
+#34 exporting manifest sha256:a7ec1d399d50bbbedaf942ea4e0d438de789f09f3d35f9f8a624f26c4feff8b6 0.0s done
+#34 exporting config sha256:b8bb5ec59dcafa5fff712b02a07f6c38115ceeef8780b1982a54e4db6fb6f460 0.0s done
+#34 exporting attestation manifest sha256:01245ea41678976922121aa63c43576dde339d5a65578f5663ba6eed453e846d 0.3s done
+#34 exporting manifest list sha256:b9ae41f2c41b2fe9af522d4a31b749d0af121520cb908254d9f7b8bcc3dfc8c8 0.2s done
+#34 naming to docker.io/library/a_blockchain_enabled_framework_for_misinformation_monitoring-fact-checking-service:latest 0.0s done
+#34 unpacking to docker.io/library/a_blockchain_enabled_framework_for_misinformation_monitoring-fact-checking-service:latest 0.1s done
+#34 DONE 0.8s
+
+#35 [flagging-engine] exporting to image
+#35 exporting layers done
+#35 exporting manifest sha256:a422658f2ff1b66093be8c6dff04d5eac3f76c99f1472c9725e964a7cfe8042a 0.1s done
+#35 exporting config sha256:7493be0f40ebfb323646c752d7990d9c7da5e7e13d59204915bd9d3af116ae7b 0.1s done
+#35 exporting attestation manifest sha256:8aded40f0a1cb581d6e8537c61234fe1b0a44acb679de4e55b3a08a09adb0543 0.3s done
+#35 exporting manifest list sha256:fc2a3b8752367a02b7775f65611e85e9336c78e93641fa771cbe418b3d824298 0.1s done
+#35 naming to docker.io/library/a_blockchain_enabled_framework_for_misinformation_monitoring-flagging-engine:latest 0.0s done
+#35 unpacking to docker.io/library/a_blockchain_enabled_framework_for_misinformation_monitoring-flagging-engine:latest 0.0s done
+#35 DONE 0.7s
+
+#36 [kafka internal] load metadata for docker.io/library/eclipse-temurin:17-jre-jammy
+#36 DONE 1.5s
+
+#37 [kafka internal] load .dockerignore
+#37 transferring context: 2B done
+#37 DONE 0.0s
+
+#38 [kafka internal] load build context
+#38 DONE 0.0s
+
+#39 [kafka 1/5] FROM docker.io/library/eclipse-temurin:17-jre-jammy@sha256:e85989f3e4d136b3d7dde921e157fddb9c7016805a225c1ec483326b825b3ca5
+#39 resolve docker.io/library/eclipse-temurin:17-jre-jammy@sha256:e85989f3e4d136b3d7dde921e157fddb9c7016805a225c1ec483326b825b3ca5 0.1s done
+#39 DONE 0.1s
+
+#38 [kafka internal] load build context
+#38 transferring context: 72B done
+#38 DONE 0.0s
+
+#40 [kafka 4/5] COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+#40 CACHED
+
+#41 [kafka 3/5] COPY server.properties /opt/kafka/config/kraft/server.properties
+#41 CACHED
+
+#42 [kafka 2/5] RUN apt-get update     && apt-get install -y --no-install-recommends curl     && curl -fsSL "https://downloads.apache.org/kafka/4.1.2/kafka_2.13-4.1.2.tgz" -o /tmp/kafka.tgz     && mkdir -p "/opt/kafka"     && tar -xzf /tmp/kafka.tgz -C "/opt/kafka" --strip-components=1     && rm /tmp/kafka.tgz     && apt-get purge -y curl     && apt-get autoremove -y     && rm -rf /var/lib/apt/lists/*
+#42 CACHED
+
+#43 [kafka 5/5] RUN chmod +x /usr/local/bin/entrypoint.sh
+#43 CACHED
+
+#44 [kafka] exporting to image
+#44 exporting layers done
+#44 exporting manifest sha256:75f46721415702f77af727e52c2041e147b69de8e0d81357da67ea9ab0d37b11 0.0s done
+#44 exporting config sha256:041ba7a8d41d93a97f17856250f360fb805a82a2f31ce8d38f6f271cee20ff06 0.0s done
+#44 exporting attestation manifest sha256:1c4dc201973859164327a04bdb8f681a6065231437f733aab74f24990faadc3e
+#44 exporting attestation manifest sha256:1c4dc201973859164327a04bdb8f681a6065231437f733aab74f24990faadc3e 0.1s done
+#44 exporting manifest list sha256:052dbd6944ca37857edca402a7de663c910d4509612166652a07313f67d84d39 0.0s done
+#44 naming to docker.io/library/a_blockchain_enabled_framework_for_misinformation_monitoring-kafka:latest
+#44 naming to docker.io/library/a_blockchain_enabled_framework_for_misinformation_monitoring-kafka:latest 0.0s done
+#44 unpacking to docker.io/library/a_blockchain_enabled_framework_for_misinformation_monitoring-kafka:latest 0.0s done
+#44 DONE 0.3s
+
+#45 [claim-ingest-worker] resolving provenance for metadata file
+#45 DONE 0.4s
+
+#46 [fact-checking-service] resolving provenance for metadata file
+#46 DONE 0.2s
+
+#47 [submission-worker] resolving provenance for metadata file
+#47 DONE 0.6s
+
+#48 [flagging-engine] resolving provenance for metadata file
+#48 DONE 0.1s
+
+#49 [kafka] resolving provenance for metadata file
+#49 DONE 0.0s
+ Image a_blockchain_enabled_framework_for_misinformation_monitoring-fact-checking-service Built 
+ Image a_blockchain_enabled_framework_for_misinformation_monitoring-flagging-engine Built 
+ Image a_blockchain_enabled_framework_for_misinformation_monitoring-kafka Built 
+ Image a_blockchain_enabled_framework_for_misinformation_monitoring-submission-worker Built 
+ Image a_blockchain_enabled_framework_for_misinformation_monitoring-claim-ingest-worker Built 
+ Container submission-worker Creating 
+ Container flagging-engine Creating 
+ Container claim-ingest-worker Creating 
+ Container prometheus Creating 
+ Container kafka Creating 
+ Container fact-checking-service Creating 
+ Container claim-ingest-worker Created 
+ Container fact-checking-service Created 
+ Container submission-worker Created 
+ Container kafka Created 
+ Container flagging-engine Created 
+ Container prometheus Created 
+ Container grafana Creating 
+ Container grafana Created 
+ Container prometheus Starting 
+ Container claim-ingest-worker Starting 
+ Container submission-worker Starting 
+ Container fact-checking-service Starting 
+ Container kafka Starting 
+ Container flagging-engine Starting 
+ Container fact-checking-service Started 
+ Container kafka Started 
+ Container flagging-engine Started 
+ Container submission-worker Started 
+ Container claim-ingest-worker Started 
+ Container prometheus Started 
+ Container grafana Starting 
+ Container grafana Started 
+  Waiting for gateway...
+  Gateway ready.
+  Waiting for flagging-engine...
+  Engine ready.
+
+--- orgs=3 samples=10 ---
+Samples: 10 | AI: 5 | Random: 5 | Reject-pct: 25% (2 reports) | Orgs: 3 (on-chain) | Mode: direct
+
+  [   1/10] REJ df6f80_sa-elections-  org=org1      label=0  conf=0.96  fc=2  2345ms
+  [   2/10] REJ f2d1c8_sa-elections-  org=org1      label=0  conf=0.98  fc=2  4361ms
+  [   3/10] OK f2d1c8_sa-elections-  org=org1      label=0  conf=0.99  fc=2  2229ms
+  [   4/10] OK df6f80_sa-elections-  org=org1      label=1  conf=0.76  fc=2  2287ms
+  [   5/10] OK f2d1c8_sa-elections-  org=org1      label=0  conf=0.82  fc=2  2220ms
+  [   6/10] OK f2d1c8_sa-elections-  org=org3      label=0  conf=0.57  fc=2  2210ms
+  [   7/10] OK f2d1c8_sa-elections-  org=org3      label=0  conf=0.61  fc=2  2205ms
+  [   8/10] OK f2d1c8_sa-elections-  org=org2      label=1  conf=0.82  fc=2  2211ms
+  [   9/10] OK df6f80_sa-elections-  org=org2      label=0  conf=0.57  fc=2  2227ms
+  [  10/10] OK kzn-2021-001          org=org2      label=0  conf=0.96  fc=2  2194ms
+
+================================================================
+  total samples:    10
+  AI-processed:     5  (50%)
+  random-pool:      5  (50%)
+  submitted:        10
+  accepted:         8  (80.0%)
+  rejected:         2  (20.0%)
+
+  by org:
+    org1          5 submitted
+    org2          3 submitted
+    org3          2 submitted
+
+  fact-checks:
+    YES votes:  16
+    NO votes:   4
+
+  avg latency:  2448.7ms
+  p50/p95:      2226.6 / 4360.7ms
+================================================================
+  Output: results/local/real_loads_org3_samples10.csv
+================================================================
+
+--- orgs=3 samples=50 ---
