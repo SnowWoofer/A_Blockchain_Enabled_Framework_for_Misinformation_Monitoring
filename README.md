@@ -1,15 +1,11 @@
 # A Blockchain Enabled Framework For Misinformation Monitoring
 
 Consortium blockchain framework for monitoring misinformation. An AI model
-(AfroXLM-R, an `XLMRobertaForSequenceClassification` — ~2.2 GB, FP32) acts as a
-data scout — flagging potential misinformation and escalating flagged reports to
-a consortium of organizations who fact-check and vote on them via Hyperledger
+(AfroXLM-R, an `XLMRobertaForSequenceClassification`) acts as a
+potential misinformation data scout allowing for flagging of potential misinformation and escalating flagged reports to
+a consortium of organizations who fact checks and vote on them via Hyperledger
 Fabric. The chain anchors only a SHA-256 hash + off-chain URI per report; full
 content lives in IPFS.
-
-The system is benchmarkable **without the AI model running**: the benchmarks
-measure blockchain throughput *per report*, and reports carry their AI verdict
-(label + confidence) as precomputed data. Live inference is optional.
 
 ## How it works
 
@@ -42,13 +38,6 @@ The system has **two layers** that run independently:
 * **Fact-Checking Service** (`:8002`): lets orgs review/interact with pending claims
 * **Prometheus** (`:9090`) + **Grafana** (`:3000`): monitoring
 
-> The application pipeline is optional for benchmarking. The gateway layer
-> (`:8000`, `:9100`, `:9101`) plus the Fabric network is all the benchmark
-> harnesses require. The flagging-engine model is ~2.2 GB (AfroXLM-R-large
-> FP32) and runs on small hosts — the whole stack fits in ~5-6 GB. Its only
-> hard dependency is Kafka (`kafka:9092`). See [Benchmarking without the AI
-> model](#benchmarking-without-the-ai-model).
-
 The application pipeline routes claims as follows: `POST /ingest` into
 claim-ingest-worker (`:8003`) publishes to the Kafka topic `claims.raw`; the
 flagging-engine (`:8004`, `/predict`) consumes it and publishes
@@ -64,12 +53,12 @@ The AI model processes incoming claims and flags potential misinformation.
 Flagged reports are escalated to consortium organizations who independently
 fact-check them. Two submission modes:
 
-* **Direct mode (default)** — org1 is the **AI stakeholder org**. It submits
+* **Direct mode (default)** :  org1 is the **AI stakeholder org**. It submits
   `--ai-pct%` of reports (the ones the AI processed); the remaining reports are
   submitted by a random `org2..orgN`. Every org except the report's submitter
   votes, so org1 votes on reports it did not submit. With `--ai-pct 100` org1
   submits everything.
-* **Indirect mode** — a random org is chosen to submit every report — simulates
+* **Indirect mode** : a random org is chosen to submit every report — simulates
   a human-in-the-loop workflow where every org is a normal stakeholder.
 
 ## Architecture
@@ -89,17 +78,15 @@ fact-check them. Two submission modes:
 |`apps/blockchain_gateway/`|FastAPI gateway (`:8000`) — IPFS + chaincode|
 |`apps/fabric_gateway/`|Node.js SDK sidecar (`:9100`)|
 |`apps/ipfs_gateway/`|IPFS add/cat bridge (`:9101`)|
-|`apps/claim-ingest-worker/`|Kafka producer — raw claims|
+|`apps/claim-ingest-worker/`|Kafka producer, raw claims|
 |`apps/flagging-engine/`|AI model + Kafka consumer/producer (`model/` weights)|
-|`apps/submission-worker/`|Kafka consumer — submits to blockchain|
+|`apps/submission-worker/`|Kafka consumer, submits to blockchain|
 |`apps/fact-checking-service/`|org review/interaction proxy|
 |`apps/kafka/`|Kafka broker (KRaft)|
 |`monitoring/`|Prometheus + Grafana provisioning|
 |`documentation/`|architecture diagrams, source formats|
 |`data/`|test samples (git-ignored)|
 |`results/local/`|benchmark CSVs (`http.csv`, `caliper.csv`, `real_loads.csv`)|
-|`info/`|development notes|
-
 > Git-ignored: Python virtualenv, `blockchain/fabric-samples/`, `offchain.db`,
 > `apps/flagging-engine/model/model.safetensors`, `data/`.
 
@@ -118,22 +105,18 @@ fact-check them. Two submission modes:
 
 Docker images are pulled automatically on first run.
 
-> **WARNING — Compose version:** use the modern Compose **v2** plugin. Legacy
+> Compose version:** use the modern Compose **v2** plugin. Legacy
 > `docker-compose` v1.29.2 breaks the test network.
 
 ### Minimum RAM
-
-The stack is light: the Fabric network (~100 MiB per peer — ~1 GB at 13 orgs),
+The Fabric network (~100 MiB per peer | ~1 GB at 10 orgs),
 Kafka (~512 MB), gateways/IPFS/monitoring, and the flagging-engine's 2.2 GB FP32
-model all run on a typical laptop. Plan for ~6 GB total with everything
-resident.
-
+model. 
 |What|Notes|
 |-|-|
 |Blockchain layer + benchmarks only|~2-3 GB|
 |Full stack incl. flagging-engine (AfroXLM-R-large 2.2 GB FP32)|~5-6 GB|
-|Server profile (5090, fp16 CUDA)|Needs the GPU box — see [the flagging-engine compose](apps/flagging-engine/docker-compose.yaml)|
-
+ 
 ## Platform compatibility
 
 |Platform|Hosting the network|As an HTTP client|
@@ -187,7 +170,7 @@ The gateway supports two authentication modes controlled by the `AUTH_MODE` envi
 |Mode|Auth method|Use case|
 |-|-|-|
 |`bootstrap` (default)|API keys via `X-API-Key` header|Benchmarks, load testing|
-|`jwt`|JWT tokens via `Authorization: Bearer` header|Demos, onboarding flows|
+|`jwt`|JWT tokens via `Authorization: Bearer` header|Onboarding flows|
 
 **Environment variables:**
 
@@ -248,7 +231,7 @@ This runs 7 steps automatically:
 7. Optionally runs a Caliper benchmark (skip with `--skip-caliper`)
 
 After this, the blockchain gateway is live at `:8000`. Scale the consortium
-with `--orgs N` (default 3, **max 25**) — gateway keys, peers, orderer, and the
+with `--orgs N` (default 3, **max 30**) — gateway keys, peers, orderer, and the
 connection profile all follow automatically. Benchmark harnesses **auto-detect
 the on-chain org count** via `GET /api/orgs`, so they always match the live
 consortium regardless of what `--orgs` you provisioned. `startup.sh` sets the

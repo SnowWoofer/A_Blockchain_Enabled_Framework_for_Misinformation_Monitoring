@@ -6,7 +6,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 ORGS=3
 SAMPLES=50
-MAX_ORGS=25
+MAX_ORGS=30
 MAX_SAMPLES=100000
 SKIP_CALIPER=false
 
@@ -16,7 +16,7 @@ startup.sh == startup script for Fabric network + all three gateways
 (fabric_gateway sidecar, ipfs_gateway, blockchain_gateway), then a
 validation load/benchmark against it. For the application pipeline (Kafka, flagging-engine, submission-worker,fact-checking-service, monitoring)
 
-  --orgs N            founding org limit, default 3 & max 25
+  --orgs N            founding org limit, default 3 & max 30
   --test-samples N    validation requests to drive against gateway, default 50 & max 100000
   --skip-caliper      skip Caliper benchmark, run only load-http.py (Caliper Scaler: writes=N*10 & reads=N*10)
   --help              show this
