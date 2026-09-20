@@ -10,11 +10,13 @@ OUT_BENCH="${SCRIPT_DIR}/benchmarks/misinformation-benchmark.yaml"
 
 N=3
 SAMPLES=50
+BENCHMARK_ONLY=0
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --orgs) shift; N="${1:-}" ;;
     --samples) shift; SAMPLES="${1:-}" ;;
+    --benchmark-only) BENCHMARK_ONLY=1 ;;
     *) echo "ERROR: unknown arg '$1'" >&2; exit 1 ;;
   esac
   shift
@@ -36,7 +38,8 @@ mkdir -p "$(dirname "${OUT_BENCH}")"
 WRITES=$((SAMPLES * 10))
 READS=$((SAMPLES * 10))
 
-python3 - "${N}" > "${OUT_CCP}" <<'PY'
+if [ "${BENCHMARK_ONLY}" -eq 0 ]; then
+  python3 - "${N}" > "${OUT_CCP}" <<'PY'
 import json, sys
 n = int(sys.argv[1])
 base = "/crypto/peerOrganizations"
@@ -81,6 +84,8 @@ profile = {
 json.dump(profile, sys.stdout, indent=2)
 print()
 PY
+  echo ">> Caliper connection profile written for org1..${N}: ${OUT_CCP}"
+fi
 
 python3 - "${WRITES}" "${READS}" > "${OUT_BENCH}" <<'PY'
 import json, sys
@@ -113,6 +118,7 @@ json.dump(config, sys.stdout, indent=2)
 print()
 PY
 
-echo ">> Caliper connection profile written for org1..${N}: ${OUT_CCP}"
 echo ">> Caliper benchmark config written (writes=${WRITES}, reads=${READS}): ${OUT_BENCH}"
-echo ">> NOTE: if N > 3, also extend networks/fabric/test-network.yaml with the extra organizations."
+if [ "${BENCHMARK_ONLY}" -eq 0 ]; then
+  echo ">> NOTE: if N > 3, also extend networks/fabric/test-network.yaml with the extra organizations."
+fi

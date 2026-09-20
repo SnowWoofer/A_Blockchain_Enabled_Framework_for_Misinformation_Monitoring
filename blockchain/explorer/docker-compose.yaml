@@ -52,7 +52,9 @@ services:
 
   explorer:
 
-    image: hyperledger/explorer:1.1.1
+    build:
+      context: .
+      dockerfile: Dockerfile
 
     container_name: explorer
 

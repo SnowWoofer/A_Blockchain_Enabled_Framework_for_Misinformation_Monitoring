@@ -25,7 +25,9 @@
       "peers": {
         "peer0.org1.example.com": {},
         "peer0.org2.example.com": {},
-        "peer0.org3.example.com": {}
+        "peer0.org3.example.com": {},
+        "peer0.org4.example.com": {},
+        "peer0.org5.example.com": {}
       },
       "connection": {
         "timeout": {
@@ -74,6 +76,30 @@
       "signedCert": {
         "path": "/tmp/crypto/peerOrganizations/org3.example.com/users/Admin@org3.example.com/msp/signcerts/Admin@org3.example.com-cert.pem"
       }
+    },
+    "Org4MSP": {
+      "mspid": "Org4MSP",
+      "adminPrivateKey": {
+        "path": "/tmp/crypto/peerOrganizations/org4.example.com/users/Admin@org4.example.com/msp/keystore/priv_sk"
+      },
+      "peers": [
+        "peer0.org4.example.com"
+      ],
+      "signedCert": {
+        "path": "/tmp/crypto/peerOrganizations/org4.example.com/users/Admin@org4.example.com/msp/signcerts/Admin@org4.example.com-cert.pem"
+      }
+    },
+    "Org5MSP": {
+      "mspid": "Org5MSP",
+      "adminPrivateKey": {
+        "path": "/tmp/crypto/peerOrganizations/org5.example.com/users/Admin@org5.example.com/msp/keystore/priv_sk"
+      },
+      "peers": [
+        "peer0.org5.example.com"
+      ],
+      "signedCert": {
+        "path": "/tmp/crypto/peerOrganizations/org5.example.com/users/Admin@org5.example.com/msp/signcerts/Admin@org5.example.com-cert.pem"
+      }
     }
   },
   "peers": {
@@ -105,6 +131,26 @@
       "eventUrl": "grpcs://peer0.org3.example.com:11053",
       "grpcOptions": {
         "ssl-target-name-override": "peer0.org3.example.com"
+      }
+    },
+    "peer0.org4.example.com": {
+      "tlsCACerts": {
+        "path": "/tmp/crypto/peerOrganizations/org4.example.com/peers/peer0.org4.example.com/tls/ca.crt"
+      },
+      "url": "grpcs://peer0.org4.example.com:13051",
+      "eventUrl": "grpcs://peer0.org4.example.com:13053",
+      "grpcOptions": {
+        "ssl-target-name-override": "peer0.org4.example.com"
+      }
+    },
+    "peer0.org5.example.com": {
+      "tlsCACerts": {
+        "path": "/tmp/crypto/peerOrganizations/org5.example.com/peers/peer0.org5.example.com/tls/ca.crt"
+      },
+      "url": "grpcs://peer0.org5.example.com:15051",
+      "eventUrl": "grpcs://peer0.org5.example.com:15053",
+      "grpcOptions": {
+        "ssl-target-name-override": "peer0.org5.example.com"
       }
     }
   },
