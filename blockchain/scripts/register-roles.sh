@@ -28,7 +28,7 @@ ca_port() {
   case "$1" in
     1) echo 7054 ;;
     2) echo 8054 ;;
-    3) echo 11054 ;;
+    3) echo 9084 ;;
     *) if [ "$1" -ge 4 ]; then echo $((12054 + 100 * ($1 - 4))); else echo ""; fi ;;
   esac
 }
