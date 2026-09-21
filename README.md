@@ -14,7 +14,17 @@ The system has **two layers** that run independently:
 ### Blockchain layer (`./startup.sh`)
 
 * **Fabric network**: peers/orderers/CouchDB on the `fabric_test` docker network
-* **Chaincode** (Go, `blockchain/chaincode/misinformation/`): fact-check consensus model
+* **Chaincode** (Go, `blockchain/chaincode/misinformation/`): fact-check consensus model with **ABAC** (attribute-based access control)
+
+  * **Roles** — every Fabric identity carries a `role` attribute (set at CA registration). Three roles control who can call which functions:
+
+    | Role | Allowed functions |
+    |------|-------------------|
+    | `official` | `FinalizeReport`, `ExpireReport`, `VoteOnOrgAdmission`, `FinalizeOrgAdmission`, `SetFoundingOrgLimit` |
+    | `fact_checker` | `Submit`, `SubmitFactCheck` (also `official` can call these) |
+    | `observer` | read-only queries (`QueryReport`, `QueryAllReports`, etc.) |
+
+    Role-bearing identities (`officialN`, `factcheckerN`) are registered via `register-roles.sh` through each org's Fabric CA during network setup.
 
   * `Submit` — an org submits a report (PENDING, 72h fact-check window)
   * `SubmitFactCheck` — another org records a verdict (`"0"`=non-misinfo, `"1"`=misinfo). After each vote the chaincode applies the consensus rule with
@@ -25,7 +35,7 @@ The system has **two layers** that run independently:
   * `FinalizeReport` — closes an UNDER_REVIEW report (≥2 fact-checks, no tie)
   * `ExpireReport` — expires PENDING reports past their deadline
   * `RegisterOrg` / `RequestOrgAdmission` / `VoteOnOrgAdmission` / `FinalizeOrgAdmission` — org governance (admission needs 2/3 of registered orgs)
-* **Fabric Gateway SDK sidecar** (`:9100`): Node.js wrapper around `@hyperledger/fabric-gateway`
+* **Fabric Gateway SDK sidecar** (`:9100`): Node.js wrapper around `@hyperledger/fabric-gateway`. Uses `GATEWAY_ROLE` env var (`official` or `fact_checker`) to select which identity the sidecar submits transactions as.
 * **IPFS Gateway** (`:9101`): thin add/cat bridge over kubo
 * **Blockchain Gateway** (`:8000`): FastAPI, the only thing orgs talk to. Dual auth (API-key for benchmarks, JWT for demos), IPFS storage, chaincode invocation
 
@@ -72,8 +82,9 @@ fact-check them. Two submission modes:
 |`startup.sh`|blockchain layer: deploy + load + gateways|
 |`docker-compose.yml`|application pipeline: Kafka + services + monitoring|
 |`benchmarks/`|`feed_samples.py` (pipeline + consensus sim), `load-http.py` (synthetic load), `caliper/` (Caliper suite)|
-|`blockchain/scripts/`|deploy, bootstrap, gateway launchers|
-|`blockchain/chaincode/misinformation/`|Go chaincode (fact-check consensus model)|
+|`blockchain/scripts/`|deploy, bootstrap, gateway launchers, role registration|
+|`blockchain/scripts/register-roles.sh`|Fabric CA role identity registration (official + fact_checker per org)|
+|`blockchain/chaincode/misinformation/`|Go chaincode (fact-check consensus model + ABAC)|
 |`blockchain/explorer/`|Hyperledger Explorer UI|
 |`apps/blockchain_gateway/`|FastAPI gateway (`:8000`) — IPFS + chaincode|
 |`apps/fabric_gateway/`|Node.js SDK sidecar (`:9100`)|
@@ -160,8 +171,10 @@ blockchain/scripts/bootstrap-keys.sh org1 org2 org3 ... orgN
 # Creates: key-org1 -> org1 ... key-orgN -> orgN, stress-key -> org1
 ```
 
-`startup.sh` bootstraps keys for every org automatically; this is only needed
-for a clean manual setup.
+`startup.sh` / `deploy.sh` bootstraps keys for every org **and** calls
+`register-roles.sh` to register ABAC role-bearing identities (`officialN`,
+`factcheckerN`) via each org's Fabric CA — this step is only needed for a clean
+manual setup.
 
 ### Auth mode (optional)
 
@@ -171,6 +184,8 @@ The gateway supports two authentication modes controlled by the `AUTH_MODE` envi
 |-|-|-|
 |`bootstrap` (default)|API keys via `X-API-Key` header|Benchmarks, load testing|
 |`jwt`|JWT tokens via `Authorization: Bearer` header|Onboarding flows|
+
+Passwords are hashed with **bcrypt** (cost factor 12) — no plaintext storage.
 
 **Environment variables:**
 
@@ -616,6 +631,15 @@ docker compose -f blockchain/explorer/docker-compose.yaml up -d --build
 > falls back to `_lifecycle`. Use `--build` on first run or after any Explorer
 > image update.
 
+> **`priv_sk` symlinks:** Fabric CA and cryptogen both name keystore files with
+> random hex; Explorer expects `priv_sk`. `deploy.sh` creates the symlink for
+> all orgs automatically. If Explorer complains about a missing `priv_sk`, run
+> `deploy.sh` again or manually symlink: `ln -sf *_sk keystore/priv_sk`.
+
+> **Cert naming:** The connection profile (`networkConfig.json`) uses `cert.pem`
+> (Fabric CA naming) for all orgs. `gen-explorer-config.sh` generates this
+> automatically for the current org count.
+
 Stop with the same compose file `down` (use `down -v` only to wipe Explorer's
 own postgres/wallet data).
 
@@ -876,24 +900,26 @@ Returns the full transaction history for a report — every time it was modified
 
 All endpoints require authentication. In bootstrap mode (default), use `-H "X-API-Key: <key>"`. In JWT mode, use `-H "Authorization: Bearer <token>"` after logging in via `/api/auth/login`.
 
+Write endpoints enforce **ABAC** via the Fabric CA `role` attribute on the submitting identity — the gateway's `GATEWAY_ROLE` env var controls which identity is used (see [How it works](#how-it-works)).
+
 ### Blockchain gateway (`:8000`)
 
-|Method & path|Purpose|
-|-|-|
-|`GET /api/status`|IPFS backend status|
-|`POST /api/reports`|Submit a report (body: `msg_id`, `label` 0/1, `confidence`, `model_version`, `content`, `source_platform`)|
-|`GET /api/reports`|List reports (optional `?status=PENDING`)|
-|`GET /api/reports/{id}`|Report + off-chain payload|
-|`GET /api/reports/{id}/chain`|On-chain record (hash, uri, status, fact-checks)|
-|`GET /api/reports/{id}/verify`|Tamper-evidence check|
-|`GET /api/reports/{id}/history`|Full tx/history via Fabric's `GetHistoryForKey`|
-|`POST /api/reports/{id}/fact-check`|Org submits a fact-check verdict (body: `outcome` "0"/"1", `reasoning`, `support`)|
-|`POST /api/reports/{id}/finalize`|Finalize a report (consensus reached)|
-|`POST /api/reports/{id}/expire`|Expire a report past its voting deadline|
-|`POST /api/orgs/apply`, `/api/orgs/{msp}/admission`, `/vote`, `/finalize`|New-org admission workflow|
-|`GET /api/orgs`, `GET /api/orgs/{msp}/admission`|Registered orgs / admission status|
-|`POST /api/auth/register`|Register user credentials (JWT mode only, body: `org`, `password`)|
-|`POST /api/auth/login`|Login and get JWT token (JWT mode only, body: `org`, `password`)|
+|Method & path|Purpose|Role required|
+|-|-|-|
+|`GET /api/status`|IPFS backend status|any|
+|`POST /api/reports`|Submit a report (body: `msg_id`, `label` 0/1, `confidence`, `model_version`, `content`, `source_platform`)|`official` or `fact_checker`|
+|`GET /api/reports`|List reports (optional `?status=PENDING`)|any|
+|`GET /api/reports/{id}`|Report + off-chain payload|any|
+|`GET /api/reports/{id}/chain`|On-chain record (hash, uri, status, fact-checks)|any|
+|`GET /api/reports/{id}/verify`|Tamper-evidence check|any|
+|`GET /api/reports/{id}/history`|Full tx/history via Fabric's `GetHistoryForKey`|any|
+|`POST /api/reports/{id}/fact-check`|Org submits a fact-check verdict (body: `outcome` "0"/"1", `reasoning`, `support`)|`official` or `fact_checker`|
+|`POST /api/reports/{id}/finalize`|Finalize a report (consensus reached)|`official`|
+|`POST /api/reports/{id}/expire`|Expire a report past its voting deadline|`official`|
+|`POST /api/orgs/apply`, `/api/orgs/{msp}/admission`, `/vote`, `/finalize`|New-org admission workflow|`official` (vote/finalize)|
+|`GET /api/orgs`, `GET /api/orgs/{msp}/admission`|Registered orgs / admission status|any|
+|`POST /api/auth/register`|Register user credentials (JWT mode only, body: `org`, `password`)|any|
+|`POST /api/auth/login`|Login and get JWT token (JWT mode only, body: `org`, `password`)|any|
 
 ### Claim Ingest Worker (`:8003`)
 
@@ -967,3 +993,6 @@ docker compose -f blockchain/explorer/docker-compose.yaml down   # or down -v to
 |Apply org returns 400 "not registered on-chain"|The target org must be registered via `RegisterOrg` before `apply_org` can generate its API key. |
 |IPFS nodes crash-loop with `Error: lock /data/ipfs/repo.lock: permission denied`|Run `docker run --rm -v ipfs_gateway_ipfs-data-1:/data -u root alpine chown -R 1000:1000 /data` (and `ipfs-data-2`), then `docker restart ipfs-node ipfs-node-1 ipfs-node-2`.|
 |Explorer shows no blocks / sync errors|Use `--build` when starting Explorer: `docker compose -f blockchain/explorer/docker-compose.yaml up -d --build`. The patched image handles Fabric 2.5.x missing `lscc`.|
+|ABAC rejection: "only official can call" / "only official or fact_checker can call"|The gateway's `GATEWAY_ROLE` identity doesn't have the required role. Check which role the endpoint needs (see [API quick reference](#api-quick-reference)) and set `GATEWAY_ROLE=official` or `GATEWAY_ROLE=fact_checker` in `apps/fabric_gateway/docker-compose.yaml`, then restart the gateway.|
+|ABAC rejection on org4+|Role-bearing identities must be registered via `register-roles.sh` (called automatically by `deploy.sh` / `startup.sh`). If org4+ was added manually without running `register-roles.sh`, re-run it: `blockchain/scripts/register-roles.sh --limit <N>`.|
+|Explorer `priv_sk` not found / wallet creation fails|`deploy.sh` creates `priv_sk` symlinks for all orgs automatically. Re-run `deploy.sh` or manually symlink: `ln -sf *_sk keystore/priv_sk` in the org's `msp/keystore/` directory.|

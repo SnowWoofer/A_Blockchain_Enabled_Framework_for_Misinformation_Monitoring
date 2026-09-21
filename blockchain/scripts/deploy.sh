@@ -80,6 +80,16 @@ echo ">> Starting the test network (Fabric CA mode)..."
 ./network.sh up -ca ${STATE_DB_ARGS}
 echo ">> Creating channel ${CHANNEL_NAME}..."
 ./network.sh createChannel -c "${CHANNEL_NAME}"
+
+# Fabric CA / cryptogen both use hex-named keystore files; Explorer expects "priv_sk"
+for _n in 1 2; do
+  _ks="${TEST_NETWORK}/organizations/peerOrganizations/org${_n}.example.com/users/Admin@org${_n}.example.com/msp/keystore"
+  _real="$(ls "${_ks}"/*_sk 2>/dev/null | head -1)"
+  if [ -n "${_real}" ] && [ ! -e "${_ks}/priv_sk" ]; then
+    ln -sf "$(basename "${_real}")" "${_ks}/priv_sk"
+  fi
+done
+
 echo ">> Deploying ${CC_NAME} v${CC_VERSION} (${CC_SRC_LANGUAGE})..."
 ./network.sh deployCC -c "${CHANNEL_NAME}" \
   -ccn "${CC_NAME}" \
@@ -92,6 +102,14 @@ echo ">> Deploying ${CC_NAME} v${CC_VERSION} (${CC_SRC_LANGUAGE})..."
 if [ -n "${THREE_ORG}" ]; then
   echo ">> Bringing up org3 (addOrg3, Fabric CA mode)..."
   (cd "${TEST_NETWORK}/addOrg3" && ./addOrg3.sh up -ca)
+
+  # Fabric CA names keys with random hex; Explorer expects "priv_sk"
+  org3_keystore="${TEST_NETWORK}/organizations/peerOrganizations/org3.example.com/users/Admin@org3.example.com/msp/keystore"
+  real_key="$(ls "${org3_keystore}"/*_sk 2>/dev/null | head -1)"
+  if [ -n "${real_key}" ] && [ ! -e "${org3_keystore}/priv_sk" ]; then
+    ln -sf "$(basename "${real_key}")" "${org3_keystore}/priv_sk"
+  fi
+
   echo ">> Switching to a 2-of-3 endorsement policy..."
   "${SCRIPT_DIR}/onboard-org3.sh"
 fi

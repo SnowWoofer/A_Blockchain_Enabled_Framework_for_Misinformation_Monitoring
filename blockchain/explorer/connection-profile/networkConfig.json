@@ -27,7 +27,9 @@
         "peer0.org2.example.com": {},
         "peer0.org3.example.com": {},
         "peer0.org4.example.com": {},
-        "peer0.org5.example.com": {}
+        "peer0.org5.example.com": {},
+        "peer0.org6.example.com": {},
+        "peer0.org7.example.com": {}
       },
       "connection": {
         "timeout": {
@@ -50,7 +52,7 @@
         "peer0.org1.example.com"
       ],
       "signedCert": {
-        "path": "/tmp/crypto/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp/signcerts/Admin@org1.example.com-cert.pem"
+        "path": "/tmp/crypto/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp/signcerts/cert.pem"
       }
     },
     "Org2MSP": {
@@ -62,7 +64,7 @@
         "peer0.org2.example.com"
       ],
       "signedCert": {
-        "path": "/tmp/crypto/peerOrganizations/org2.example.com/users/Admin@org2.example.com/msp/signcerts/Admin@org2.example.com-cert.pem"
+        "path": "/tmp/crypto/peerOrganizations/org2.example.com/users/Admin@org2.example.com/msp/signcerts/cert.pem"
       }
     },
     "Org3MSP": {
@@ -74,7 +76,7 @@
         "peer0.org3.example.com"
       ],
       "signedCert": {
-        "path": "/tmp/crypto/peerOrganizations/org3.example.com/users/Admin@org3.example.com/msp/signcerts/Admin@org3.example.com-cert.pem"
+        "path": "/tmp/crypto/peerOrganizations/org3.example.com/users/Admin@org3.example.com/msp/signcerts/cert.pem"
       }
     },
     "Org4MSP": {
@@ -86,7 +88,7 @@
         "peer0.org4.example.com"
       ],
       "signedCert": {
-        "path": "/tmp/crypto/peerOrganizations/org4.example.com/users/Admin@org4.example.com/msp/signcerts/Admin@org4.example.com-cert.pem"
+        "path": "/tmp/crypto/peerOrganizations/org4.example.com/users/Admin@org4.example.com/msp/signcerts/cert.pem"
       }
     },
     "Org5MSP": {
@@ -98,7 +100,31 @@
         "peer0.org5.example.com"
       ],
       "signedCert": {
-        "path": "/tmp/crypto/peerOrganizations/org5.example.com/users/Admin@org5.example.com/msp/signcerts/Admin@org5.example.com-cert.pem"
+        "path": "/tmp/crypto/peerOrganizations/org5.example.com/users/Admin@org5.example.com/msp/signcerts/cert.pem"
+      }
+    },
+    "Org6MSP": {
+      "mspid": "Org6MSP",
+      "adminPrivateKey": {
+        "path": "/tmp/crypto/peerOrganizations/org6.example.com/users/Admin@org6.example.com/msp/keystore/priv_sk"
+      },
+      "peers": [
+        "peer0.org6.example.com"
+      ],
+      "signedCert": {
+        "path": "/tmp/crypto/peerOrganizations/org6.example.com/users/Admin@org6.example.com/msp/signcerts/cert.pem"
+      }
+    },
+    "Org7MSP": {
+      "mspid": "Org7MSP",
+      "adminPrivateKey": {
+        "path": "/tmp/crypto/peerOrganizations/org7.example.com/users/Admin@org7.example.com/msp/keystore/priv_sk"
+      },
+      "peers": [
+        "peer0.org7.example.com"
+      ],
+      "signedCert": {
+        "path": "/tmp/crypto/peerOrganizations/org7.example.com/users/Admin@org7.example.com/msp/signcerts/cert.pem"
       }
     }
   },
@@ -151,6 +177,26 @@
       "eventUrl": "grpcs://peer0.org5.example.com:15053",
       "grpcOptions": {
         "ssl-target-name-override": "peer0.org5.example.com"
+      }
+    },
+    "peer0.org6.example.com": {
+      "tlsCACerts": {
+        "path": "/tmp/crypto/peerOrganizations/org6.example.com/peers/peer0.org6.example.com/tls/ca.crt"
+      },
+      "url": "grpcs://peer0.org6.example.com:17051",
+      "eventUrl": "grpcs://peer0.org6.example.com:17053",
+      "grpcOptions": {
+        "ssl-target-name-override": "peer0.org6.example.com"
+      }
+    },
+    "peer0.org7.example.com": {
+      "tlsCACerts": {
+        "path": "/tmp/crypto/peerOrganizations/org7.example.com/peers/peer0.org7.example.com/tls/ca.crt"
+      },
+      "url": "grpcs://peer0.org7.example.com:19051",
+      "eventUrl": "grpcs://peer0.org7.example.com:19053",
+      "grpcOptions": {
+        "ssl-target-name-override": "peer0.org7.example.com"
       }
     }
   },

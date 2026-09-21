@@ -49,7 +49,7 @@ for i in range(1, n + 1):
         },
         "peers": [peer],
         "signedCert": {
-            "path": f"{base}/{org}.example.com/users/Admin@{org}.example.com/msp/signcerts/Admin@{org}.example.com-cert.pem"
+            "path": f"{base}/{org}.example.com/users/Admin@{org}.example.com/msp/signcerts/cert.pem"
         },
     }
     peer_entries[peer] = {

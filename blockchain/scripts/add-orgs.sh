@@ -228,6 +228,14 @@ NODEEOF
     --tls.certfiles "${ca_cert_dir}/tls-cert.pem" >/dev/null 2>&1
   cp "${org_root}/msp/config.yaml" "${org_root}/users/Admin@org${n}.example.com/msp/config.yaml"
 
+  # Fabric CA names keys with random hex; Explorer expects "priv_sk"
+  local admin_keystore="${org_root}/users/Admin@org${n}.example.com/msp/keystore"
+  local real_key
+  real_key="$(ls "${admin_keystore}"/*_sk 2>/dev/null | head -1)"
+  if [ -n "${real_key}" ] && [ ! -e "${admin_keystore}/priv_sk" ]; then
+    ln -sf "$(basename "${real_key}")" "${admin_keystore}/priv_sk"
+  fi
+
   unset FABRIC_CA_CLIENT_HOME
 
   # ── Org definition (configtxgen) ────────────────────────────────
