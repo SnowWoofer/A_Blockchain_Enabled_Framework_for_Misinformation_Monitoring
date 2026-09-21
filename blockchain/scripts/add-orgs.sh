@@ -115,33 +115,130 @@ add_org_assets() {
   local p1 p2
   p1="$(org_peer_port "${n}")"
   p2=$((p1 + 1))
-  echo ">> [org${n}] generating crypto material (cryptogen)..."
-  local crypto_yaml="${ADD_ORG3}/crypto-org${n}.yaml"
-  cat > "${crypto_yaml}" <<EOF
-PeerOrgs:
-  - Name: Org${n}
-    Domain: org${n}.example.com
-    EnableNodeOUs: true
-    Template:
-      Count: 1
-      SANS:
-        - localhost
-    Users:
-      Count: 1
-EOF
-  (cd "${TEST_NETWORK}" && cryptogen generate --config="${crypto_yaml}" --output="./organizations" >/dev/null 2>&1)
-  rm -f "${crypto_yaml}"
 
+  # ── Fabric CA crypto for org4+ ──────────────────────────────────
+  local ca_p=$((12054 + 1000 * (n - 4)))
+  local ca_cert_dir="${ADD_ORG3}/fabric-ca/org${n}"
+  local org_root="${TEST_NETWORK}/organizations/peerOrganizations/org${n}.example.com"
+
+  echo ">> [org${n}] starting Fabric CA (port ${ca_p})..."
+  mkdir -p "${ca_cert_dir}"
+  cat > "${ADD_ORG3}/compose/compose-ca-org${n}.yaml" <<CAEOF
+networks:
+  test:
+    name: fabric_test
+services:
+  ca_org${n}:
+    image: hyperledger/fabric-ca:latest
+    labels:
+      service: hyperledger-fabric
+    environment:
+      - FABRIC_CA_HOME=/etc/hyperledger/fabric-ca-server
+      - FABRIC_CA_SERVER_CA_NAME=ca-org${n}
+      - FABRIC_CA_SERVER_TLS_ENABLED=true
+      - FABRIC_CA_SERVER_PORT=${ca_p}
+    ports:
+      - "${ca_p}:${ca_p}"
+    command: sh -c 'fabric-ca-server start -b admin:adminpw -d'
+    volumes:
+      - ../fabric-ca/org${n}:/etc/hyperledger/fabric-ca-server
+    container_name: ca_org${n}
+CAEOF
+
+  (cd "${ADD_ORG3}" && ${CONTAINER_CLI_COMPOSE} \
+    -f compose/compose-ca-org${n}.yaml up -d 2>&1 | tail -2)
+  sleep 10
+
+  # ── Enroll CA admin ─────────────────────────────────────────────
+  echo ">> [org${n}] enrolling CA admin..."
+  mkdir -p "${org_root}"
+  export FABRIC_CA_CLIENT_HOME="${org_root}"
+  fabric-ca-client enroll \
+    -u "https://admin:adminpw@localhost:${ca_p}" \
+    --caname "ca-org${n}" \
+    --tls.certfiles "${ca_cert_dir}/tls-cert.pem" >/dev/null 2>&1
+
+  cat > "${org_root}/msp/config.yaml" <<NODEEOF
+NodeOUs:
+  Enable: true
+  ClientOUIdentifier:
+    Certificate: cacerts/localhost-${ca_p}-ca-org${n}.pem
+    OrganizationalUnitIdentifier: client
+  PeerOUIdentifier:
+    Certificate: cacerts/localhost-${ca_p}-ca-org${n}.pem
+    OrganizationalUnitIdentifier: peer
+  AdminOUIdentifier:
+    Certificate: cacerts/localhost-${ca_p}-ca-org${n}.pem
+    OrganizationalUnitIdentifier: admin
+  OrdererOUIdentifier:
+    Certificate: cacerts/localhost-${ca_p}-ca-org${n}.pem
+    OrganizationalUnitIdentifier: orderer
+NODEEOF
+
+  # Copy CA root cert to well-known paths (ca-cert.pem, NOT tls-cert.pem)
+  mkdir -p "${org_root}/msp/tlscacerts"
+  cp "${ca_cert_dir}/ca-cert.pem" "${org_root}/msp/tlscacerts/ca.crt"
+  mkdir -p "${org_root}/tlsca"
+  cp "${ca_cert_dir}/ca-cert.pem" "${org_root}/tlsca/tlsca.org${n}.example.com-cert.pem"
+  mkdir -p "${org_root}/ca"
+  cp "${ca_cert_dir}/ca-cert.pem" "${org_root}/ca/ca.org${n}.example.com-cert.pem"
+
+  # ── Register peers and users ────────────────────────────────────
+  echo ">> [org${n}] registering peer0, user1, org admin..."
+  fabric-ca-client register --caname "ca-org${n}" \
+    --id.name peer0 --id.secret peer0pw --id.type peer \
+    --tls.certfiles "${ca_cert_dir}/tls-cert.pem" >/dev/null 2>&1 || true
+  fabric-ca-client register --caname "ca-org${n}" \
+    --id.name user1 --id.secret user1pw --id.type client \
+    --tls.certfiles "${ca_cert_dir}/tls-cert.pem" >/dev/null 2>&1 || true
+  fabric-ca-client register --caname "ca-org${n}" \
+    --id.name "org${n}admin" --id.secret "org${n}adminpw" --id.type admin \
+    --tls.certfiles "${ca_cert_dir}/tls-cert.pem" >/dev/null 2>&1 || true
+
+  # ── Enroll peer0 (MSP + TLS) ───────────────────────────────────
+  echo ">> [org${n}] enrolling peer0..."
+  local peer_msp="${org_root}/peers/peer0.org${n}.example.com/msp"
+  local peer_tls="${org_root}/peers/peer0.org${n}.example.com/tls"
+  mkdir -p "${peer_msp}" "${peer_tls}"
+  fabric-ca-client enroll -u "https://peer0:peer0pw@localhost:${ca_p}" \
+    --caname "ca-org${n}" -M "${peer_msp}" \
+    --tls.certfiles "${ca_cert_dir}/tls-cert.pem" >/dev/null 2>&1
+  cp "${org_root}/msp/config.yaml" "${peer_msp}/config.yaml"
+
+  fabric-ca-client enroll -u "https://peer0:peer0pw@localhost:${ca_p}" \
+    --caname "ca-org${n}" -M "${peer_tls}" \
+    --enrollment.profile tls --csr.hosts "peer0.org${n}.example.com" --csr.hosts localhost \
+    --tls.certfiles "${ca_cert_dir}/tls-cert.pem" >/dev/null 2>&1
+
+  cp "${peer_tls}/tlscacerts/"* "${peer_tls}/ca.crt"
+  cp "${peer_tls}/signcerts/"*  "${peer_tls}/server.crt"
+  cp "${peer_tls}/keystore/"*   "${peer_tls}/server.key"
+
+  # ── Enroll user1 and org admin MSPs ─────────────────────────────
+  echo ">> [org${n}] enrolling User1 and Admin..."
+  fabric-ca-client enroll -u "https://user1:user1pw@localhost:${ca_p}" \
+    --caname "ca-org${n}" \
+    -M "${org_root}/users/User1@org${n}.example.com/msp" \
+    --tls.certfiles "${ca_cert_dir}/tls-cert.pem" >/dev/null 2>&1
+  cp "${org_root}/msp/config.yaml" "${org_root}/users/User1@org${n}.example.com/msp/config.yaml"
+
+  fabric-ca-client enroll -u "https://org${n}admin:org${n}adminpw@localhost:${ca_p}" \
+    --caname "ca-org${n}" \
+    -M "${org_root}/users/Admin@org${n}.example.com/msp" \
+    --tls.certfiles "${ca_cert_dir}/tls-cert.pem" >/dev/null 2>&1
+  cp "${org_root}/msp/config.yaml" "${org_root}/users/Admin@org${n}.example.com/msp/config.yaml"
+
+  unset FABRIC_CA_CLIENT_HOME
+
+  # ── Org definition (configtxgen) ────────────────────────────────
   echo ">> [org${n}] generating org definition (configtxgen)..."
-
-
   local cfgdir="${ADD_ORG3}/.configtx-org${n}"
   mkdir -p "${cfgdir}"
   sed -e "s|MSPDir: ../organizations|MSPDir: ../../organizations|" \
     -e "s/Org3MSP/Org${n}MSP/g" -e "s/org3/org${n}/g" -e "s/Org3/Org${n}/g" \
     "${ADD_ORG3}/configtx.yaml" > "${cfgdir}/configtx.yaml"
   (cd "${cfgdir}" && FABRIC_CFG_PATH="${cfgdir}" configtxgen -printOrg "Org${n}MSP" \
-    > "${TEST_NETWORK}/organizations/peerOrganizations/org${n}.example.com/org${n}.json" 2>/dev/null)
+    > "${org_root}/org${n}.json" 2>/dev/null)
   rm -rf "${cfgdir}"
 
   echo ">> [org${n}] writing docker compose files..."
@@ -339,7 +436,7 @@ if [ ! -d "${TEST_NETWORK}/organizations/peerOrganizations/org3.example.com" ]; 
   exit 1
 fi
 
-for f in "${ADD_ORG3}"/compose/compose-org*.yaml; do
+for f in "${ADD_ORG3}"/compose/compose-org*.yaml "${ADD_ORG3}"/compose/compose-ca-org*.yaml; do
   [ -e "$f" ] || continue
   base="${f##*/}"
   n="${base#compose-org}"; n="${n%.yaml}"

@@ -1,5 +1,4 @@
 from __future__ import annotations
-import hashlib
 import hmac
 import os
 import secrets
@@ -9,6 +8,7 @@ import time
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+import bcrypt
 import jwt
 from fastapi import Depends, HTTPException, Header
 
@@ -24,17 +24,14 @@ def get_auth_mode() -> str:
     """Read AUTH_MODE dynamically so env var changes at runtime are picked up."""
     return os.environ.get("AUTH_MODE", "bootstrap").strip().lower()
 
-# Password hashing (SHA-256 + pepper, no bcrypt dependency for POC simplicity)
-
-_PEPPER = os.environ.get("PASSWORD_PEPPER", "misinfo-monitor-2024")
+# Password hashing (bcrypt)
 
 def hash_password(password: str) -> str:
-    #SHA-256(pepper + password)
-    return hashlib.sha256(f"{_PEPPER}:{password}".encode("utf-8")).hexdigest()
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 
 def verify_password(password: str, hashed: str) -> bool:
-    return hmac.compare_digest(hash_password(password), hashed)
+    return bcrypt.checkpw(password.encode("utf-8"), hashed.encode("utf-8"))
 
 # JWT helpers
 

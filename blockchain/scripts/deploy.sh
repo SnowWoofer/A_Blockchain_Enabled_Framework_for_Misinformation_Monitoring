@@ -76,8 +76,8 @@ if [ -n "${RESET_NETWORK}" ]; then
   fi
 fi
 
-echo ">> Starting the test network..."
-./network.sh up ${STATE_DB_ARGS}
+echo ">> Starting the test network (Fabric CA mode)..."
+./network.sh up -ca ${STATE_DB_ARGS}
 echo ">> Creating channel ${CHANNEL_NAME}..."
 ./network.sh createChannel -c "${CHANNEL_NAME}"
 echo ">> Deploying ${CC_NAME} v${CC_VERSION} (${CC_SRC_LANGUAGE})..."
@@ -90,8 +90,8 @@ echo ">> Deploying ${CC_NAME} v${CC_VERSION} (${CC_SRC_LANGUAGE})..."
   ${CC_ENDORSEMENT_POLICY}
 
 if [ -n "${THREE_ORG}" ]; then
-  echo ">> Bringing up org3 (addOrg3)..."
-  (cd "${TEST_NETWORK}/addOrg3" && ./addOrg3.sh up)
+  echo ">> Bringing up org3 (addOrg3, Fabric CA mode)..."
+  (cd "${TEST_NETWORK}/addOrg3" && ./addOrg3.sh up -ca)
   echo ">> Switching to a 2-of-3 endorsement policy..."
   "${SCRIPT_DIR}/onboard-org3.sh"
 fi
@@ -101,13 +101,15 @@ if [ -n "${THREE_ORG}" ] && [ "${FOUNDING_LIMIT}" -gt 3 ]; then
   "${SCRIPT_DIR}/add-orgs.sh" --orgs "${FOUNDING_LIMIT}"
 fi
 
+"${SCRIPT_DIR}/register-roles.sh" --limit "${FOUNDING_LIMIT}"
+
 if [ "${FOUNDING_LIMIT}" -ne 3 ]; then
   echo ">> Setting founding org limit to ${FOUNDING_LIMIT} (stress-test mode)..."
   export FABRIC_CFG_PATH="${TEST_NETWORK}/../config"
   export CORE_PEER_TLS_ENABLED=true
   export CORE_PEER_LOCALMSPID="Org1MSP"
   export CORE_PEER_TLS_ROOTCERT_FILE="${TEST_NETWORK}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt"
-  export CORE_PEER_MSPCONFIGPATH="${TEST_NETWORK}/organizations/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp"
+  export CORE_PEER_MSPCONFIGPATH="${TEST_NETWORK}/organizations/peerOrganizations/org1.example.com/users/official1@org1.example.com/msp"
   export CORE_PEER_ADDRESS="localhost:7051"
   payload=$(python3 -c "import json,sys; print(json.dumps({'function':'SetFoundingOrgLimit','Args':['${FOUNDING_LIMIT}']}))")
   peer chaincode invoke -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com \

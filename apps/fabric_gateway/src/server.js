@@ -36,8 +36,25 @@ function readPrivateKey(dir) {
 // 'OrgNMSP.client'), while OR('OrgNMSP.admin') alone gates channel-config
 // changes. A member that only ever fact-checks should therefore sign as
 // User1 (OU=client) and keep its admin key offline — set IDENTITY_ORG4=User1.
+//
+// For ABAC, role-bearing identities are registered by register-roles.sh:
+//   officialN@orgN.example.com   — role=official  (admin/governance)
+//   factcheckerN@orgN.example.com — role=fact_checker (submit/fact-check)
+// Set GATEWAY_ROLE=official or GATEWAY_ROLE=fact_checker to select one.
 function identityNameFor(num) {
+  const role = (process.env.GATEWAY_ROLE || '').trim();
+  if (role === 'official')   return `official${num}`;
+  if (role === 'fact_checker') return `factchecker${num}`;
   return process.env[`IDENTITY_ORG${num}`] || 'Admin';
+}
+
+function loadCert(signcertsDir, user) {
+  // cryptogen produces <user>-cert.pem; Fabric CA produces cert.pem
+  const preferred = path.join(signcertsDir, `${user}-cert.pem`);
+  if (fs.existsSync(preferred)) return fs.readFileSync(preferred);
+  const fallback = path.join(signcertsDir, 'cert.pem');
+  if (fs.existsSync(fallback)) return fs.readFileSync(fallback);
+  throw new Error(`no certificate found in ${signcertsDir}`);
 }
 
 function loadIdentity(org) {
@@ -52,7 +69,7 @@ function loadIdentity(org) {
   );
   return {
     mspId: `Org${num}MSP`,
-    cert: fs.readFileSync(path.join(mspDir, 'signcerts', `${user}-cert.pem`)),
+    cert: loadCert(path.join(mspDir, 'signcerts'), user),
     key: readPrivateKey(path.join(mspDir, 'keystore')),
   };
 }
@@ -106,6 +123,7 @@ app.get('/health', (_req, res) => {
     chaincode: CHAINCODE,
     gateway_peer: GATEWAY_PEER,
     gateway_target: GATEWAY_TARGET,
+    gateway_role: process.env.GATEWAY_ROLE || 'admin',
     identities: ORGS,
   });
 });
@@ -168,6 +186,6 @@ app.post('/query', async (req, res) => {
 app.listen(PORT, () => {
   console.log(
     `[gateway-service] listening on :${PORT} | channel=${CHANNEL} cc=${CHAINCODE} ` +
-      `peer=${GATEWAY_TARGET} override=${TLS_NAME_OVERRIDE} orgs=[${ORGS.join(',')}]`
+      `peer=${GATEWAY_TARGET} override=${TLS_NAME_OVERRIDE} role=${process.env.GATEWAY_ROLE || 'admin'} orgs=[${ORGS.join(',')}]`
   );
 });

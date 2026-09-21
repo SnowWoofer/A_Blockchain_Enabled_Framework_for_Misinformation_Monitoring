@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hyperledger/fabric-chaincode-go/v2/pkg/cid"
 	"github.com/hyperledger/fabric-contract-api-go/v2/contractapi"
 )
 
@@ -30,6 +31,24 @@ const (
 
 func isValidOutcome(v string) bool {
 	return v == outcomeNonMisinformation || v == outcomeMisinformation
+}
+
+// requireRole checks that the transaction submitter carries one of the
+// allowed ABAC roles in its X509 certificate attribute extension.
+func requireRole(ctx contractapi.TransactionContextInterface, allowedRoles ...string) error {
+	role, found, err := cid.GetAttributeValue(ctx.GetStub(), "role")
+	if err != nil {
+		return fmt.Errorf("failed to read role attribute: %v", err)
+	}
+	if !found {
+		return fmt.Errorf("no role attribute found on identity")
+	}
+	for _, r := range allowedRoles {
+		if role == r {
+			return nil
+		}
+	}
+	return fmt.Errorf("identity has role %q; required one of %v", role, allowedRoles)
 }
 
 // FactCheck deliberately carries only what the on-chain consensus tally needs.
@@ -120,6 +139,9 @@ func (c *MisinformationContract) foundingOrgLimit(ctx contractapi.TransactionCon
 func (c *MisinformationContract) SetFoundingOrgLimit(
 	ctx contractapi.TransactionContextInterface, limit int,
 ) (int, error) {
+	if err := requireRole(ctx, "official"); err != nil {
+		return 0, err
+	}
 	if limit < 1 {
 		return 0, fmt.Errorf("founding org limit must be >= 1, got %d", limit)
 	}
@@ -327,6 +349,9 @@ func (c *MisinformationContract) VoteOnOrgAdmission(
 	} else if !ok {
 		return fmt.Errorf("org %s is not a registered stakeholder; call RegisterOrg first", voterMSP)
 	}
+	if err := requireRole(ctx, "official"); err != nil {
+		return err
+	}
 	if verdict != "0" && verdict != "1" {
 		return fmt.Errorf("verdict must be \"0\" or \"1\", got %q", verdict)
 	}
@@ -384,6 +409,9 @@ func (c *MisinformationContract) FinalizeOrgAdmission(
 		return err
 	} else if !ok {
 		return fmt.Errorf("org %s is not a registered stakeholder; call RegisterOrg first", finalizerMSP)
+	}
+	if err := requireRole(ctx, "official"); err != nil {
+		return err
 	}
 	key, err := newAdmissionKey(ctx, candidateMSP)
 	if err != nil {
@@ -485,6 +513,9 @@ func (c *MisinformationContract) Submit(
 	} else if !ok {
 		return fmt.Errorf("org %s is not a registered stakeholder; call RegisterOrg first", submittedBy)
 	}
+	if err := requireRole(ctx, "official", "fact_checker"); err != nil {
+		return err
+	}
 	key, err := newReportKey(ctx, reportID)
 	if err != nil {
 		return fmt.Errorf("failed to build key: %v", err)
@@ -531,6 +562,9 @@ func (c *MisinformationContract) SubmitFactCheck(
 		return err
 	} else if !ok {
 		return fmt.Errorf("org %s is not a registered stakeholder; call RegisterOrg first", checkerMSP)
+	}
+	if err := requireRole(ctx, "official", "fact_checker"); err != nil {
+		return err
 	}
 	if !isValidOutcome(outcome) {
 		return fmt.Errorf("outcome must be \"0\" or \"1\", got %q", outcome)
@@ -620,6 +654,9 @@ func (c *MisinformationContract) FinalizeReport(
 	} else if !ok {
 		return fmt.Errorf("org %s is not a registered stakeholder; call RegisterOrg first", finalizerMSP)
 	}
+	if err := requireRole(ctx, "official"); err != nil {
+		return err
+	}
 	key, err := newReportKey(ctx, reportID)
 	if err != nil {
 		return fmt.Errorf("failed to build key: %v", err)
@@ -680,6 +717,9 @@ func (c *MisinformationContract) ExpireReport(
 		return err
 	} else if !ok {
 		return fmt.Errorf("org %s is not a registered stakeholder; call RegisterOrg first", finalizerMSP)
+	}
+	if err := requireRole(ctx, "official"); err != nil {
+		return err
 	}
 	key, err := newReportKey(ctx, reportID)
 	if err != nil {

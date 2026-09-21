@@ -6,6 +6,7 @@ services:
     environment:
       - CRYPTO_PATH=/crypto
       - ORGS=${ORGS_LIST}
+      - GATEWAY_ROLE=official
       - IDENTITY_ORG4=${IDENTITY_ORG4:-User1}
       - IDENTITY_ORG5=${IDENTITY_ORG5:-User1}
       - CHANNEL=mychannel

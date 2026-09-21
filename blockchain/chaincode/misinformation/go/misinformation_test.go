@@ -22,9 +22,10 @@ func newTestStub(t *testing.T) *MockStub {
 	}
 	stub := &MockStub{
 		cc:          cc,
-		State:       map[string][]byte{}, //Init as empty Map (string,byte)
+		State:       map[string][]byte{},
 		TxID:        "tx1",
 		TxTimestamp: nil,
+		Attrs:       map[string]string{"role": "official"},
 	}
 	stub.args = [][]byte{} 
 	stub.signedProposal = &peer.SignedProposal{}
@@ -538,5 +539,83 @@ func TestQuorumForMatchesEarlyAcceptanceThreshold(t *testing.T) {
 		if q != early {
 			t.Errorf("quorumFor(%d)=%d but ceil(2/3*%d)=%d — mismatch", n, q, n, early)
 		}
+	}
+}
+
+// ---------- ABAC (Attribute-Based Access Control) ----------
+
+// newTestStubWithRole creates a stub where the caller identity carries the
+// given "role" attribute in its X509 certificate.
+func newTestStubWithRole(t *testing.T, role string) *MockStub {
+	t.Helper()
+	stub := newTestStub(t)
+	stub.Attrs = map[string]string{"role": role}
+	return stub
+}
+
+func TestABAC_FactCheckerCanSubmit(t *testing.T) {
+	stub := newTestStubWithRole(t, "fact_checker")
+	registerOrgs(t, stub, "Org1MSP")
+	if res := submitReport(stub, "tx1", "Org1MSP", "rep-abac"); res.Status != 200 {
+		t.Fatalf("fact_checker should be able to submit: %s", res.Message)
+	}
+}
+
+func TestABAC_ObserverCannotSubmit(t *testing.T) {
+	stub := newTestStubWithRole(t, "observer")
+	registerOrgs(t, stub, "Org1MSP")
+	if res := submitReport(stub, "tx1", "Org1MSP", "rep-abac"); res.Status == 200 {
+		t.Fatalf("observer should not be able to submit")
+	}
+}
+
+func TestABAC_NoRoleRejected(t *testing.T) {
+	stub := newTestStub(t)
+	stub.Attrs = nil // no role attribute
+	registerOrgs(t, stub, "Org1MSP")
+	if res := submitReport(stub, "tx1", "Org1MSP", "rep-abac"); res.Status == 200 {
+		t.Fatalf("identity with no role should be rejected")
+	}
+}
+
+func TestABAC_FactCheckerCanFactCheck(t *testing.T) {
+	stub := newTestStubWithRole(t, "fact_checker")
+	registerOrgs(t, stub, "Org1MSP")
+	submitReport(stub, "tx1", "Org1MSP", "rep-abac")
+	if res := invokeAs(stub, "tx2", "Org1MSP", "SubmitFactCheck", "rep-abac", "1"); res.Status != 200 {
+		t.Fatalf("fact_checker should be able to fact-check: %s", res.Message)
+	}
+}
+
+func TestABAC_ObserverCannotFactCheck(t *testing.T) {
+	stub := newTestStubWithRole(t, "observer")
+	registerOrgs(t, stub, "Org1MSP")
+	submitReport(stub, "tx1", "Org1MSP", "rep-abac")
+	if res := invokeAs(stub, "tx2", "Org1MSP", "SubmitFactCheck", "rep-abac", "1"); res.Status == 200 {
+		t.Fatalf("observer should not be able to fact-check")
+	}
+}
+
+func TestABAC_FactCheckerCannotFinalize(t *testing.T) {
+	stub := newTestStubWithRole(t, "fact_checker")
+	registerOrgs(t, stub, "Org1MSP")
+	submitReport(stub, "tx1", "Org1MSP", "rep-abac")
+	invokeAs(stub, "tx2", "Org1MSP", "SubmitFactCheck", "rep-abac", "1")
+	// FinalizeReport requires "official"
+	if res := invokeAs(stub, "tx3", "Org1MSP", "FinalizeReport", "rep-abac"); res.Status == 200 {
+		t.Fatalf("fact_checker should not be able to finalize")
+	}
+}
+
+func TestABAC_ObserverCanQuery(t *testing.T) {
+	stub := newTestStubWithRole(t, "official")
+	registerOrgs(t, stub, "Org1MSP")
+	submitReport(stub, "tx1", "Org1MSP", "rep-abac")
+
+	// Create observer stub sharing the same ledger state
+	obs := newTestStubWithRole(t, "observer")
+	obs.State = stub.State
+	if res := invokeAs(obs, "tx2", "Org1MSP", "QueryReport", "rep-abac"); res.Status != 200 {
+		t.Fatalf("observer should be able to query: %s", res.Message)
 	}
 }

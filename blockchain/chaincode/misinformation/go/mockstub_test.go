@@ -9,6 +9,7 @@ import (
 	"crypto/rand"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/json"
 	"encoding/pem"
 	"errors"
 	"math/big"
@@ -16,6 +17,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hyperledger/fabric-chaincode-go/v2/pkg/attrmgr"
 	"github.com/hyperledger/fabric-chaincode-go/v2/shim"
 	"github.com/hyperledger/fabric-protos-go-apiv2/ledger/queryresult"
 	mspproto "github.com/hyperledger/fabric-protos-go-apiv2/msp"
@@ -23,8 +25,6 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
-
-var testIdentityPEMOnce []byte
 
 const (
 	minUnicodeRuneValue = 0 //U+0000
@@ -60,6 +60,10 @@ type MockStub struct {
 
 	// CreatorMSP is the MSP the mock transaction is signed by (default Org1MSP).
 	CreatorMSP string
+
+	// Attrs holds X509 certificate attributes for ABAC testing.
+	// When set, GetCreator() embeds these as the attribute extension (OID 1.2.3.4.5.6.7.8.1).
+	Attrs map[string]string
 }
 
 // GetTxID ...
@@ -378,45 +382,62 @@ func (stub *MockStub) InvokeChaincode(chaincodeName string, args [][]byte, chann
 	return nil
 }
 
-// GetCreator ...
+// GetCreator returns a SerializedIdentity whose X509 cert carries any
+// attributes set in stub.Attrs (embedded via the Fabric attribute extension
+// OID 1.2.3.4.5.6.7.8.1 so that cid.GetAttributeValue works in chaincode).
 func (stub *MockStub) GetCreator() ([]byte, error) {
 	mspid := stub.CreatorMSP
 	if mspid == "" {
 		mspid = "Org1MSP"
 	}
+
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return nil, err
+	}
+
+	template := &x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject:      pkix.Name{CommonName: "mock-user", Organization: []string{mspid}},
+		NotBefore:    time.Now().Add(-time.Hour),
+		NotAfter:     time.Now().Add(time.Hour),
+		KeyUsage:     x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
+	}
+
+	// Embed ABAC attributes into the cert via ExtraExtensions.
+	// We use ExtraExtensions (not Extensions) because Go's x509.CreateCertificate
+	// silently drops extensions from template.Extensions that it doesn't recognise.
+	if len(stub.Attrs) > 0 {
+		attrs := &attrmgr.Attributes{Attrs: make(map[string]string)}
+		for k, v := range stub.Attrs {
+			attrs.Attrs[k] = v
+		}
+		attrJSON, err := json.Marshal(attrs)
+		if err != nil {
+			return nil, err
+		}
+		template.ExtraExtensions = append(template.ExtraExtensions, pkix.Extension{
+			Id:       attrmgr.AttrOID,
+			Critical: false,
+			Value:    attrJSON,
+		})
+	}
+
+	der, err := x509.CreateCertificate(rand.Reader, template, template, &key.PublicKey, key)
+	if err != nil {
+		return nil, err
+	}
+	certPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der})
+
 	serialized, err := proto.Marshal(&mspproto.SerializedIdentity{
 		Mspid:   mspid,
-		IdBytes: testIdentityPEM(),
+		IdBytes: certPEM,
 	})
 	if err != nil {
 		return nil, err
 	}
 	return serialized, nil
-}
-
-// testIdentityPEM returns a self-signed X509 cert used as the mock transaction invoker.
-func testIdentityPEM() []byte {
-	if testIdentityPEMOnce == nil {
-		key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-		if err != nil {
-			return nil
-		}
-		template := &x509.Certificate{
-			SerialNumber: big.NewInt(1),
-			Subject:      pkix.Name{CommonName: "mock-user", Organization: []string{"Org1MSP"}},
-			NotBefore:    time.Now().Add(-time.Hour),
-			NotAfter:     time.Now().Add(time.Hour),
-			KeyUsage:     x509.KeyUsageDigitalSignature,
-			ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
-		}
-		der, err := x509.CreateCertificate(rand.Reader, template, template, &key.PublicKey, key)
-		if err != nil {
-			return nil
-		}
-		block := &pem.Block{Type: "CERTIFICATE", Bytes: der}
-		testIdentityPEMOnce = pem.EncodeToMemory(block)
-	}
-	return testIdentityPEMOnce
 }
 
 // SetTransient set TransientMap to mockStub
