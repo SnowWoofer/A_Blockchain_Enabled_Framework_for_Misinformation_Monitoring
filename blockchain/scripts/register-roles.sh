@@ -1,14 +1,6 @@
 #!/usr/bin/env bash
-#
+
 # Register role-bearing identities for each org via Fabric CA.
-#
-# For each org N (1..LIMIT), this script registers and enrolls:
-#   - officialN   (role=official)   — admin/governance operations
-#   - factcheckerN (role=fact_checker) — submit + fact-check operations
-#
-# All orgs use Fabric CA (org1-3 from network.sh, org4+ from add-orgs.sh).
-# CA ports: org1=7054, org2=8054, org3=11054, org4+=12054+
-#
 # Usage:  ./register-roles.sh [--limit 5]
 
 set -euo pipefail
@@ -31,13 +23,13 @@ if ! [[ "${LIMIT}" =~ ^[0-9]+$ ]] || [ "${LIMIT}" -lt 1 ]; then
   exit 1
 fi
 
-# CA ports: org1=7054, org2=8054, org3=11054, org4+=12054,13054,...
+# CA ports
 ca_port() {
   case "$1" in
     1) echo 7054 ;;
     2) echo 8054 ;;
     3) echo 11054 ;;
-    *) if [ "$1" -ge 4 ]; then echo $((12054 + 1000 * ($1 - 4))); else echo ""; fi ;;
+    *) if [ "$1" -ge 4 ]; then echo $((12054 + 100 * ($1 - 4))); else echo ""; fi ;;
   esac
 }
 
@@ -71,8 +63,7 @@ enroll_ca_admin() {
   local n="$1" port="$2" cert="$3"
   local org_root="${TEST_NETWORK}/organizations/peerOrganizations/org${n}.example.com"
 
-  # Must set FABRIC_CA_CLIENT_HOME BEFORE the skip check so that
-  # subsequent fabric-ca-client register calls can find the enrollment.
+  # Must set FABRIC_CA_CLIENT_HOME BEFORE the skip check so that subsequent fabric-ca-client register calls can find the enrollment.
   export FABRIC_CA_CLIENT_HOME="${org_root}"
 
   if [ -d "${org_root}/msp/keystore" ]; then

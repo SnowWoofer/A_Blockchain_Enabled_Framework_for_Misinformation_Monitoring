@@ -1,14 +1,6 @@
 #!/usr/bin/env bash
-# Onboard Org3: install + approve the misinformation chaincode on all THREE
-# orgs and re-commit with a 2-of-3 endorsement policy.
-#
-# Prereqs (in order):
-#   1. ./scripts/deploy.sh              # 2-org network + chaincode committed
-#   2. test-network/addOrg3/addOrg3.sh up   # org3 peer running + on channel
-# Then: ./scripts/onboard-org3.sh
-#
-# Outcome: endorsement policy becomes OutOf(2, Org1MSP, Org2MSP, Org3MSP) —
-# a quorum of 2 of the 3 stakeholder orgs must endorse every transaction.
+# Onboard Org3: install + approve the misinformation chaincode on all THREE orgs and re-commit with a 2-of-3 endorsement policy.
+
 
 set -euo pipefail
 
@@ -49,13 +41,13 @@ use_org() {
       export CORE_PEER_LOCALMSPID="Org2MSP"
       export CORE_PEER_TLS_ROOTCERT_FILE="${ORG2_TLS}"
       export CORE_PEER_MSPCONFIGPATH="${TEST_NETWORK}/organizations/peerOrganizations/org2.example.com/users/Admin@org2.example.com/msp"
-      export CORE_PEER_ADDRESS="localhost:9051"
+      export CORE_PEER_ADDRESS="localhost:7151"
       ;;
     org3)
       export CORE_PEER_LOCALMSPID="Org3MSP"
       export CORE_PEER_TLS_ROOTCERT_FILE="${ORG3_TLS}"
       export CORE_PEER_MSPCONFIGPATH="${TEST_NETWORK}/organizations/peerOrganizations/org3.example.com/users/Admin@org3.example.com/msp"
-      export CORE_PEER_ADDRESS="localhost:11051"
+      export CORE_PEER_ADDRESS="localhost:7251"
       ;;
   esac
 }
@@ -74,7 +66,7 @@ echo ">> Package ID: ${PACKAGE_ID}"
 for org in org1 org2 org3; do
   echo ">> Install on ${org}..."
   use_org "${org}"
-  # "already installed" is fine (idempotent); only a genuine failure aborts.
+  # already installed is ok, only a real failure aborts.
   if ! out=$(peer lifecycle chaincode install misinformation-org3.tar.gz 2>&1); then
     if ! echo "${out}" | grep -q "already successfully installed"; then
       echo "${out}" >&2
@@ -112,8 +104,8 @@ peer lifecycle chaincode commit -o localhost:7050 \
   --version "${CC_VERSION}" --sequence "${CC_SEQUENCE}" \
   --signature-policy "${POLICY}" \
   --peerAddresses localhost:7051 --tlsRootCertFiles "${ORG1_TLS}" \
-  --peerAddresses localhost:9051 --tlsRootCertFiles "${ORG2_TLS}" \
-  --peerAddresses localhost:11051 --tlsRootCertFiles "${ORG3_TLS}" \
+  --peerAddresses localhost:7151 --tlsRootCertFiles "${ORG2_TLS}" \
+  --peerAddresses localhost:7251 --tlsRootCertFiles "${ORG3_TLS}" \
   --tls --cafile "${ORDERER_TLS}" \
   --waitForEvent 2>&1 | tail -2
 

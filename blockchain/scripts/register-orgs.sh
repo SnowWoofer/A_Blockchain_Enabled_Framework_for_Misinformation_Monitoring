@@ -1,8 +1,5 @@
 #!/usr/bin/env bash
-# register-orgs.sh — register stakeholder orgs 1..N on-chain via the
-# "misinformation" chaincode. The chaincode's SubmitReport rejects work from any
-# caller whose MSP is not a registered org, so this must run after the network
-# is up (this is wired into deploy.sh).
+# register-orgs.sh == register stakeholder orgs 1..N on-chain via the misinformation chaincode.
 
 set -euo pipefail
 
@@ -39,7 +36,7 @@ ORDERER_CA="${TEST_NETWORK}/organizations/ordererOrganizations/example.com/order
 ORG1_TLS="${TEST_NETWORK}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt"
 ORG2_TLS="${TEST_NETWORK}/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt"
 
-org_peer_port() { echo $((7051 + 2000 * ($1 - 1))); }
+org_peer_port() { echo $((7051 + 100 * ($1 - 1))); }
 
 use_org() {
   local n="$1"
@@ -61,7 +58,7 @@ for n in $(seq 1 "${LIMIT}"); do
     --tls --cafile "${ORDERER_CA}" \
     -C "${CHANNEL_NAME}" -n "${CC_NAME}" \
     --peerAddresses localhost:7051 --tlsRootCertFiles "${ORG1_TLS}" \
-    --peerAddresses localhost:9051 --tlsRootCertFiles "${ORG2_TLS}" \
+    --peerAddresses localhost:7151 --tlsRootCertFiles "${ORG2_TLS}" \
     --waitForEvent -c "${payload}" 2>&1 | tail -1
 done
 

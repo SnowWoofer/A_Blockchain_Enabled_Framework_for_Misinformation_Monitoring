@@ -1,15 +1,6 @@
 #!/usr/bin/env python3
 """Independent verifier for a fact-checking organisation that runs NO
-infrastructure — no Fabric peer, no IPFS node, no database.
-
-It answers one question: does the claim document I was handed match the hash
-the consortium anchored on the ledger? That check is pure arithmetic, so it
-does not require trusting whoever served either the document or the record.
-
-    ./thin-verifier.py <report-id> [--api http://host:8000] [--key key-org3]
-    ./thin-verifier.py <report-id> --document ./copy-i-was-sent.json
-
-Exit status is 0 only if the document verifies.
+infrastructure (no Fabric peer, no IPFS node, no database).
 """
 import argparse
 import hashlib

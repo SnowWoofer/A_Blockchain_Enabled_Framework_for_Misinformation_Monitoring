@@ -36,7 +36,7 @@ class FabricBridge:
         env = os.environ.copy()
         tn = self.test_network
         org_dir = f"org{self.org[3:]}.example.com"
-        ports = {"org1": "7051", "org2": "9051", "org3": "11051"}
+        ports = {"org1": "7051", "org2": "7151", "org3": "7251"}
         msps = {"org1": "Org1MSP", "org2": "Org2MSP", "org3": "Org3MSP"}
         peer_port = ports.get(self.org, "7051")
         env.update(
@@ -90,7 +90,7 @@ class FabricBridge:
         return self._run(cmd)
     @staticmethod
     def _peer_port(org: str) -> str:
-        return {"org1": "7051", "org2": "9051", "org3": "11051"}.get(org, "7051")
+        return {"org1": "7051", "org2": "7151", "org3": "7251"}.get(org, "7051")
 
     def _peer_tls_ca(self, org: str) -> str:
         mspid = {"org1": "org1", "org2": "org2", "org3": "org3"}.get(org, "org1")

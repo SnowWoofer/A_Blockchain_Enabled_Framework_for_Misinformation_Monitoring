@@ -134,7 +134,7 @@ if [ "${FOUNDING_LIMIT}" -ne 3 ]; then
     --tls --cafile "${TEST_NETWORK}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem" \
     -C "${CHANNEL_NAME}" -n "${CC_NAME}" \
     --peerAddresses localhost:7051 --tlsRootCertFiles "${CORE_PEER_TLS_ROOTCERT_FILE}" \
-    --peerAddresses localhost:9051 --tlsRootCertFiles "${TEST_NETWORK}/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt" \
+    --peerAddresses localhost:7151 --tlsRootCertFiles "${TEST_NETWORK}/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt" \
     --waitForEvent -c "${payload}" >/dev/null
 
 fi

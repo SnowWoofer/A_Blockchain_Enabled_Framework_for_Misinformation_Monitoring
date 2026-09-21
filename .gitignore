@@ -87,3 +87,4 @@ report
 benchmarks/run_remaining.sh
 misinformation-abac.tar.gz
 benchmarks/run_overnight_abac.sh
+swarm.key

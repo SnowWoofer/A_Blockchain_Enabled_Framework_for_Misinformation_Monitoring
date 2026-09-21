@@ -1,24 +1,6 @@
 #!/usr/bin/env bash
-#
-# Adds a CLIENT-ONLY organisation to the channel: an MSP identity with no peer,
-# no ledger copy and no infrastructure of any kind.
-#
-# Why this exists: most credible fact-checking organisations — newsrooms,
-# universities, civil-society groups — cannot fund a 24/7 blockchain node. They
-# can still be full voting members of the consortium. A member needs ~44KB of
-# crypto material to sign with; endorsement is supplied by whichever orgs do run
-# peers (the policy is OutOf(2,...), satisfied by the founding three).
-#
-# What a client-only org CAN do:
-#   - sign and submit transactions; its votes are recorded under its own MSP,
-#     and no peer can forge or alter them
-#   - independently verify any claim (see thin-verifier.py)
-# What it CANNOT do:
-#   - endorse. The org definition's Endorsement policy is OR('OrgNMSP.peer'),
-#     which an org with no peers can never satisfy. This is correct, not a
-#     limitation to work around.
-#   - hold its own ledger replica, so it must read through someone's peer.
-#
+
+# Adds a CLIENT-ONLY organisation to the channel: an MSP identity with no peer, no ledger copy and no infrastructure of any kind.
 # Usage:  ./add-client-org.sh [--org 4] [--channel mychannel]
 set -euo pipefail
 
@@ -56,10 +38,10 @@ use_org() {
   export CORE_PEER_LOCALMSPID="Org${n}MSP"
   export CORE_PEER_TLS_ROOTCERT_FILE="${TEST_NETWORK}/organizations/peerOrganizations/org${n}.example.com/peers/peer0.org${n}.example.com/tls/ca.crt"
   export CORE_PEER_MSPCONFIGPATH="${TEST_NETWORK}/organizations/peerOrganizations/org${n}.example.com/users/Admin@org${n}.example.com/msp"
-  export CORE_PEER_ADDRESS="localhost:$((7051 + 2000 * (n - 1)))"
+  export CORE_PEER_ADDRESS="localhost:$((7051 + 100 * (n - 1)))"
 }
 
-# ---------------------------------------------------------------- crypto ----
+#crypto
 if [ -d "${ORGDIR}/users/Admin@org${N}.example.com/msp" ]; then
   echo ">> [org${N}] crypto material already present — skipping cryptogen."
 else
@@ -78,13 +60,12 @@ EOF
   (cd "${TEST_NETWORK}" && cryptogen generate --config="${crypto_yaml}" --output="./organizations" >/dev/null)
   rm -f "${crypto_yaml}"
 fi
-# No peers/ directory is the expected outcome here — count defensively, since
-# `ls` on a missing path fails and `set -o pipefail` would abort the script.
+# No peers/ directory is the expected outcome here since ls on a missing path fails and set -o pipefail would abort the script.
 peers_made=0
 [ -d "${ORGDIR}/peers" ] && peers_made="$(find "${ORGDIR}/peers" -mindepth 1 -maxdepth 1 | wc -l)"
 echo ">> [org${N}] peers provisioned: ${peers_made} (expected 0)"
 
-# ------------------------------------------------------- org definition -----
+# org definition
 echo ">> [org${N}] generating org definition (configtxgen)..."
 cfgdir="${ADD_ORG3}/.configtx-client-org${N}"
 mkdir -p "${cfgdir}"
@@ -96,7 +77,7 @@ sed -e "s|MSPDir: ../organizations|MSPDir: ../../organizations|" \
 rm -rf "${cfgdir}"
 [ -s "${ORGDIR}/org${N}.json" ] || { echo "ERROR: empty org definition" >&2; exit 1; }
 
-# ------------------------------------------------- channel config update ----
+# channel config update 
 echo ">> [org${N}] adding Org${N}MSP to channel '${CHANNEL_NAME}'..."
 use_org 1
 peer channel fetch config "${ARTIFACTS}/config_block.pb" \
@@ -127,7 +108,6 @@ else
   configtxlator proto_encode --input "${ARTIFACTS}/config_update_in_envelope.json" --type common.Envelope --output "${TX}"
 
   # The Application group's mod_policy is MAJORITY Admins, so the update needs
-  # signatures from a majority of the existing member orgs.
   for i in 1 2; do use_org "${i}"; peer channel signconfigtx -f "${TX}" >/dev/null 2>&1 || true; done
   use_org 3
   peer channel update -f "${TX}" -c "${CHANNEL_NAME}" \

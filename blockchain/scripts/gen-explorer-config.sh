@@ -39,7 +39,7 @@ peer_entries = {}
 for i in range(1, n + 1):
     org = f"org{i}"
     msp = f"Org{i}MSP"
-    port = 7051 + 2000 * (i - 1)
+    port = 7051 + 100 * (i - 1)
     peer = f"peer0.{org}.example.com"
     peers.append(peer)
     organizations[msp] = {

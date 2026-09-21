@@ -46,7 +46,7 @@ export FABRIC_CFG_PATH="${TEST_NETWORK}/../config"
 export CORE_PEER_TLS_ENABLED=true
 ORDERER_CA="${TEST_NETWORK}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem"
 
-org_peer_port() { echo $((7051 + 2000 * ($1 - 1))); }
+org_peer_port() { echo $((7051 + 100 * ($1 - 1))); }
 
 use_org() {
   local n="$1"
@@ -116,8 +116,8 @@ add_org_assets() {
   p1="$(org_peer_port "${n}")"
   p2=$((p1 + 1))
 
-  # ── Fabric CA crypto for org4+ ──────────────────────────────────
-  local ca_p=$((12054 + 1000 * (n - 4)))
+  # Fabric CA crypto for org4+ 
+  local ca_p=$((12054 + 100 * (n - 4)))
   local ca_cert_dir="${ADD_ORG3}/fabric-ca/org${n}"
   local org_root="${TEST_NETWORK}/organizations/peerOrganizations/org${n}.example.com"
 

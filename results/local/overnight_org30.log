@@ -1,0 +1,1485 @@
+>> 1/7: Ensuring Docker networks exist...
+>> 2/7: Provisioning 30-org Fabric network...
+>> Resetting any existing network (fresh ledger)...
+>> Starting the test network (Fabric CA mode)...
+[0;34mUsing docker and docker compose[0m
+[0;34mStarting nodes with CLI timeout of '5' tries and CLI delay of '3' seconds and using database 'couchdb' with crypto from 'Certificate Authorities'[0m
+[0;34mLOCAL_VERSION=v2.5.16[0m
+[0;34mDOCKER_IMAGE_VERSION=v3.1.5[0m
+[1;33mLocal fabric binaries and docker images are out of sync. This may cause problems.[0m
+[0;34mCA_LOCAL_VERSION=v1.5.17[0m
+[0;34mCA_DOCKER_IMAGE_VERSION=v1.5.22[0m
+[1;33mLocal fabric-ca binaries and docker images are out of sync. This may cause problems.[0m
+[0;34mGenerating certificates using Fabric CA[0m
+ Network fabric_test Creating 
+ Network fabric_test Created 
+ Container ca_org2 Creating 
+ Container ca_orderer Creating 
+ Container ca_org1 Creating 
+ Container ca_orderer Created 
+ Container ca_org2 Created 
+ Container ca_org1 Created 
+ Container ca_org1 Starting 
+ Container ca_org2 Starting 
+ Container ca_orderer Starting 
+ Container ca_org2 Started 
+ Container ca_orderer Started 
+ Container ca_org1 Started 
++ fabric-ca-client getcainfo -u https://admin:adminpw@localhost:7054 --caname ca-org1 --tls.certfiles /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/fabric-ca/org1/ca-cert.pem
+2026/09/21 16:22:11 [INFO] Configuration file location: /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/fabric-ca-client-config.yaml
+2026/09/21 16:22:11 [INFO] TLS Enabled
+2026/09/21 16:22:11 [INFO] Stored root CA certificate at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/msp/cacerts/localhost-7054-ca-org1.pem
+2026/09/21 16:22:11 [INFO] Stored Issuer public key at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/msp/IssuerPublicKey
+2026/09/21 16:22:11 [INFO] Stored Issuer revocation public key at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/msp/IssuerRevocationPublicKey
++ res=0
+[0;34mCreating Org1 Identities[0m
+[0;34mEnrolling the CA admin[0m
++ fabric-ca-client enroll -u https://admin:adminpw@localhost:7054 --caname ca-org1 --tls.certfiles /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/fabric-ca/org1/ca-cert.pem
+2026/09/21 16:22:11 [INFO] Created a default configuration file at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/fabric-ca-client-config.yaml
+2026/09/21 16:22:11 [INFO] TLS Enabled
+2026/09/21 16:22:11 [INFO] generating key: &{A:ecdsa S:256}
+2026/09/21 16:22:11 [INFO] encoded CSR
+2026/09/21 16:22:11 [INFO] Stored client certificate at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/msp/signcerts/cert.pem
+2026/09/21 16:22:11 [INFO] Stored root CA certificate at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/msp/cacerts/localhost-7054-ca-org1.pem
+2026/09/21 16:22:11 [INFO] Stored Issuer public key at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/msp/IssuerPublicKey
+2026/09/21 16:22:11 [INFO] Stored Issuer revocation public key at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/msp/IssuerRevocationPublicKey
+[0;34mRegistering peer0[0m
++ fabric-ca-client register --caname ca-org1 --id.name peer0 --id.secret peer0pw --id.type peer --tls.certfiles /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/fabric-ca/org1/ca-cert.pem
+2026/09/21 16:22:11 [INFO] Configuration file location: /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/fabric-ca-client-config.yaml
+2026/09/21 16:22:11 [INFO] TLS Enabled
+2026/09/21 16:22:11 [INFO] TLS Enabled
+Password: peer0pw
+[0;34mRegistering user[0m
++ fabric-ca-client register --caname ca-org1 --id.name user1 --id.secret user1pw --id.type client --tls.certfiles /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/fabric-ca/org1/ca-cert.pem
+2026/09/21 16:22:11 [INFO] Configuration file location: /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/fabric-ca-client-config.yaml
+2026/09/21 16:22:11 [INFO] TLS Enabled
+2026/09/21 16:22:11 [INFO] TLS Enabled
+Password: user1pw
+[0;34mRegistering the org admin[0m
++ fabric-ca-client register --caname ca-org1 --id.name org1admin --id.secret org1adminpw --id.type admin --tls.certfiles /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/fabric-ca/org1/ca-cert.pem
+2026/09/21 16:22:11 [INFO] Configuration file location: /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/fabric-ca-client-config.yaml
+2026/09/21 16:22:11 [INFO] TLS Enabled
+2026/09/21 16:22:11 [INFO] TLS Enabled
+Password: org1adminpw
+[0;34mGenerating the peer0 msp[0m
++ fabric-ca-client enroll -u https://peer0:peer0pw@localhost:7054 --caname ca-org1 -M /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/msp --tls.certfiles /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/fabric-ca/org1/ca-cert.pem
+2026/09/21 16:22:11 [INFO] TLS Enabled
+2026/09/21 16:22:11 [INFO] generating key: &{A:ecdsa S:256}
+2026/09/21 16:22:11 [INFO] encoded CSR
+2026/09/21 16:22:11 [INFO] Stored client certificate at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/msp/signcerts/cert.pem
+2026/09/21 16:22:11 [INFO] Stored root CA certificate at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/msp/cacerts/localhost-7054-ca-org1.pem
+2026/09/21 16:22:11 [INFO] Stored Issuer public key at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/msp/IssuerPublicKey
+2026/09/21 16:22:11 [INFO] Stored Issuer revocation public key at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/msp/IssuerRevocationPublicKey
+[0;34mGenerating the peer0-tls certificates, use --csr.hosts to specify Subject Alternative Names[0m
++ fabric-ca-client enroll -u https://peer0:peer0pw@localhost:7054 --caname ca-org1 -M /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls --enrollment.profile tls --csr.hosts peer0.org1.example.com --csr.hosts localhost --tls.certfiles /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/fabric-ca/org1/ca-cert.pem
+2026/09/21 16:22:12 [INFO] TLS Enabled
+2026/09/21 16:22:12 [INFO] generating key: &{A:ecdsa S:256}
+2026/09/21 16:22:12 [INFO] encoded CSR
+2026/09/21 16:22:12 [INFO] Stored client certificate at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/signcerts/cert.pem
+2026/09/21 16:22:12 [INFO] Stored TLS root CA certificate at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/tlscacerts/tls-localhost-7054-ca-org1.pem
+2026/09/21 16:22:12 [INFO] Stored Issuer public key at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/IssuerPublicKey
+2026/09/21 16:22:12 [INFO] Stored Issuer revocation public key at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/IssuerRevocationPublicKey
+[0;34mGenerating the user msp[0m
++ fabric-ca-client enroll -u https://user1:user1pw@localhost:7054 --caname ca-org1 -M /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/users/User1@org1.example.com/msp --tls.certfiles /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/fabric-ca/org1/ca-cert.pem
+2026/09/21 16:22:12 [INFO] TLS Enabled
+2026/09/21 16:22:12 [INFO] generating key: &{A:ecdsa S:256}
+2026/09/21 16:22:12 [INFO] encoded CSR
+2026/09/21 16:22:12 [INFO] Stored client certificate at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/users/User1@org1.example.com/msp/signcerts/cert.pem
+2026/09/21 16:22:12 [INFO] Stored root CA certificate at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/users/User1@org1.example.com/msp/cacerts/localhost-7054-ca-org1.pem
+2026/09/21 16:22:12 [INFO] Stored Issuer public key at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/users/User1@org1.example.com/msp/IssuerPublicKey
+2026/09/21 16:22:12 [INFO] Stored Issuer revocation public key at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/users/User1@org1.example.com/msp/IssuerRevocationPublicKey
+[0;34mGenerating the org admin msp[0m
++ fabric-ca-client enroll -u https://org1admin:org1adminpw@localhost:7054 --caname ca-org1 -M /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp --tls.certfiles /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/fabric-ca/org1/ca-cert.pem
+2026/09/21 16:22:12 [INFO] TLS Enabled
+2026/09/21 16:22:12 [INFO] generating key: &{A:ecdsa S:256}
+2026/09/21 16:22:12 [INFO] encoded CSR
+2026/09/21 16:22:12 [INFO] Stored client certificate at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp/signcerts/cert.pem
+2026/09/21 16:22:12 [INFO] Stored root CA certificate at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp/cacerts/localhost-7054-ca-org1.pem
+2026/09/21 16:22:12 [INFO] Stored Issuer public key at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp/IssuerPublicKey
+2026/09/21 16:22:12 [INFO] Stored Issuer revocation public key at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp/IssuerRevocationPublicKey
+[0;34mCreating Org2 Identities[0m
+[0;34mEnrolling the CA admin[0m
++ fabric-ca-client enroll -u https://admin:adminpw@localhost:8054 --caname ca-org2 --tls.certfiles /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/fabric-ca/org2/ca-cert.pem
+2026/09/21 16:22:12 [INFO] Created a default configuration file at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/fabric-ca-client-config.yaml
+2026/09/21 16:22:12 [INFO] TLS Enabled
+2026/09/21 16:22:12 [INFO] generating key: &{A:ecdsa S:256}
+2026/09/21 16:22:12 [INFO] encoded CSR
+2026/09/21 16:22:12 [INFO] Stored client certificate at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/msp/signcerts/cert.pem
+2026/09/21 16:22:12 [INFO] Stored root CA certificate at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/msp/cacerts/localhost-8054-ca-org2.pem
+2026/09/21 16:22:12 [INFO] Stored Issuer public key at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/msp/IssuerPublicKey
+2026/09/21 16:22:12 [INFO] Stored Issuer revocation public key at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/msp/IssuerRevocationPublicKey
+[0;34mRegistering peer0[0m
++ fabric-ca-client register --caname ca-org2 --id.name peer0 --id.secret peer0pw --id.type peer --tls.certfiles /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/fabric-ca/org2/ca-cert.pem
+2026/09/21 16:22:12 [INFO] Configuration file location: /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/fabric-ca-client-config.yaml
+2026/09/21 16:22:12 [INFO] TLS Enabled
+2026/09/21 16:22:12 [INFO] TLS Enabled
+Password: peer0pw
+[0;34mRegistering user[0m
++ fabric-ca-client register --caname ca-org2 --id.name user1 --id.secret user1pw --id.type client --tls.certfiles /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/fabric-ca/org2/ca-cert.pem
+2026/09/21 16:22:12 [INFO] Configuration file location: /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/fabric-ca-client-config.yaml
+2026/09/21 16:22:12 [INFO] TLS Enabled
+2026/09/21 16:22:12 [INFO] TLS Enabled
+Password: user1pw
+[0;34mRegistering the org admin[0m
++ fabric-ca-client register --caname ca-org2 --id.name org2admin --id.secret org2adminpw --id.type admin --tls.certfiles /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/fabric-ca/org2/ca-cert.pem
+2026/09/21 16:22:12 [INFO] Configuration file location: /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/fabric-ca-client-config.yaml
+2026/09/21 16:22:12 [INFO] TLS Enabled
+2026/09/21 16:22:12 [INFO] TLS Enabled
+Password: org2adminpw
+[0;34mGenerating the peer0 msp[0m
++ fabric-ca-client enroll -u https://peer0:peer0pw@localhost:8054 --caname ca-org2 -M /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/msp --tls.certfiles /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/fabric-ca/org2/ca-cert.pem
+2026/09/21 16:22:12 [INFO] TLS Enabled
+2026/09/21 16:22:12 [INFO] generating key: &{A:ecdsa S:256}
+2026/09/21 16:22:12 [INFO] encoded CSR
+2026/09/21 16:22:12 [INFO] Stored client certificate at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/msp/signcerts/cert.pem
+2026/09/21 16:22:12 [INFO] Stored root CA certificate at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/msp/cacerts/localhost-8054-ca-org2.pem
+2026/09/21 16:22:12 [INFO] Stored Issuer public key at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/msp/IssuerPublicKey
+2026/09/21 16:22:12 [INFO] Stored Issuer revocation public key at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/msp/IssuerRevocationPublicKey
+[0;34mGenerating the peer0-tls certificates, use --csr.hosts to specify Subject Alternative Names[0m
++ fabric-ca-client enroll -u https://peer0:peer0pw@localhost:8054 --caname ca-org2 -M /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls --enrollment.profile tls --csr.hosts peer0.org2.example.com --csr.hosts localhost --tls.certfiles /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/fabric-ca/org2/ca-cert.pem
+2026/09/21 16:22:12 [INFO] TLS Enabled
+2026/09/21 16:22:12 [INFO] generating key: &{A:ecdsa S:256}
+2026/09/21 16:22:12 [INFO] encoded CSR
+2026/09/21 16:22:12 [INFO] Stored client certificate at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/signcerts/cert.pem
+2026/09/21 16:22:12 [INFO] Stored TLS root CA certificate at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/tlscacerts/tls-localhost-8054-ca-org2.pem
+2026/09/21 16:22:12 [INFO] Stored Issuer public key at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/IssuerPublicKey
+2026/09/21 16:22:12 [INFO] Stored Issuer revocation public key at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/IssuerRevocationPublicKey
+[0;34mGenerating the user msp[0m
++ fabric-ca-client enroll -u https://user1:user1pw@localhost:8054 --caname ca-org2 -M /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/users/User1@org2.example.com/msp --tls.certfiles /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/fabric-ca/org2/ca-cert.pem
+2026/09/21 16:22:13 [INFO] TLS Enabled
+2026/09/21 16:22:13 [INFO] generating key: &{A:ecdsa S:256}
+2026/09/21 16:22:13 [INFO] encoded CSR
+2026/09/21 16:22:13 [INFO] Stored client certificate at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/users/User1@org2.example.com/msp/signcerts/cert.pem
+2026/09/21 16:22:13 [INFO] Stored root CA certificate at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/users/User1@org2.example.com/msp/cacerts/localhost-8054-ca-org2.pem
+2026/09/21 16:22:13 [INFO] Stored Issuer public key at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/users/User1@org2.example.com/msp/IssuerPublicKey
+2026/09/21 16:22:13 [INFO] Stored Issuer revocation public key at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/users/User1@org2.example.com/msp/IssuerRevocationPublicKey
+[0;34mGenerating the org admin msp[0m
++ fabric-ca-client enroll -u https://org2admin:org2adminpw@localhost:8054 --caname ca-org2 -M /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/users/Admin@org2.example.com/msp --tls.certfiles /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/fabric-ca/org2/ca-cert.pem
+2026/09/21 16:22:13 [INFO] TLS Enabled
+2026/09/21 16:22:13 [INFO] generating key: &{A:ecdsa S:256}
+2026/09/21 16:22:13 [INFO] encoded CSR
+2026/09/21 16:22:13 [INFO] Stored client certificate at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/users/Admin@org2.example.com/msp/signcerts/cert.pem
+2026/09/21 16:22:13 [INFO] Stored root CA certificate at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/users/Admin@org2.example.com/msp/cacerts/localhost-8054-ca-org2.pem
+2026/09/21 16:22:13 [INFO] Stored Issuer public key at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/users/Admin@org2.example.com/msp/IssuerPublicKey
+2026/09/21 16:22:13 [INFO] Stored Issuer revocation public key at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/users/Admin@org2.example.com/msp/IssuerRevocationPublicKey
+[0;34mCreating Orderer Org Identities[0m
+[0;34mEnrolling the CA admin[0m
++ fabric-ca-client enroll -u https://admin:adminpw@localhost:9054 --caname ca-orderer --tls.certfiles /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/fabric-ca/ordererOrg/ca-cert.pem
+2026/09/21 16:22:13 [INFO] Created a default configuration file at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/fabric-ca-client-config.yaml
+2026/09/21 16:22:13 [INFO] TLS Enabled
+2026/09/21 16:22:13 [INFO] generating key: &{A:ecdsa S:256}
+2026/09/21 16:22:13 [INFO] encoded CSR
+2026/09/21 16:22:13 [INFO] Stored client certificate at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/msp/signcerts/cert.pem
+2026/09/21 16:22:13 [INFO] Stored root CA certificate at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/msp/cacerts/localhost-9054-ca-orderer.pem
+2026/09/21 16:22:13 [INFO] Stored Issuer public key at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/msp/IssuerPublicKey
+2026/09/21 16:22:13 [INFO] Stored Issuer revocation public key at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/msp/IssuerRevocationPublicKey
+[0;34mRegistering orderer[0m
++ fabric-ca-client register --caname ca-orderer --id.name orderer --id.secret ordererpw --id.type orderer --tls.certfiles /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/fabric-ca/ordererOrg/ca-cert.pem
+2026/09/21 16:22:13 [INFO] Configuration file location: /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/fabric-ca-client-config.yaml
+2026/09/21 16:22:13 [INFO] TLS Enabled
+2026/09/21 16:22:13 [INFO] TLS Enabled
+Password: ordererpw
+[0;34mGenerating the orderer MSP[0m
++ fabric-ca-client enroll -u https://orderer:ordererpw@localhost:9054 --caname ca-orderer -M /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp --tls.certfiles /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/fabric-ca/ordererOrg/ca-cert.pem
+2026/09/21 16:22:13 [INFO] TLS Enabled
+2026/09/21 16:22:13 [INFO] generating key: &{A:ecdsa S:256}
+2026/09/21 16:22:13 [INFO] encoded CSR
+2026/09/21 16:22:13 [INFO] Stored client certificate at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/signcerts/cert.pem
+2026/09/21 16:22:13 [INFO] Stored root CA certificate at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/cacerts/localhost-9054-ca-orderer.pem
+2026/09/21 16:22:13 [INFO] Stored Issuer public key at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/IssuerPublicKey
+2026/09/21 16:22:13 [INFO] Stored Issuer revocation public key at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/IssuerRevocationPublicKey
+[0;34mGenerating the orderer TLS certificates, use --csr.hosts to specify Subject Alternative Names[0m
++ fabric-ca-client enroll -u https://orderer:ordererpw@localhost:9054 --caname ca-orderer -M /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/tls --enrollment.profile tls --csr.hosts orderer.example.com --csr.hosts localhost --tls.certfiles /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/fabric-ca/ordererOrg/ca-cert.pem
+2026/09/21 16:22:13 [INFO] TLS Enabled
+2026/09/21 16:22:13 [INFO] generating key: &{A:ecdsa S:256}
+2026/09/21 16:22:13 [INFO] encoded CSR
+2026/09/21 16:22:13 [INFO] Stored client certificate at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/tls/signcerts/cert.pem
+2026/09/21 16:22:13 [INFO] Stored TLS root CA certificate at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/tls/tlscacerts/tls-localhost-9054-ca-orderer.pem
+2026/09/21 16:22:13 [INFO] Stored Issuer public key at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/tls/IssuerPublicKey
+2026/09/21 16:22:13 [INFO] Stored Issuer revocation public key at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/tls/IssuerRevocationPublicKey
+[0;34mRegistering orderer2[0m
++ fabric-ca-client register --caname ca-orderer --id.name orderer2 --id.secret orderer2pw --id.type orderer --tls.certfiles /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/fabric-ca/ordererOrg/ca-cert.pem
+2026/09/21 16:22:13 [INFO] Configuration file location: /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/fabric-ca-client-config.yaml
+2026/09/21 16:22:13 [INFO] TLS Enabled
+2026/09/21 16:22:13 [INFO] TLS Enabled
+Password: orderer2pw
+[0;34mGenerating the orderer2 MSP[0m
++ fabric-ca-client enroll -u https://orderer2:orderer2pw@localhost:9054 --caname ca-orderer -M /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer2.example.com/msp --tls.certfiles /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/fabric-ca/ordererOrg/ca-cert.pem
+2026/09/21 16:22:13 [INFO] TLS Enabled
+2026/09/21 16:22:13 [INFO] generating key: &{A:ecdsa S:256}
+2026/09/21 16:22:13 [INFO] encoded CSR
+2026/09/21 16:22:13 [INFO] Stored client certificate at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer2.example.com/msp/signcerts/cert.pem
+2026/09/21 16:22:13 [INFO] Stored root CA certificate at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer2.example.com/msp/cacerts/localhost-9054-ca-orderer.pem
+2026/09/21 16:22:13 [INFO] Stored Issuer public key at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer2.example.com/msp/IssuerPublicKey
+2026/09/21 16:22:13 [INFO] Stored Issuer revocation public key at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer2.example.com/msp/IssuerRevocationPublicKey
+[0;34mGenerating the orderer2 TLS certificates, use --csr.hosts to specify Subject Alternative Names[0m
++ fabric-ca-client enroll -u https://orderer2:orderer2pw@localhost:9054 --caname ca-orderer -M /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer2.example.com/tls --enrollment.profile tls --csr.hosts orderer2.example.com --csr.hosts localhost --tls.certfiles /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/fabric-ca/ordererOrg/ca-cert.pem
+2026/09/21 16:22:13 [INFO] TLS Enabled
+2026/09/21 16:22:13 [INFO] generating key: &{A:ecdsa S:256}
+2026/09/21 16:22:13 [INFO] encoded CSR
+2026/09/21 16:22:14 [INFO] Stored client certificate at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer2.example.com/tls/signcerts/cert.pem
+2026/09/21 16:22:14 [INFO] Stored TLS root CA certificate at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer2.example.com/tls/tlscacerts/tls-localhost-9054-ca-orderer.pem
+2026/09/21 16:22:14 [INFO] Stored Issuer public key at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer2.example.com/tls/IssuerPublicKey
+2026/09/21 16:22:14 [INFO] Stored Issuer revocation public key at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer2.example.com/tls/IssuerRevocationPublicKey
+[0;34mRegistering orderer3[0m
++ fabric-ca-client register --caname ca-orderer --id.name orderer3 --id.secret orderer3pw --id.type orderer --tls.certfiles /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/fabric-ca/ordererOrg/ca-cert.pem
+2026/09/21 16:22:14 [INFO] Configuration file location: /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/fabric-ca-client-config.yaml
+2026/09/21 16:22:14 [INFO] TLS Enabled
+2026/09/21 16:22:14 [INFO] TLS Enabled
+Password: orderer3pw
+[0;34mGenerating the orderer3 MSP[0m
++ fabric-ca-client enroll -u https://orderer3:orderer3pw@localhost:9054 --caname ca-orderer -M /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer3.example.com/msp --tls.certfiles /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/fabric-ca/ordererOrg/ca-cert.pem
+2026/09/21 16:22:14 [INFO] TLS Enabled
+2026/09/21 16:22:14 [INFO] generating key: &{A:ecdsa S:256}
+2026/09/21 16:22:14 [INFO] encoded CSR
+2026/09/21 16:22:14 [INFO] Stored client certificate at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer3.example.com/msp/signcerts/cert.pem
+2026/09/21 16:22:14 [INFO] Stored root CA certificate at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer3.example.com/msp/cacerts/localhost-9054-ca-orderer.pem
+2026/09/21 16:22:14 [INFO] Stored Issuer public key at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer3.example.com/msp/IssuerPublicKey
+2026/09/21 16:22:14 [INFO] Stored Issuer revocation public key at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer3.example.com/msp/IssuerRevocationPublicKey
+[0;34mGenerating the orderer3 TLS certificates, use --csr.hosts to specify Subject Alternative Names[0m
++ fabric-ca-client enroll -u https://orderer3:orderer3pw@localhost:9054 --caname ca-orderer -M /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer3.example.com/tls --enrollment.profile tls --csr.hosts orderer3.example.com --csr.hosts localhost --tls.certfiles /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/fabric-ca/ordererOrg/ca-cert.pem
+2026/09/21 16:22:14 [INFO] TLS Enabled
+2026/09/21 16:22:14 [INFO] generating key: &{A:ecdsa S:256}
+2026/09/21 16:22:14 [INFO] encoded CSR
+2026/09/21 16:22:14 [INFO] Stored client certificate at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer3.example.com/tls/signcerts/cert.pem
+2026/09/21 16:22:14 [INFO] Stored TLS root CA certificate at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer3.example.com/tls/tlscacerts/tls-localhost-9054-ca-orderer.pem
+2026/09/21 16:22:14 [INFO] Stored Issuer public key at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer3.example.com/tls/IssuerPublicKey
+2026/09/21 16:22:14 [INFO] Stored Issuer revocation public key at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer3.example.com/tls/IssuerRevocationPublicKey
+[0;34mRegistering orderer4[0m
++ fabric-ca-client register --caname ca-orderer --id.name orderer4 --id.secret orderer4pw --id.type orderer --tls.certfiles /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/fabric-ca/ordererOrg/ca-cert.pem
+2026/09/21 16:22:14 [INFO] Configuration file location: /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/fabric-ca-client-config.yaml
+2026/09/21 16:22:14 [INFO] TLS Enabled
+2026/09/21 16:22:14 [INFO] TLS Enabled
+Password: orderer4pw
+[0;34mGenerating the orderer4 MSP[0m
++ fabric-ca-client enroll -u https://orderer4:orderer4pw@localhost:9054 --caname ca-orderer -M /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer4.example.com/msp --tls.certfiles /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/fabric-ca/ordererOrg/ca-cert.pem
+2026/09/21 16:22:14 [INFO] TLS Enabled
+2026/09/21 16:22:14 [INFO] generating key: &{A:ecdsa S:256}
+2026/09/21 16:22:14 [INFO] encoded CSR
+2026/09/21 16:22:14 [INFO] Stored client certificate at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer4.example.com/msp/signcerts/cert.pem
+2026/09/21 16:22:14 [INFO] Stored root CA certificate at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer4.example.com/msp/cacerts/localhost-9054-ca-orderer.pem
+2026/09/21 16:22:14 [INFO] Stored Issuer public key at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer4.example.com/msp/IssuerPublicKey
+2026/09/21 16:22:14 [INFO] Stored Issuer revocation public key at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer4.example.com/msp/IssuerRevocationPublicKey
+[0;34mGenerating the orderer4 TLS certificates, use --csr.hosts to specify Subject Alternative Names[0m
++ fabric-ca-client enroll -u https://orderer4:orderer4pw@localhost:9054 --caname ca-orderer -M /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer4.example.com/tls --enrollment.profile tls --csr.hosts orderer4.example.com --csr.hosts localhost --tls.certfiles /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/fabric-ca/ordererOrg/ca-cert.pem
+2026/09/21 16:22:14 [INFO] TLS Enabled
+2026/09/21 16:22:14 [INFO] generating key: &{A:ecdsa S:256}
+2026/09/21 16:22:14 [INFO] encoded CSR
+2026/09/21 16:22:14 [INFO] Stored client certificate at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer4.example.com/tls/signcerts/cert.pem
+2026/09/21 16:22:14 [INFO] Stored TLS root CA certificate at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer4.example.com/tls/tlscacerts/tls-localhost-9054-ca-orderer.pem
+2026/09/21 16:22:14 [INFO] Stored Issuer public key at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer4.example.com/tls/IssuerPublicKey
+2026/09/21 16:22:14 [INFO] Stored Issuer revocation public key at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer4.example.com/tls/IssuerRevocationPublicKey
+[0;34mRegistering the orderer admin[0m
++ fabric-ca-client register --caname ca-orderer --id.name ordererAdmin --id.secret ordererAdminpw --id.type admin --tls.certfiles /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/fabric-ca/ordererOrg/ca-cert.pem
+2026/09/21 16:22:14 [INFO] Configuration file location: /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/fabric-ca-client-config.yaml
+2026/09/21 16:22:14 [INFO] TLS Enabled
+2026/09/21 16:22:14 [INFO] TLS Enabled
+Password: ordererAdminpw
+[0;34mGenerating the admin msp[0m
++ fabric-ca-client enroll -u https://ordererAdmin:ordererAdminpw@localhost:9054 --caname ca-orderer -M /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/users/Admin@example.com/msp --tls.certfiles /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/fabric-ca/ordererOrg/ca-cert.pem
+2026/09/21 16:22:14 [INFO] TLS Enabled
+2026/09/21 16:22:14 [INFO] generating key: &{A:ecdsa S:256}
+2026/09/21 16:22:14 [INFO] encoded CSR
+2026/09/21 16:22:14 [INFO] Stored client certificate at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/users/Admin@example.com/msp/signcerts/cert.pem
+2026/09/21 16:22:14 [INFO] Stored root CA certificate at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/users/Admin@example.com/msp/cacerts/localhost-9054-ca-orderer.pem
+2026/09/21 16:22:14 [INFO] Stored Issuer public key at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/users/Admin@example.com/msp/IssuerPublicKey
+2026/09/21 16:22:14 [INFO] Stored Issuer revocation public key at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/users/Admin@example.com/msp/IssuerRevocationPublicKey
+[0;34mGenerating CCP files for Org1 and Org2[0m
+ Volume compose_orderer.example.com Creating 
+ Volume compose_orderer.example.com Created 
+ Volume compose_peer0.org1.example.com Creating 
+ Volume compose_peer0.org1.example.com Created 
+ Volume compose_peer0.org2.example.com Creating 
+ Volume compose_peer0.org2.example.com Created 
+time="2026-09-21T16:22:15+02:00" level=warning msg="Found orphan containers (ca_orderer, ca_org2, ca_org1) for this project. If you removed or renamed this service in your compose file, you can run this command with the --remove-orphans flag to clean it up."
+ Container couchdb0 Creating 
+ Container couchdb1 Creating 
+ Container orderer.example.com Creating 
+ Container couchdb0 Created 
+ Container peer0.org1.example.com Creating 
+ Container couchdb1 Created 
+ Container peer0.org2.example.com Creating 
+ Container orderer.example.com Created 
+ Container peer0.org1.example.com Created 
+ Container peer0.org2.example.com Created 
+ Container orderer.example.com Starting 
+ Container couchdb1 Starting 
+ Container couchdb0 Starting 
+ Container couchdb0 Started 
+ Container peer0.org1.example.com Starting 
+ Container orderer.example.com Started 
+ Container couchdb1 Started 
+ Container peer0.org2.example.com Starting 
+ Container peer0.org1.example.com Started 
+ Container peer0.org2.example.com Started 
+CONTAINER ID   IMAGE                               COMMAND                  CREATED         STATUS                  PORTS                                                                                                                                   NAMES
+a8f8c11e727c   hyperledger/fabric-peer:latest      "peer node start"        1 second ago    Up Less than a second   0.0.0.0:7151->7151/tcp, [::]:7151->7151/tcp, 7051/tcp, 0.0.0.0:9445->9445/tcp, [::]:9445->9445/tcp                                      peer0.org2.example.com
+5aab6b818f0d   hyperledger/fabric-peer:latest      "peer node start"        1 second ago    Up Less than a second   0.0.0.0:7051->7051/tcp, [::]:7051->7051/tcp, 0.0.0.0:9444->9444/tcp, [::]:9444->9444/tcp                                                peer0.org1.example.com
+2aacc78366ae   couchdb:3.4.2                       "tini -- /docker-ent…"   1 second ago    Up Less than a second   4369/tcp, 9100/tcp, 0.0.0.0:7984->5984/tcp, [::]:7984->5984/tcp                                                                         couchdb1
+944fe2886d39   couchdb:3.4.2                       "tini -- /docker-ent…"   1 second ago    Up Less than a second   4369/tcp, 9100/tcp, 0.0.0.0:5984->5984/tcp, [::]:5984->5984/tcp                                                                         couchdb0
+fc74b74b7189   hyperledger/fabric-orderer:latest   "orderer"                1 second ago    Up Less than a second   0.0.0.0:7050->7050/tcp, [::]:7050->7050/tcp, 0.0.0.0:7053->7053/tcp, [::]:7053->7053/tcp, 0.0.0.0:9443->9443/tcp, [::]:9443->9443/tcp   orderer.example.com
+3d28d28623f4   hyperledger/fabric-ca:latest        "sh -c 'fabric-ca-se…"   8 seconds ago   Up 7 seconds            7054/tcp, 0.0.0.0:9054-9055->9054-9055/tcp, [::]:9054-9055->9054-9055/tcp                                                               ca_orderer
+b3149c32d4f0   hyperledger/fabric-ca:latest        "sh -c 'fabric-ca-se…"   8 seconds ago   Up 7 seconds            7054/tcp, 0.0.0.0:8054-8055->8054-8055/tcp, [::]:8054-8055->8054-8055/tcp                                                               ca_org2
+f11f2d8090d0   hyperledger/fabric-ca:latest        "sh -c 'fabric-ca-se…"   8 seconds ago   Up 7 seconds            0.0.0.0:7054-7055->7054-7055/tcp, [::]:7054-7055->7054-7055/tcp                                                                         ca_org1
+>> Creating channel mychannel...
+[0;34mUsing docker and docker compose[0m
+[0;34mCreating channel 'mychannel'.[0m
+[0;34mIf network is not up, starting nodes with CLI timeout of '5' tries and CLI delay of '3' seconds and using database 'leveldb [0m
+Network Running Already
+[0;34mUsing docker and docker compose[0m
+[0;34mGenerating channel genesis block 'mychannel.block'[0m
+[0;34mUsing organization 1[0m
+/home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/../bin/configtxgen
++ '[' 0 -eq 1 ']'
++ configtxgen -profile ChannelUsingRaft -outputBlock ./channel-artifacts/mychannel.block -channelID mychannel
+[34m2026-09-21 16:22:17.075 SAST 0001 INFO[0m [common.tools.configtxgen] [34;1mmain[0m -> Loading configuration
+[34m2026-09-21 16:22:17.078 SAST 0002 INFO[0m [common.tools.configtxgen.localconfig] [34;1mcompleteInitialization[0m -> orderer type: etcdraft
+[34m2026-09-21 16:22:17.078 SAST 0003 INFO[0m [common.tools.configtxgen.localconfig] [34;1mcompleteInitialization[0m -> Orderer.EtcdRaft.Options unset, setting to tick_interval:"500ms" election_tick:10 heartbeat_tick:1 max_inflight_blocks:5 snapshot_interval_size:16777216 
+[34m2026-09-21 16:22:17.078 SAST 0004 INFO[0m [common.tools.configtxgen.localconfig] [34;1mLoad[0m -> Loaded configuration: /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/configtx/configtx.yaml
+[34m2026-09-21 16:22:17.080 SAST 0005 INFO[0m [common.tools.configtxgen] [34;1mdoOutputBlock[0m -> Generating genesis block
+[34m2026-09-21 16:22:17.080 SAST 0006 INFO[0m [common.tools.configtxgen] [34;1mdoOutputBlock[0m -> Creating application channel genesis block
+[34m2026-09-21 16:22:17.080 SAST 0007 INFO[0m [common.tools.configtxgen] [34;1mdoOutputBlock[0m -> Writing genesis block
++ res=0
+[0;34mCreating channel mychannel[0m
+[0;34mAdding orderers[0m
++ . scripts/orderer.sh mychannel
++ '[' 0 -eq 1 ']'
++ res=0
+Status: 201
+{
+	"name": "mychannel",
+	"url": "/participation/v1/channels/mychannel",
+	"consensusRelation": "consenter",
+	"status": "active",
+	"height": 1
+}
+
+[0;32mChannel 'mychannel' created[0m
+[0;34mJoining org1 peer to the channel...[0m
+[0;34mUsing organization 1[0m
++ peer channel join -b ./channel-artifacts/mychannel.block
++ res=0
+[34m2026-09-21 16:22:22.284 SAST 0001 INFO[0m [channelCmd] [34;1mInitCmdFactory[0m -> Endorser and orderer connections initialized
+[34m2026-09-21 16:22:22.568 SAST 0002 INFO[0m [channelCmd] [34;1mexecuteJoin[0m -> Successfully submitted proposal to join channel
+[0;34mJoining org2 peer to the channel...[0m
+[0;34mUsing organization 2[0m
++ peer channel join -b ./channel-artifacts/mychannel.block
++ res=0
+[34m2026-09-21 16:22:25.619 SAST 0001 INFO[0m [channelCmd] [34;1mInitCmdFactory[0m -> Endorser and orderer connections initialized
+[34m2026-09-21 16:22:25.894 SAST 0002 INFO[0m [channelCmd] [34;1mexecuteJoin[0m -> Successfully submitted proposal to join channel
+[0;34mSetting anchor peer for org1...[0m
+[0;34mUsing organization 1[0m
+[0;34mFetching channel config for channel mychannel[0m
+[0;34mUsing organization 1[0m
+[0;34mFetching the most recent configuration block for the channel[0m
+++ peer channel fetch config /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/config_block.pb -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com -c mychannel --tls --cafile /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/tlsca/tlsca.example.com-cert.pem
+[34m2026-09-21 16:22:25.944 SAST 0001 INFO[0m [channelCmd] [34;1mInitCmdFactory[0m -> Endorser and orderer connections initialized
+[34m2026-09-21 16:22:25.946 SAST 0002 INFO[0m [cli.common] [34;1mreadBlock[0m -> Received block: 0
+[34m2026-09-21 16:22:25.946 SAST 0003 INFO[0m [channelCmd] [34;1mfetch[0m -> Retrieving last config block: 0
+[34m2026-09-21 16:22:25.947 SAST 0004 INFO[0m [cli.common] [34;1mreadBlock[0m -> Received block: 0
+[0;34mDecoding config block to JSON and isolating config to /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/Org1MSPconfig.json[0m
+++ configtxlator proto_decode --input /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/config_block.pb --type common.Block --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/config_block.json
+++ jq '.data.data[0].payload.data.config' /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/config_block.json
+++ res=0
+[0;34mGenerating anchor peer update transaction for Org1 on channel mychannel[0m
+++ jq '.channel_group.groups.Application.groups.Org1MSP.values += {"AnchorPeers":{"mod_policy": "Admins","value":{"anchor_peers": [{"host": "peer0.org1.example.com","port": 7051}]},"version": "0"}}' /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/Org1MSPconfig.json
+++ res=0
+++ configtxlator proto_encode --input /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/Org1MSPconfig.json --type common.Config --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/original_config.pb
+++ configtxlator proto_encode --input /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/Org1MSPmodified_config.json --type common.Config --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/modified_config.pb
+++ configtxlator compute_update --channel_id mychannel --original /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/original_config.pb --updated /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/modified_config.pb --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/config_update.pb
+++ configtxlator proto_decode --input /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/config_update.pb --type common.ConfigUpdate --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/config_update.json
+++ jq .
++++ cat /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/config_update.json
+++ echo '{"payload":{"header":{"channel_header":{"channel_id":"mychannel", "type":2}},"data":{"config_update":{' '"channel_id":' '"mychannel",' '"isolated_data":' '{},' '"read_set":' '{' '"groups":' '{' '"Application":' '{' '"groups":' '{' '"Org1MSP":' '{' '"groups":' '{},' '"mod_policy":' '"",' '"policies":' '{' '"Admins":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Endorsement":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Readers":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Writers":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '}' '},' '"values":' '{' '"MSP":' '{' '"mod_policy":' '"",' '"value":' null, '"version":' '"0"' '}' '},' '"version":' '"0"' '}' '},' '"mod_policy":' '"",' '"policies":' '{},' '"values":' '{},' '"version":' '"0"' '}' '},' '"mod_policy":' '"",' '"policies":' '{},' '"values":' '{},' '"version":' '"0"' '},' '"write_set":' '{' '"groups":' '{' '"Application":' '{' '"groups":' '{' '"Org1MSP":' '{' '"groups":' '{},' '"mod_policy":' '"Admins",' '"policies":' '{' '"Admins":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Endorsement":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Readers":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Writers":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '}' '},' '"values":' '{' '"AnchorPeers":' '{' '"mod_policy":' '"Admins",' '"value":' '{' '"anchor_peers":' '[' '{' '"host":' '"peer0.org1.example.com",' '"port":' 7051 '}' ']' '},' '"version":' '"0"' '},' '"MSP":' '{' '"mod_policy":' '"",' '"value":' null, '"version":' '"0"' '}' '},' '"version":' '"1"' '}' '},' '"mod_policy":' '"",' '"policies":' '{},' '"values":' '{},' '"version":' '"0"' '}' '},' '"mod_policy":' '"",' '"policies":' '{},' '"values":' '{},' '"version":' '"0"' '}' '}}}}'
+++ configtxlator proto_encode --input /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/config_update_in_envelope.json --type common.Envelope --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/Org1MSPanchors.tx
+[34m2026-09-21 16:22:26.073 SAST 0001 INFO[0m [channelCmd] [34;1mInitCmdFactory[0m -> Endorser and orderer connections initialized
+[34m2026-09-21 16:22:26.082 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+[0;32mAnchor peer set for org 'Org1MSP' on channel 'mychannel'[0m
+[0;34mSetting anchor peer for org2...[0m
+[0;34mUsing organization 2[0m
+[0;34mFetching channel config for channel mychannel[0m
+[0;34mUsing organization 2[0m
+[0;34mFetching the most recent configuration block for the channel[0m
+++ peer channel fetch config /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/config_block.pb -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com -c mychannel --tls --cafile /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/tlsca/tlsca.example.com-cert.pem
+[34m2026-09-21 16:22:26.133 SAST 0001 INFO[0m [channelCmd] [34;1mInitCmdFactory[0m -> Endorser and orderer connections initialized
+[34m2026-09-21 16:22:26.135 SAST 0002 INFO[0m [cli.common] [34;1mreadBlock[0m -> Received block: 1
+[34m2026-09-21 16:22:26.135 SAST 0003 INFO[0m [channelCmd] [34;1mfetch[0m -> Retrieving last config block: 1
+[34m2026-09-21 16:22:26.136 SAST 0004 INFO[0m [cli.common] [34;1mreadBlock[0m -> Received block: 1
+[0;34mDecoding config block to JSON and isolating config to /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/Org2MSPconfig.json[0m
+++ configtxlator proto_decode --input /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/config_block.pb --type common.Block --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/config_block.json
+++ jq '.data.data[0].payload.data.config' /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/config_block.json
+++ res=0
+[0;34mGenerating anchor peer update transaction for Org2 on channel mychannel[0m
+++ jq '.channel_group.groups.Application.groups.Org2MSP.values += {"AnchorPeers":{"mod_policy": "Admins","value":{"anchor_peers": [{"host": "peer0.org2.example.com","port": 7151}]},"version": "0"}}' /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/Org2MSPconfig.json
+++ res=0
+++ configtxlator proto_encode --input /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/Org2MSPconfig.json --type common.Config --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/original_config.pb
+++ configtxlator proto_encode --input /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/Org2MSPmodified_config.json --type common.Config --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/modified_config.pb
+++ configtxlator compute_update --channel_id mychannel --original /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/original_config.pb --updated /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/modified_config.pb --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/config_update.pb
+++ configtxlator proto_decode --input /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/config_update.pb --type common.ConfigUpdate --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/config_update.json
+++ jq .
++++ cat /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/config_update.json
+++ echo '{"payload":{"header":{"channel_header":{"channel_id":"mychannel", "type":2}},"data":{"config_update":{' '"channel_id":' '"mychannel",' '"isolated_data":' '{},' '"read_set":' '{' '"groups":' '{' '"Application":' '{' '"groups":' '{' '"Org2MSP":' '{' '"groups":' '{},' '"mod_policy":' '"",' '"policies":' '{' '"Admins":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Endorsement":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Readers":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Writers":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '}' '},' '"values":' '{' '"MSP":' '{' '"mod_policy":' '"",' '"value":' null, '"version":' '"0"' '}' '},' '"version":' '"0"' '}' '},' '"mod_policy":' '"",' '"policies":' '{},' '"values":' '{},' '"version":' '"0"' '}' '},' '"mod_policy":' '"",' '"policies":' '{},' '"values":' '{},' '"version":' '"0"' '},' '"write_set":' '{' '"groups":' '{' '"Application":' '{' '"groups":' '{' '"Org2MSP":' '{' '"groups":' '{},' '"mod_policy":' '"Admins",' '"policies":' '{' '"Admins":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Endorsement":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Readers":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Writers":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '}' '},' '"values":' '{' '"AnchorPeers":' '{' '"mod_policy":' '"Admins",' '"value":' '{' '"anchor_peers":' '[' '{' '"host":' '"peer0.org2.example.com",' '"port":' 7151 '}' ']' '},' '"version":' '"0"' '},' '"MSP":' '{' '"mod_policy":' '"",' '"value":' null, '"version":' '"0"' '}' '},' '"version":' '"1"' '}' '},' '"mod_policy":' '"",' '"policies":' '{},' '"values":' '{},' '"version":' '"0"' '}' '},' '"mod_policy":' '"",' '"policies":' '{},' '"values":' '{},' '"version":' '"0"' '}' '}}}}'
+++ configtxlator proto_encode --input /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/config_update_in_envelope.json --type common.Envelope --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/channel-artifacts/Org2MSPanchors.tx
+[34m2026-09-21 16:22:26.267 SAST 0001 INFO[0m [channelCmd] [34;1mInitCmdFactory[0m -> Endorser and orderer connections initialized
+[34m2026-09-21 16:22:26.276 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+[0;32mAnchor peer set for org 'Org2MSP' on channel 'mychannel'[0m
+[0;32mChannel 'mychannel' joined[0m
+>> Deploying misinformation v2.2 (go)...
+[0;34mUsing docker and docker compose[0m
+[0;34mdeploying chaincode on channel 'mychannel'[0m
+executing with the following
+- CHANNEL_NAME: [0;32mmychannel[0m
+- CC_NAME: [0;32mmisinformation[0m
+- CC_SRC_PATH: [0;32m/home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/chaincode/misinformation/go[0m
+- CC_SRC_LANGUAGE: [0;32mgo[0m
+- CC_VERSION: [0;32m2.2[0m
+- CC_SEQUENCE: [0;32m1[0m
+- CC_END_POLICY: [0;32mNA[0m
+- CC_COLL_CONFIG: [0;32mNA[0m
+- CC_INIT_FCN: [0;32mNA[0m
+- DELAY: [0;32m3[0m
+- MAX_RETRY: [0;32m5[0m
+- VERBOSE: [0;32mfalse[0m
+executing with the following
+- CC_NAME: [0;32mmisinformation[0m
+- CC_SRC_PATH: [0;32m/home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/chaincode/misinformation/go[0m
+- CC_SRC_LANGUAGE: [0;32mgo[0m
+- CC_VERSION: [0;32m2.2[0m
+[0;34mVendoring Go dependencies at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/chaincode/misinformation/go[0m
+~/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/chaincode/misinformation/go ~/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network
+~/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network
+[0;32mFinished vendoring Go dependencies[0m
++ '[' false = true ']'
++ peer lifecycle chaincode package misinformation.tar.gz --path /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/chaincode/misinformation/go --lang golang --label misinformation_2.2
++ res=0
+[0;32mChaincode is packaged[0m
+[0;34mInstalling chaincode on peer0.org1...[0m
+[0;34mUsing organization 1[0m
++ peer lifecycle chaincode queryinstalled --output json
++ jq -r 'try (.installed_chaincodes[].package_id)'
++ grep '^misinformation_2.2:dbfbf2d9a910d8e70054615a124fe0213864400df3c9f3a5847803436c051fd1$'
++ test 1 -ne 0
++ peer lifecycle chaincode install misinformation.tar.gz
++ res=0
+[34m2026-09-21 16:22:49.243 SAST 0001 INFO[0m [cli.lifecycle.chaincode] [34;1msubmitInstallProposal[0m -> Installed remotely: response:<status:200 payload:"\nSmisinformation_2.2:dbfbf2d9a910d8e70054615a124fe0213864400df3c9f3a5847803436c051fd1\022\022misinformation_2.2" > 
+[34m2026-09-21 16:22:49.243 SAST 0002 INFO[0m [cli.lifecycle.chaincode] [34;1msubmitInstallProposal[0m -> Chaincode code package identifier: misinformation_2.2:dbfbf2d9a910d8e70054615a124fe0213864400df3c9f3a5847803436c051fd1
+[0;32mChaincode is installed on peer0.org1[0m
+[0;34mInstall chaincode on peer0.org2...[0m
+[0;34mUsing organization 2[0m
++ peer lifecycle chaincode queryinstalled --output json
++ jq -r 'try (.installed_chaincodes[].package_id)'
++ grep '^misinformation_2.2:dbfbf2d9a910d8e70054615a124fe0213864400df3c9f3a5847803436c051fd1$'
++ test 1 -ne 0
++ peer lifecycle chaincode install misinformation.tar.gz
++ res=0
+[34m2026-09-21 16:23:08.114 SAST 0001 INFO[0m [cli.lifecycle.chaincode] [34;1msubmitInstallProposal[0m -> Installed remotely: response:<status:200 payload:"\nSmisinformation_2.2:dbfbf2d9a910d8e70054615a124fe0213864400df3c9f3a5847803436c051fd1\022\022misinformation_2.2" > 
+[34m2026-09-21 16:23:08.114 SAST 0002 INFO[0m [cli.lifecycle.chaincode] [34;1msubmitInstallProposal[0m -> Chaincode code package identifier: misinformation_2.2:dbfbf2d9a910d8e70054615a124fe0213864400df3c9f3a5847803436c051fd1
+[0;32mChaincode is installed on peer0.org2[0m
+[0;34mUsing organization 1[0m
++ peer lifecycle chaincode queryinstalled --output json
++ jq -r 'try (.installed_chaincodes[].package_id)'
++ grep '^misinformation_2.2:dbfbf2d9a910d8e70054615a124fe0213864400df3c9f3a5847803436c051fd1$'
++ res=0
+misinformation_2.2:dbfbf2d9a910d8e70054615a124fe0213864400df3c9f3a5847803436c051fd1
+[0;32mQuery installed successful on peer0.org1 on channel[0m
+[0;34mUsing organization 1[0m
++ peer lifecycle chaincode approveformyorg -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --tls --cafile /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/tlsca/tlsca.example.com-cert.pem --channelID mychannel --name misinformation --version 2.2 --package-id misinformation_2.2:dbfbf2d9a910d8e70054615a124fe0213864400df3c9f3a5847803436c051fd1 --sequence 1
++ res=0
+[34m2026-09-21 16:23:10.522 SAST 0001 INFO[0m [chaincodeCmd] [34;1mClientWait[0m -> txid [4f8194bf511a50467fe1430a6a8d67bcf412789fcbf4509071fb531f06c68091] committed with status (VALID) at localhost:7051
+[0;32mChaincode definition approved on peer0.org1 on channel 'mychannel'[0m
+[0;34mUsing organization 1[0m
+[0;34mChecking the commit readiness of the chaincode definition on peer0.org1 on channel 'mychannel'...[0m
+[0;34mAttempting to check the commit readiness of the chaincode definition on peer0.org1, Retry after 3 seconds.[0m
++ peer lifecycle chaincode checkcommitreadiness --channelID mychannel --name misinformation --version 2.2 --sequence 1 --output json
++ res=0
+{
+	"approvals": {
+		"Org1MSP": true,
+		"Org2MSP": false
+	}
+}
+[0;34mChecking the commit readiness of the chaincode definition successful on peer0.org1 on channel 'mychannel'[0m
+[0;34mUsing organization 2[0m
+[0;34mChecking the commit readiness of the chaincode definition on peer0.org2 on channel 'mychannel'...[0m
+[0;34mAttempting to check the commit readiness of the chaincode definition on peer0.org2, Retry after 3 seconds.[0m
++ peer lifecycle chaincode checkcommitreadiness --channelID mychannel --name misinformation --version 2.2 --sequence 1 --output json
++ res=0
+{
+	"approvals": {
+		"Org1MSP": true,
+		"Org2MSP": false
+	}
+}
+[0;34mChecking the commit readiness of the chaincode definition successful on peer0.org2 on channel 'mychannel'[0m
+[0;34mUsing organization 2[0m
++ peer lifecycle chaincode approveformyorg -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --tls --cafile /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/tlsca/tlsca.example.com-cert.pem --channelID mychannel --name misinformation --version 2.2 --package-id misinformation_2.2:dbfbf2d9a910d8e70054615a124fe0213864400df3c9f3a5847803436c051fd1 --sequence 1
++ res=0
+[34m2026-09-21 16:23:19.007 SAST 0001 INFO[0m [chaincodeCmd] [34;1mClientWait[0m -> txid [56cf9bd1e1dfee4a5ee9982689e9bb166eb8912ea6afc3c666c58ce7e0ba60d5] committed with status (VALID) at localhost:7151
+[0;32mChaincode definition approved on peer0.org2 on channel 'mychannel'[0m
+[0;34mUsing organization 1[0m
+[0;34mChecking the commit readiness of the chaincode definition on peer0.org1 on channel 'mychannel'...[0m
+[0;34mAttempting to check the commit readiness of the chaincode definition on peer0.org1, Retry after 3 seconds.[0m
++ peer lifecycle chaincode checkcommitreadiness --channelID mychannel --name misinformation --version 2.2 --sequence 1 --output json
++ res=0
+{
+	"approvals": {
+		"Org1MSP": true,
+		"Org2MSP": true
+	}
+}
+[0;34mChecking the commit readiness of the chaincode definition successful on peer0.org1 on channel 'mychannel'[0m
+[0;34mUsing organization 2[0m
+[0;34mChecking the commit readiness of the chaincode definition on peer0.org2 on channel 'mychannel'...[0m
+[0;34mAttempting to check the commit readiness of the chaincode definition on peer0.org2, Retry after 3 seconds.[0m
++ peer lifecycle chaincode checkcommitreadiness --channelID mychannel --name misinformation --version 2.2 --sequence 1 --output json
++ res=0
+{
+	"approvals": {
+		"Org1MSP": true,
+		"Org2MSP": true
+	}
+}
+[0;34mChecking the commit readiness of the chaincode definition successful on peer0.org2 on channel 'mychannel'[0m
+[0;34mUsing organization 1[0m
+[0;34mUsing organization 2[0m
++ peer lifecycle chaincode commit -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --tls --cafile /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/ordererOrganizations/example.com/tlsca/tlsca.example.com-cert.pem --channelID mychannel --name misinformation --peerAddresses localhost:7051 --tlsRootCertFiles /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/tlsca/tlsca.org1.example.com-cert.pem --peerAddresses localhost:7151 --tlsRootCertFiles /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/tlsca/tlsca.org2.example.com-cert.pem --version 2.2 --sequence 1
++ res=0
+[34m2026-09-21 16:23:26.697 SAST 0001 INFO[0m [chaincodeCmd] [34;1mClientWait[0m -> txid [74cdaadf5cef96a5cd3213be3d863d69cbce92ec98a067abfc3c9d066dc33fb3] committed with status (VALID) at localhost:7151
+[34m2026-09-21 16:23:26.771 SAST 0002 INFO[0m [chaincodeCmd] [34;1mClientWait[0m -> txid [74cdaadf5cef96a5cd3213be3d863d69cbce92ec98a067abfc3c9d066dc33fb3] committed with status (VALID) at localhost:7051
+[0;32mChaincode definition committed on channel 'mychannel'[0m
+[0;34mUsing organization 1[0m
+[0;34mQuerying chaincode definition on peer0.org1 on channel 'mychannel'...[0m
+[0;34mAttempting to Query committed status on peer0.org1, Retry after 3 seconds.[0m
++ peer lifecycle chaincode querycommitted --channelID mychannel --name misinformation
++ res=0
+Committed chaincode definition for chaincode 'misinformation' on channel 'mychannel':
+Version: 2.2, Sequence: 1, Endorsement Plugin: escc, Validation Plugin: vscc, Approvals: [Org1MSP: true, Org2MSP: true]
+[0;32mQuery chaincode definition successful on peer0.org1 on channel 'mychannel'[0m
+[0;34mUsing organization 2[0m
+[0;34mQuerying chaincode definition on peer0.org2 on channel 'mychannel'...[0m
+[0;34mAttempting to Query committed status on peer0.org2, Retry after 3 seconds.[0m
++ peer lifecycle chaincode querycommitted --channelID mychannel --name misinformation
++ res=0
+Committed chaincode definition for chaincode 'misinformation' on channel 'mychannel':
+Version: 2.2, Sequence: 1, Endorsement Plugin: escc, Validation Plugin: vscc, Approvals: [Org1MSP: true, Org2MSP: true]
+[0;32mQuery chaincode definition successful on peer0.org2 on channel 'mychannel'[0m
+[0;34mChaincode initialization is not required[0m
+>> Bringing up org3 (addOrg3, Fabric CA mode)...
+[0;34mUsing docker and docker compose[0m
+[0;34mAdding org3 to channel 'mychannel' with '10' seconds and CLI delay of '3' seconds and using database 'leveldb'[0m
+
+[0;34mGenerating certificates using Fabric CA[0m
+ Network compose_default Creating 
+ Network compose_default Created 
+time="2026-09-21T16:23:33+02:00" level=warning msg="Found orphan containers (peer0.org2.example.com, peer0.org1.example.com, couchdb1, couchdb0, orderer.example.com, ca_orderer, ca_org2, ca_org1) for this project. If you removed or renamed this service in your compose file, you can run this command with the --remove-orphans flag to clean it up."
+ Container ca_org3 Creating 
+ Container ca_org3 Created 
+ Container ca_org3 Starting 
+ Container ca_org3 Started 
+[0;34mCreating Org3 Identities[0m
+[0;34mEnrolling the CA admin[0m
++ fabric-ca-client enroll -u https://admin:adminpw@localhost:11054 --caname ca-org3 --tls.certfiles /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/fabric-ca/org3/tls-cert.pem
+2026/09/21 16:23:43 [INFO] Created a default configuration file at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org3.example.com/fabric-ca-client-config.yaml
+2026/09/21 16:23:43 [INFO] TLS Enabled
+2026/09/21 16:23:43 [INFO] generating key: &{A:ecdsa S:256}
+2026/09/21 16:23:43 [INFO] encoded CSR
+2026/09/21 16:23:43 [INFO] Stored client certificate at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org3.example.com/msp/signcerts/cert.pem
+2026/09/21 16:23:43 [INFO] Stored root CA certificate at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org3.example.com/msp/cacerts/localhost-11054-ca-org3.pem
+2026/09/21 16:23:43 [INFO] Stored Issuer public key at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org3.example.com/msp/IssuerPublicKey
+2026/09/21 16:23:43 [INFO] Stored Issuer revocation public key at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org3.example.com/msp/IssuerRevocationPublicKey
+[0;34mRegistering peer0[0m
++ fabric-ca-client register --caname ca-org3 --id.name peer0 --id.secret peer0pw --id.type peer --tls.certfiles /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/fabric-ca/org3/tls-cert.pem
+2026/09/21 16:23:43 [INFO] Configuration file location: /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org3.example.com/fabric-ca-client-config.yaml
+2026/09/21 16:23:43 [INFO] TLS Enabled
+2026/09/21 16:23:43 [INFO] TLS Enabled
+Password: peer0pw
+[0;34mRegistering user[0m
++ fabric-ca-client register --caname ca-org3 --id.name user1 --id.secret user1pw --id.type client --tls.certfiles /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/fabric-ca/org3/tls-cert.pem
+2026/09/21 16:23:44 [INFO] Configuration file location: /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org3.example.com/fabric-ca-client-config.yaml
+2026/09/21 16:23:44 [INFO] TLS Enabled
+2026/09/21 16:23:44 [INFO] TLS Enabled
+Password: user1pw
+[0;34mRegistering the org admin[0m
++ fabric-ca-client register --caname ca-org3 --id.name org3admin --id.secret org3adminpw --id.type admin --tls.certfiles /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/fabric-ca/org3/tls-cert.pem
+2026/09/21 16:23:44 [INFO] Configuration file location: /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org3.example.com/fabric-ca-client-config.yaml
+2026/09/21 16:23:44 [INFO] TLS Enabled
+2026/09/21 16:23:44 [INFO] TLS Enabled
+Password: org3adminpw
+[0;34mGenerating the peer0 msp[0m
++ fabric-ca-client enroll -u https://peer0:peer0pw@localhost:11054 --caname ca-org3 -M /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../organizations/peerOrganizations/org3.example.com/peers/peer0.org3.example.com/msp --tls.certfiles /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/fabric-ca/org3/tls-cert.pem
+2026/09/21 16:23:44 [INFO] TLS Enabled
+2026/09/21 16:23:44 [INFO] generating key: &{A:ecdsa S:256}
+2026/09/21 16:23:44 [INFO] encoded CSR
+2026/09/21 16:23:44 [INFO] Stored client certificate at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org3.example.com/peers/peer0.org3.example.com/msp/signcerts/cert.pem
+2026/09/21 16:23:44 [INFO] Stored root CA certificate at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org3.example.com/peers/peer0.org3.example.com/msp/cacerts/localhost-11054-ca-org3.pem
+2026/09/21 16:23:44 [INFO] Stored Issuer public key at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org3.example.com/peers/peer0.org3.example.com/msp/IssuerPublicKey
+2026/09/21 16:23:44 [INFO] Stored Issuer revocation public key at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org3.example.com/peers/peer0.org3.example.com/msp/IssuerRevocationPublicKey
+[0;34mGenerating the peer0-tls certificates, use --csr.hosts to specify Subject Alternative Names[0m
++ fabric-ca-client enroll -u https://peer0:peer0pw@localhost:11054 --caname ca-org3 -M /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../organizations/peerOrganizations/org3.example.com/peers/peer0.org3.example.com/tls --enrollment.profile tls --csr.hosts peer0.org3.example.com --csr.hosts localhost --tls.certfiles /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/fabric-ca/org3/tls-cert.pem
+2026/09/21 16:23:44 [INFO] TLS Enabled
+2026/09/21 16:23:44 [INFO] generating key: &{A:ecdsa S:256}
+2026/09/21 16:23:44 [INFO] encoded CSR
+2026/09/21 16:23:44 [INFO] Stored client certificate at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org3.example.com/peers/peer0.org3.example.com/tls/signcerts/cert.pem
+2026/09/21 16:23:44 [INFO] Stored TLS root CA certificate at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org3.example.com/peers/peer0.org3.example.com/tls/tlscacerts/tls-localhost-11054-ca-org3.pem
+2026/09/21 16:23:44 [INFO] Stored Issuer public key at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org3.example.com/peers/peer0.org3.example.com/tls/IssuerPublicKey
+2026/09/21 16:23:44 [INFO] Stored Issuer revocation public key at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org3.example.com/peers/peer0.org3.example.com/tls/IssuerRevocationPublicKey
+[0;34mGenerating the user msp[0m
++ fabric-ca-client enroll -u https://user1:user1pw@localhost:11054 --caname ca-org3 -M /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../organizations/peerOrganizations/org3.example.com/users/User1@org3.example.com/msp --tls.certfiles /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/fabric-ca/org3/tls-cert.pem
+2026/09/21 16:23:44 [INFO] TLS Enabled
+2026/09/21 16:23:44 [INFO] generating key: &{A:ecdsa S:256}
+2026/09/21 16:23:44 [INFO] encoded CSR
+2026/09/21 16:23:44 [INFO] Stored client certificate at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org3.example.com/users/User1@org3.example.com/msp/signcerts/cert.pem
+2026/09/21 16:23:44 [INFO] Stored root CA certificate at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org3.example.com/users/User1@org3.example.com/msp/cacerts/localhost-11054-ca-org3.pem
+2026/09/21 16:23:44 [INFO] Stored Issuer public key at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org3.example.com/users/User1@org3.example.com/msp/IssuerPublicKey
+2026/09/21 16:23:44 [INFO] Stored Issuer revocation public key at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org3.example.com/users/User1@org3.example.com/msp/IssuerRevocationPublicKey
+[0;34mGenerating the org admin msp[0m
++ fabric-ca-client enroll -u https://org3admin:org3adminpw@localhost:11054 --caname ca-org3 -M /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../organizations/peerOrganizations/org3.example.com/users/Admin@org3.example.com/msp --tls.certfiles /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/fabric-ca/org3/tls-cert.pem
+2026/09/21 16:23:44 [INFO] TLS Enabled
+2026/09/21 16:23:44 [INFO] generating key: &{A:ecdsa S:256}
+2026/09/21 16:23:44 [INFO] encoded CSR
+2026/09/21 16:23:44 [INFO] Stored client certificate at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org3.example.com/users/Admin@org3.example.com/msp/signcerts/cert.pem
+2026/09/21 16:23:44 [INFO] Stored root CA certificate at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org3.example.com/users/Admin@org3.example.com/msp/cacerts/localhost-11054-ca-org3.pem
+2026/09/21 16:23:44 [INFO] Stored Issuer public key at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org3.example.com/users/Admin@org3.example.com/msp/IssuerPublicKey
+2026/09/21 16:23:44 [INFO] Stored Issuer revocation public key at /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/organizations/peerOrganizations/org3.example.com/users/Admin@org3.example.com/msp/IssuerRevocationPublicKey
+[0;34mGenerating CCP files for Org3[0m
+/home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../../bin/configtxgen
+[0;34mGenerating Org3 organization definition[0m
++ configtxgen -printOrg Org3MSP
+[34m2026-09-21 16:23:44.736 SAST 0001 INFO[0m [common.tools.configtxgen] [34;1mmain[0m -> Loading configuration
+[34m2026-09-21 16:23:44.736 SAST 0002 INFO[0m [common.tools.configtxgen.localconfig] [34;1mLoadTopLevel[0m -> Loaded configuration: /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/configtx.yaml
++ res=0
+[0;34mBringing up Org3 peer[0m
+ Volume compose_peer0.org3.example.com Creating 
+ Volume compose_peer0.org3.example.com Created 
+time="2026-09-21T16:23:45+02:00" level=warning msg="Found orphan containers (ca_org3, peer0.org2.example.com, peer0.org1.example.com, couchdb1, couchdb0, orderer.example.com, ca_orderer, ca_org2, ca_org1) for this project. If you removed or renamed this service in your compose file, you can run this command with the --remove-orphans flag to clean it up."
+ Container peer0.org3.example.com Creating 
+ Container peer0.org3.example.com Created 
+ Container peer0.org3.example.com Starting 
+ Container peer0.org3.example.com Started 
+[0;34mGenerating and submitting config tx to add Org3[0m
+[0;34mCreating config transaction to add org3 to network[0m
+[0;34mUsing organization 1[0m
+[0;34mFetching the most recent configuration block for the channel[0m
+++ peer channel fetch config /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/config_block.pb -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com -c mychannel --tls --cafile /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../organizations/ordererOrganizations/example.com/tlsca/tlsca.example.com-cert.pem
+[34m2026-09-21 16:23:45.474 SAST 0001 INFO[0m [channelCmd] [34;1mInitCmdFactory[0m -> Endorser and orderer connections initialized
+[34m2026-09-21 16:23:45.475 SAST 0002 INFO[0m [cli.common] [34;1mreadBlock[0m -> Received block: 5
+[34m2026-09-21 16:23:45.475 SAST 0003 INFO[0m [channelCmd] [34;1mfetch[0m -> Retrieving last config block: 2
+[34m2026-09-21 16:23:45.477 SAST 0004 INFO[0m [cli.common] [34;1mreadBlock[0m -> Received block: 2
+[0;34mDecoding config block to JSON and isolating config to /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/config.json[0m
+++ configtxlator proto_decode --input /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/config_block.pb --type common.Block --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/config_block.json
+++ jq '.data.data[0].payload.data.config' /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/config_block.json
+++ res=0
+++ jq -s '.[0] * {"channel_group":{"groups":{"Application":{"groups": {"Org3MSP":.[1]}}}}}' /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/config.json /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../organizations/peerOrganizations/org3.example.com/org3.json
+++ configtxlator proto_encode --input /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/config.json --type common.Config --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/original_config.pb
+++ configtxlator proto_encode --input /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/modified_config.json --type common.Config --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/modified_config.pb
+++ configtxlator compute_update --channel_id mychannel --original /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/original_config.pb --updated /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/modified_config.pb --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/config_update.pb
+++ configtxlator proto_decode --input /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/config_update.pb --type common.ConfigUpdate --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/config_update.json
+++ jq .
++++ cat /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/config_update.json
+++ echo '{"payload":{"header":{"channel_header":{"channel_id":"mychannel", "type":2}},"data":{"config_update":{' '"channel_id":' '"mychannel",' '"isolated_data":' '{},' '"read_set":' '{' '"groups":' '{' '"Application":' '{' '"groups":' '{' '"Org1MSP":' '{' '"groups":' '{},' '"mod_policy":' '"",' '"policies":' '{},' '"values":' '{},' '"version":' '"1"' '},' '"Org2MSP":' '{' '"groups":' '{},' '"mod_policy":' '"",' '"policies":' '{},' '"values":' '{},' '"version":' '"1"' '}' '},' '"mod_policy":' '"",' '"policies":' '{' '"Admins":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Endorsement":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"LifecycleEndorsement":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Readers":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Writers":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '}' '},' '"values":' '{' '"Capabilities":' '{' '"mod_policy":' '"",' '"value":' null, '"version":' '"0"' '}' '},' '"version":' '"0"' '}' '},' '"mod_policy":' '"",' '"policies":' '{},' '"values":' '{},' '"version":' '"0"' '},' '"write_set":' '{' '"groups":' '{' '"Application":' '{' '"groups":' '{' '"Org1MSP":' '{' '"groups":' '{},' '"mod_policy":' '"",' '"policies":' '{},' '"values":' '{},' '"version":' '"1"' '},' '"Org2MSP":' '{' '"groups":' '{},' '"mod_policy":' '"",' '"policies":' '{},' '"values":' '{},' '"version":' '"1"' '},' '"Org3MSP":' '{' '"groups":' '{},' '"mod_policy":' '"Admins",' '"policies":' '{' '"Admins":' '{' '"mod_policy":' '"Admins",' '"policy":' '{' '"type":' 1, '"value":' '{' '"identities":' '[' '{' '"principal":' '{' '"msp_identifier":' '"Org3MSP",' '"role":' '"ADMIN"' '},' '"principal_classification":' '"ROLE"' '}' '],' '"rule":' '{' '"n_out_of":' '{' '"n":' 1, '"rules":' '[' '{' '"signed_by":' 0 '}' ']' '}' '},' '"version":' 0 '}' '},' '"version":' '"0"' '},' '"Endorsement":' '{' '"mod_policy":' '"Admins",' '"policy":' '{' '"type":' 1, '"value":' '{' '"identities":' '[' '{' '"principal":' '{' '"msp_identifier":' '"Org3MSP",' '"role":' '"PEER"' '},' '"principal_classification":' '"ROLE"' '}' '],' '"rule":' '{' '"n_out_of":' '{' '"n":' 1, '"rules":' '[' '{' '"signed_by":' 0 '}' ']' '}' '},' '"version":' 0 '}' '},' '"version":' '"0"' '},' '"Readers":' '{' '"mod_policy":' '"Admins",' '"policy":' '{' '"type":' 1, '"value":' '{' '"identities":' '[' '{' '"principal":' '{' '"msp_identifier":' '"Org3MSP",' '"role":' '"ADMIN"' '},' '"principal_classification":' '"ROLE"' '},' '{' '"principal":' '{' '"msp_identifier":' '"Org3MSP",' '"role":' '"PEER"' '},' '"principal_classification":' '"ROLE"' '},' '{' '"principal":' '{' '"msp_identifier":' '"Org3MSP",' '"role":' '"CLIENT"' '},' '"principal_classification":' '"ROLE"' '}' '],' '"rule":' '{' '"n_out_of":' '{' '"n":' 1, '"rules":' '[' '{' '"signed_by":' 0 '},' '{' '"signed_by":' 1 '},' '{' '"signed_by":' 2 '}' ']' '}' '},' '"version":' 0 '}' '},' '"version":' '"0"' '},' '"Writers":' '{' '"mod_policy":' '"Admins",' '"policy":' '{' '"type":' 1, '"value":' '{' '"identities":' '[' '{' '"principal":' '{' '"msp_identifier":' '"Org3MSP",' '"role":' '"ADMIN"' '},' '"principal_classification":' '"ROLE"' '},' '{' '"principal":' '{' '"msp_identifier":' '"Org3MSP",' '"role":' '"CLIENT"' '},' '"principal_classification":' '"ROLE"' '}' '],' '"rule":' '{' '"n_out_of":' '{' '"n":' 1, '"rules":' '[' '{' '"signed_by":' 0 '},' '{' '"signed_by":' 1 '}' ']' '}' '},' '"version":' 0 '}' '},' '"version":' '"0"' '}' '},' '"values":' '{' '"MSP":' '{' '"mod_policy":' '"Admins",' '"value":' '{' '"config":' '{' '"admins":' '[],' '"crypto_config":' '{' '"identity_identifier_hash_function":' '"SHA256",' '"signature_hash_family":' '"SHA2"' '},' '"fabric_node_ous":' '{' '"admin_ou_identifier":' '{' '"certificate":' '"LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUNLRENDQWMrZ0F3SUJBZ0lVUXFiaVRDNnhwazRuNzlvL2RTc29yRUVtSE5Rd0NnWUlLb1pJemowRUF3SXcKY1RFTE1Ba0dBMVVFQmhNQ1ZWTXhGekFWQmdOVkJBZ1REazV2Y25Sb0lFTmhjbTlzYVc1aE1SQXdEZ1lEVlFRSApFd2RTWVd4bGFXZG9NUmt3RndZRFZRUUtFeEJ2Y21jekxtVjRZVzF3YkdVdVkyOXRNUnd3R2dZRFZRUURFeE5qCllTNXZjbWN6TG1WNFlXMXdiR1V1WTI5dE1CNFhEVEkyTURreU1URTBNVGt3TUZvWERUUXhNRGt4TnpFME1Ua3cKTUZvd2NURUxNQWtHQTFVRUJoTUNWVk14RnpBVkJnTlZCQWdURGs1dmNuUm9JRU5oY205c2FXNWhNUkF3RGdZRApWUVFIRXdkU1lXeGxhV2RvTVJrd0Z3WURWUVFLRXhCdmNtY3pMbVY0WVcxd2JHVXVZMjl0TVJ3d0dnWURWUVFECkV4TmpZUzV2Y21jekxtVjRZVzF3YkdVdVkyOXRNRmt3RXdZSEtvWkl6ajBDQVFZSUtvWkl6ajBEQVFjRFFnQUUKVC9sYXRsNnJ4ODR0cXZTdEZ5Q3RlSFZKTENLWHYyOFFDcGNVdzNXcU95aWR6d1B2RWVGMWxrbmN1NzR4Uk5Ncwo5YVNUWXFoU3o3KysxdEU5ZW9jT0ZLTkZNRU13RGdZRFZSMFBBUUgvQkFRREFnRUdNQklHQTFVZEV3RUIvd1FJCk1BWUJBZjhDQVFFd0hRWURWUjBPQkJZRUZDRjdvaDYxMDl5SFEwQmRDZzdGMFkwcEJ2SzhNQW9HQ0NxR1NNNDkKQkFNQ0EwY0FNRVFDSUVZWllYekZrOG5ESzl6bU1wL1VmOFdha3pBNE1GZjBnTzczUS9VQWc0NndBaUJmUW1HdQo5Vm5pMEFsY1BmSCtCbWdlY2RKcVRnQU40MWROakRwdDhkS2lSUT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K",' '"organizational_unit_identifier":' '"admin"' '},' '"client_ou_identifier":' '{' '"certificate":' '"LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUNLRENDQWMrZ0F3SUJBZ0lVUXFiaVRDNnhwazRuNzlvL2RTc29yRUVtSE5Rd0NnWUlLb1pJemowRUF3SXcKY1RFTE1Ba0dBMVVFQmhNQ1ZWTXhGekFWQmdOVkJBZ1REazV2Y25Sb0lFTmhjbTlzYVc1aE1SQXdEZ1lEVlFRSApFd2RTWVd4bGFXZG9NUmt3RndZRFZRUUtFeEJ2Y21jekxtVjRZVzF3YkdVdVkyOXRNUnd3R2dZRFZRUURFeE5qCllTNXZjbWN6TG1WNFlXMXdiR1V1WTI5dE1CNFhEVEkyTURreU1URTBNVGt3TUZvWERUUXhNRGt4TnpFME1Ua3cKTUZvd2NURUxNQWtHQTFVRUJoTUNWVk14RnpBVkJnTlZCQWdURGs1dmNuUm9JRU5oY205c2FXNWhNUkF3RGdZRApWUVFIRXdkU1lXeGxhV2RvTVJrd0Z3WURWUVFLRXhCdmNtY3pMbVY0WVcxd2JHVXVZMjl0TVJ3d0dnWURWUVFECkV4TmpZUzV2Y21jekxtVjRZVzF3YkdVdVkyOXRNRmt3RXdZSEtvWkl6ajBDQVFZSUtvWkl6ajBEQVFjRFFnQUUKVC9sYXRsNnJ4ODR0cXZTdEZ5Q3RlSFZKTENLWHYyOFFDcGNVdzNXcU95aWR6d1B2RWVGMWxrbmN1NzR4Uk5Ncwo5YVNUWXFoU3o3KysxdEU5ZW9jT0ZLTkZNRU13RGdZRFZSMFBBUUgvQkFRREFnRUdNQklHQTFVZEV3RUIvd1FJCk1BWUJBZjhDQVFFd0hRWURWUjBPQkJZRUZDRjdvaDYxMDl5SFEwQmRDZzdGMFkwcEJ2SzhNQW9HQ0NxR1NNNDkKQkFNQ0EwY0FNRVFDSUVZWllYekZrOG5ESzl6bU1wL1VmOFdha3pBNE1GZjBnTzczUS9VQWc0NndBaUJmUW1HdQo5Vm5pMEFsY1BmSCtCbWdlY2RKcVRnQU40MWROakRwdDhkS2lSUT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K",' '"organizational_unit_identifier":' '"client"' '},' '"enable":' true, '"orderer_ou_identifier":' '{' '"certificate":' '"LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUNLRENDQWMrZ0F3SUJBZ0lVUXFiaVRDNnhwazRuNzlvL2RTc29yRUVtSE5Rd0NnWUlLb1pJemowRUF3SXcKY1RFTE1Ba0dBMVVFQmhNQ1ZWTXhGekFWQmdOVkJBZ1REazV2Y25Sb0lFTmhjbTlzYVc1aE1SQXdEZ1lEVlFRSApFd2RTWVd4bGFXZG9NUmt3RndZRFZRUUtFeEJ2Y21jekxtVjRZVzF3YkdVdVkyOXRNUnd3R2dZRFZRUURFeE5qCllTNXZjbWN6TG1WNFlXMXdiR1V1WTI5dE1CNFhEVEkyTURreU1URTBNVGt3TUZvWERUUXhNRGt4TnpFME1Ua3cKTUZvd2NURUxNQWtHQTFVRUJoTUNWVk14RnpBVkJnTlZCQWdURGs1dmNuUm9JRU5oY205c2FXNWhNUkF3RGdZRApWUVFIRXdkU1lXeGxhV2RvTVJrd0Z3WURWUVFLRXhCdmNtY3pMbVY0WVcxd2JHVXVZMjl0TVJ3d0dnWURWUVFECkV4TmpZUzV2Y21jekxtVjRZVzF3YkdVdVkyOXRNRmt3RXdZSEtvWkl6ajBDQVFZSUtvWkl6ajBEQVFjRFFnQUUKVC9sYXRsNnJ4ODR0cXZTdEZ5Q3RlSFZKTENLWHYyOFFDcGNVdzNXcU95aWR6d1B2RWVGMWxrbmN1NzR4Uk5Ncwo5YVNUWXFoU3o3KysxdEU5ZW9jT0ZLTkZNRU13RGdZRFZSMFBBUUgvQkFRREFnRUdNQklHQTFVZEV3RUIvd1FJCk1BWUJBZjhDQVFFd0hRWURWUjBPQkJZRUZDRjdvaDYxMDl5SFEwQmRDZzdGMFkwcEJ2SzhNQW9HQ0NxR1NNNDkKQkFNQ0EwY0FNRVFDSUVZWllYekZrOG5ESzl6bU1wL1VmOFdha3pBNE1GZjBnTzczUS9VQWc0NndBaUJmUW1HdQo5Vm5pMEFsY1BmSCtCbWdlY2RKcVRnQU40MWROakRwdDhkS2lSUT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K",' '"organizational_unit_identifier":' '"orderer"' '},' '"peer_ou_identifier":' '{' '"certificate":' '"LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUNLRENDQWMrZ0F3SUJBZ0lVUXFiaVRDNnhwazRuNzlvL2RTc29yRUVtSE5Rd0NnWUlLb1pJemowRUF3SXcKY1RFTE1Ba0dBMVVFQmhNQ1ZWTXhGekFWQmdOVkJBZ1REazV2Y25Sb0lFTmhjbTlzYVc1aE1SQXdEZ1lEVlFRSApFd2RTWVd4bGFXZG9NUmt3RndZRFZRUUtFeEJ2Y21jekxtVjRZVzF3YkdVdVkyOXRNUnd3R2dZRFZRUURFeE5qCllTNXZjbWN6TG1WNFlXMXdiR1V1WTI5dE1CNFhEVEkyTURreU1URTBNVGt3TUZvWERUUXhNRGt4TnpFME1Ua3cKTUZvd2NURUxNQWtHQTFVRUJoTUNWVk14RnpBVkJnTlZCQWdURGs1dmNuUm9JRU5oY205c2FXNWhNUkF3RGdZRApWUVFIRXdkU1lXeGxhV2RvTVJrd0Z3WURWUVFLRXhCdmNtY3pMbVY0WVcxd2JHVXVZMjl0TVJ3d0dnWURWUVFECkV4TmpZUzV2Y21jekxtVjRZVzF3YkdVdVkyOXRNRmt3RXdZSEtvWkl6ajBDQVFZSUtvWkl6ajBEQVFjRFFnQUUKVC9sYXRsNnJ4ODR0cXZTdEZ5Q3RlSFZKTENLWHYyOFFDcGNVdzNXcU95aWR6d1B2RWVGMWxrbmN1NzR4Uk5Ncwo5YVNUWXFoU3o3KysxdEU5ZW9jT0ZLTkZNRU13RGdZRFZSMFBBUUgvQkFRREFnRUdNQklHQTFVZEV3RUIvd1FJCk1BWUJBZjhDQVFFd0hRWURWUjBPQkJZRUZDRjdvaDYxMDl5SFEwQmRDZzdGMFkwcEJ2SzhNQW9HQ0NxR1NNNDkKQkFNQ0EwY0FNRVFDSUVZWllYekZrOG5ESzl6bU1wL1VmOFdha3pBNE1GZjBnTzczUS9VQWc0NndBaUJmUW1HdQo5Vm5pMEFsY1BmSCtCbWdlY2RKcVRnQU40MWROakRwdDhkS2lSUT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K",' '"organizational_unit_identifier":' '"peer"' '}' '},' '"intermediate_certs":' '[],' '"name":' '"Org3MSP",' '"organizational_unit_identifiers":' '[],' '"revocation_list":' '[],' '"root_certs":' '[' '"LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUNLRENDQWMrZ0F3SUJBZ0lVUXFiaVRDNnhwazRuNzlvL2RTc29yRUVtSE5Rd0NnWUlLb1pJemowRUF3SXcKY1RFTE1Ba0dBMVVFQmhNQ1ZWTXhGekFWQmdOVkJBZ1REazV2Y25Sb0lFTmhjbTlzYVc1aE1SQXdEZ1lEVlFRSApFd2RTWVd4bGFXZG9NUmt3RndZRFZRUUtFeEJ2Y21jekxtVjRZVzF3YkdVdVkyOXRNUnd3R2dZRFZRUURFeE5qCllTNXZjbWN6TG1WNFlXMXdiR1V1WTI5dE1CNFhEVEkyTURreU1URTBNVGt3TUZvWERUUXhNRGt4TnpFME1Ua3cKTUZvd2NURUxNQWtHQTFVRUJoTUNWVk14RnpBVkJnTlZCQWdURGs1dmNuUm9JRU5oY205c2FXNWhNUkF3RGdZRApWUVFIRXdkU1lXeGxhV2RvTVJrd0Z3WURWUVFLRXhCdmNtY3pMbVY0WVcxd2JHVXVZMjl0TVJ3d0dnWURWUVFECkV4TmpZUzV2Y21jekxtVjRZVzF3YkdVdVkyOXRNRmt3RXdZSEtvWkl6ajBDQVFZSUtvWkl6ajBEQVFjRFFnQUUKVC9sYXRsNnJ4ODR0cXZTdEZ5Q3RlSFZKTENLWHYyOFFDcGNVdzNXcU95aWR6d1B2RWVGMWxrbmN1NzR4Uk5Ncwo5YVNUWXFoU3o3KysxdEU5ZW9jT0ZLTkZNRU13RGdZRFZSMFBBUUgvQkFRREFnRUdNQklHQTFVZEV3RUIvd1FJCk1BWUJBZjhDQVFFd0hRWURWUjBPQkJZRUZDRjdvaDYxMDl5SFEwQmRDZzdGMFkwcEJ2SzhNQW9HQ0NxR1NNNDkKQkFNQ0EwY0FNRVFDSUVZWllYekZrOG5ESzl6bU1wL1VmOFdha3pBNE1GZjBnTzczUS9VQWc0NndBaUJmUW1HdQo5Vm5pMEFsY1BmSCtCbWdlY2RKcVRnQU40MWROakRwdDhkS2lSUT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K"' '],' '"signing_identity":' null, '"tls_intermediate_certs":' '[],' '"tls_root_certs":' '[' '"LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUNLRENDQWMrZ0F3SUJBZ0lVUXFiaVRDNnhwazRuNzlvL2RTc29yRUVtSE5Rd0NnWUlLb1pJemowRUF3SXcKY1RFTE1Ba0dBMVVFQmhNQ1ZWTXhGekFWQmdOVkJBZ1REazV2Y25Sb0lFTmhjbTlzYVc1aE1SQXdEZ1lEVlFRSApFd2RTWVd4bGFXZG9NUmt3RndZRFZRUUtFeEJ2Y21jekxtVjRZVzF3YkdVdVkyOXRNUnd3R2dZRFZRUURFeE5qCllTNXZjbWN6TG1WNFlXMXdiR1V1WTI5dE1CNFhEVEkyTURreU1URTBNVGt3TUZvWERUUXhNRGt4TnpFME1Ua3cKTUZvd2NURUxNQWtHQTFVRUJoTUNWVk14RnpBVkJnTlZCQWdURGs1dmNuUm9JRU5oY205c2FXNWhNUkF3RGdZRApWUVFIRXdkU1lXeGxhV2RvTVJrd0Z3WURWUVFLRXhCdmNtY3pMbVY0WVcxd2JHVXVZMjl0TVJ3d0dnWURWUVFECkV4TmpZUzV2Y21jekxtVjRZVzF3YkdVdVkyOXRNRmt3RXdZSEtvWkl6ajBDQVFZSUtvWkl6ajBEQVFjRFFnQUUKVC9sYXRsNnJ4ODR0cXZTdEZ5Q3RlSFZKTENLWHYyOFFDcGNVdzNXcU95aWR6d1B2RWVGMWxrbmN1NzR4Uk5Ncwo5YVNUWXFoU3o3KysxdEU5ZW9jT0ZLTkZNRU13RGdZRFZSMFBBUUgvQkFRREFnRUdNQklHQTFVZEV3RUIvd1FJCk1BWUJBZjhDQVFFd0hRWURWUjBPQkJZRUZDRjdvaDYxMDl5SFEwQmRDZzdGMFkwcEJ2SzhNQW9HQ0NxR1NNNDkKQkFNQ0EwY0FNRVFDSUVZWllYekZrOG5ESzl6bU1wL1VmOFdha3pBNE1GZjBnTzczUS9VQWc0NndBaUJmUW1HdQo5Vm5pMEFsY1BmSCtCbWdlY2RKcVRnQU40MWROakRwdDhkS2lSUT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K"' ']' '},' '"type":' 0 '},' '"version":' '"0"' '}' '},' '"version":' '"0"' '}' '},' '"mod_policy":' '"Admins",' '"policies":' '{' '"Admins":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Endorsement":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"LifecycleEndorsement":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Readers":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Writers":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '}' '},' '"values":' '{' '"Capabilities":' '{' '"mod_policy":' '"",' '"value":' null, '"version":' '"0"' '}' '},' '"version":' '"1"' '}' '},' '"mod_policy":' '"",' '"policies":' '{},' '"values":' '{},' '"version":' '"0"' '}' '}}}}'
+++ configtxlator proto_encode --input /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/config_update_in_envelope.json --type common.Envelope --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/org3_update_in_envelope.pb
+[0;34mSigning config transaction[0m
+[0;34mUsing organization 1[0m
+++ peer channel signconfigtx -f /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/org3_update_in_envelope.pb
+[34m2026-09-21 16:23:45.618 SAST 0001 INFO[0m [channelCmd] [34;1mInitCmdFactory[0m -> Endorser and orderer connections initialized
+[0;34mSubmitting transaction from a different peer (peer0.org2) which also signs it[0m
+[0;34mUsing organization 2[0m
+++ peer channel update -f /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/org3_update_in_envelope.pb -c mychannel -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --tls --cafile /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../organizations/ordererOrganizations/example.com/tlsca/tlsca.example.com-cert.pem
+[34m2026-09-21 16:23:45.660 SAST 0001 INFO[0m [channelCmd] [34;1mInitCmdFactory[0m -> Endorser and orderer connections initialized
+[34m2026-09-21 16:23:45.670 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+[0;32mConfig transaction to add org3 to network submitted[0m
+[0;34mJoining Org3 peers to network[0m
+[0;34mUsing organization 3[0m
+Fetching channel config block from orderer...
+++ peer channel fetch 0 /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/mychannel.block -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com -c mychannel --tls --cafile /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../organizations/ordererOrganizations/example.com/tlsca/tlsca.example.com-cert.pem
+++ res=0
+[0;34mJoining org3 peer to the channel...[0m
+[0;34mUsing organization 3[0m
+++ peer channel join -b /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/mychannel.block
+++ res=0
+[34m2026-09-21 16:23:48.770 SAST 0001 INFO[0m [channelCmd] [34;1mInitCmdFactory[0m -> Endorser and orderer connections initialized
+[34m2026-09-21 16:23:48.844 SAST 0002 INFO[0m [channelCmd] [34;1mexecuteJoin[0m -> Successfully submitted proposal to join channel
+[0;34mSetting anchor peer for org3...[0m
+[0;34mUsing organization 3[0m
+[0;34mFetching channel config for channel mychannel[0m
+[0;34mUsing organization 3[0m
+[0;34mFetching the most recent configuration block for the channel[0m
++ peer channel fetch config /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/config_block.pb -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com -c mychannel --tls --cafile /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../organizations/ordererOrganizations/example.com/tlsca/tlsca.example.com-cert.pem
+[34m2026-09-21 16:23:48.899 SAST 0001 INFO[0m [channelCmd] [34;1mInitCmdFactory[0m -> Endorser and orderer connections initialized
+[34m2026-09-21 16:23:48.901 SAST 0002 INFO[0m [cli.common] [34;1mreadBlock[0m -> Received block: 6
+[34m2026-09-21 16:23:48.902 SAST 0003 INFO[0m [channelCmd] [34;1mfetch[0m -> Retrieving last config block: 6
+[34m2026-09-21 16:23:48.903 SAST 0004 INFO[0m [cli.common] [34;1mreadBlock[0m -> Received block: 6
+[0;34mDecoding config block to JSON and isolating config to /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/Org3MSPconfig.json[0m
++ configtxlator proto_decode --input /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/config_block.pb --type common.Block --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/config_block.json
++ jq '.data.data[0].payload.data.config' /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/config_block.json
++ res=0
+[0;34mGenerating anchor peer update transaction for Org3 on channel mychannel[0m
++ jq '.channel_group.groups.Application.groups.Org3MSP.values += {"AnchorPeers":{"mod_policy": "Admins","value":{"anchor_peers": [{"host": "peer0.org3.example.com","port": 7251}]},"version": "0"}}' /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/Org3MSPconfig.json
++ res=0
++ configtxlator proto_encode --input /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/Org3MSPconfig.json --type common.Config --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/original_config.pb
++ configtxlator proto_encode --input /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/Org3MSPmodified_config.json --type common.Config --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/modified_config.pb
++ configtxlator compute_update --channel_id mychannel --original /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/original_config.pb --updated /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/modified_config.pb --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/config_update.pb
++ configtxlator proto_decode --input /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/config_update.pb --type common.ConfigUpdate --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/config_update.json
++ jq .
+++ cat /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/config_update.json
++ echo '{"payload":{"header":{"channel_header":{"channel_id":"mychannel", "type":2}},"data":{"config_update":{' '"channel_id":' '"mychannel",' '"isolated_data":' '{},' '"read_set":' '{' '"groups":' '{' '"Application":' '{' '"groups":' '{' '"Org3MSP":' '{' '"groups":' '{},' '"mod_policy":' '"",' '"policies":' '{' '"Admins":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Endorsement":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Readers":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Writers":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '}' '},' '"values":' '{' '"MSP":' '{' '"mod_policy":' '"",' '"value":' null, '"version":' '"0"' '}' '},' '"version":' '"0"' '}' '},' '"mod_policy":' '"",' '"policies":' '{},' '"values":' '{},' '"version":' '"1"' '}' '},' '"mod_policy":' '"",' '"policies":' '{},' '"values":' '{},' '"version":' '"0"' '},' '"write_set":' '{' '"groups":' '{' '"Application":' '{' '"groups":' '{' '"Org3MSP":' '{' '"groups":' '{},' '"mod_policy":' '"Admins",' '"policies":' '{' '"Admins":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Endorsement":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Readers":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '},' '"Writers":' '{' '"mod_policy":' '"",' '"policy":' null, '"version":' '"0"' '}' '},' '"values":' '{' '"AnchorPeers":' '{' '"mod_policy":' '"Admins",' '"value":' '{' '"anchor_peers":' '[' '{' '"host":' '"peer0.org3.example.com",' '"port":' 7251 '}' ']' '},' '"version":' '"0"' '},' '"MSP":' '{' '"mod_policy":' '"",' '"value":' null, '"version":' '"0"' '}' '},' '"version":' '"1"' '}' '},' '"mod_policy":' '"",' '"policies":' '{},' '"values":' '{},' '"version":' '"1"' '}' '},' '"mod_policy":' '"",' '"policies":' '{},' '"values":' '{},' '"version":' '"0"' '}' '}}}}'
++ configtxlator proto_encode --input /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/config_update_in_envelope.json --type common.Envelope --output /home/snow_woofer/projects/snow_woofer/2026/autistic_collection/A_Blockchain_Enabled_Framework_for_Misinformation_Monitoring/blockchain/fabric-samples/test-network/addOrg3/../channel-artifacts/Org3MSPanchors.tx
+[34m2026-09-21 16:23:49.047 SAST 0001 INFO[0m [channelCmd] [34;1mInitCmdFactory[0m -> Endorser and orderer connections initialized
+[34m2026-09-21 16:23:49.057 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+[0;32mAnchor peer set for org 'Org3MSP' on channel 'mychannel'[0m
+[0;32mChannel 'mychannel' joined[0m
+[0;32mOrg3 peer successfully added to network[0m
+>> Switching to a 2-of-3 endorsement policy...
+>> Packaging chaincode misinformation v2.2...
+>> Package ID: misinformation_2.2:dbfbf2d9a910d8e70054615a124fe0213864400df3c9f3a5847803436c051fd1
+>> Install on org1...
+>> Install on org2...
+>> Install on org3...
+>> Approve on org1...
+[34m2026-09-21 16:24:16.173 SAST 0001 INFO[0m [chaincodeCmd] [34;1mClientWait[0m -> txid [8ba10d1159b0320fd5d31ed556f349411d3671c46979aebe8889186b259f282c] committed with status (VALID) at localhost:7051
+>> Approve on org2...
+[34m2026-09-21 16:24:18.346 SAST 0001 INFO[0m [chaincodeCmd] [34;1mClientWait[0m -> txid [92ddd0f982c7ccea398fa9d6f9b675a478b6af9094fe75e0dee2e5ed43b422bc] committed with status (VALID) at localhost:7151
+>> Approve on org3...
+[34m2026-09-21 16:24:20.480 SAST 0001 INFO[0m [chaincodeCmd] [34;1mClientWait[0m -> txid [a06af0b3c64ebeb42a87d35a991e678a96bd61d72a18d83e0f73c1a39187d5c4] committed with status (VALID) at localhost:7251
+>> Checking commit readiness...
+}
+>> Committing with 2/3 endorsement policy...
+[34m2026-09-21 16:24:23.115 SAST 0002 INFO[0m [chaincodeCmd] [34;1mClientWait[0m -> txid [534003ca778c703376a7e4f32d9f5af1189c8ba551c74b3da43d89ef57ab17dc] committed with status (VALID) at localhost:7151
+[34m2026-09-21 16:24:23.115 SAST 0003 INFO[0m [chaincodeCmd] [34;1mClientWait[0m -> txid [534003ca778c703376a7e4f32d9f5af1189c8ba551c74b3da43d89ef57ab17dc] committed with status (VALID) at localhost:7051
+>> Query committed definition on each org...
+  org1: Endorsement Plugin: escc, Validation Plugin: vscc, Approvals: [Org1MSP: true, Org2MSP: true, Org3MSP: true]
+  org2: Endorsement Plugin: escc, Validation Plugin: vscc, Approvals: [Org1MSP: true, Org2MSP: true, Org3MSP: true]
+  org3: Endorsement Plugin: escc, Validation Plugin: vscc, Approvals: [Org1MSP: true, Org2MSP: true, Org3MSP: true]
+
+Org3 onboarded. Endorsement policy is now: OutOf(2, 'Org1MSP.member','Org2MSP.member','Org3MSP.member')
+>> Adding peer orgs to the channel...
+>> Adding peer orgs org4..org30 to the running network...
+>> [org4] starting Fabric CA (port 12054)...
+ Container ca_org4 Starting 
+ Container ca_org4 Started 
+>> [org4] enrolling CA admin...
+>> [org4] registering peer0, user1, org admin...
+>> [org4] enrolling peer0...
+>> [org4] enrolling User1 and Admin...
+>> [org4] generating org definition (configtxgen)...
+>> [org4] writing docker compose files...
+>> [org4] starting peer container (peer0.org4.example.com:7351)...
+ Container peer0.org4.example.com Starting 
+ Container peer0.org4.example.com Started 
+>> [org4] adding Org4MSP to channel 'mychannel'...
+[34m2026-09-21 16:24:35.968 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+>> [org4] joining peer0.org4 to the channel...
+>> [org4] peer0.org4 joined the channel.
+>> [org4] setting anchor peer peer0.org4:7351...
+[34m2026-09-21 16:24:39.460 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+>> [org5] starting Fabric CA (port 12154)...
+ Container ca_org5 Starting 
+ Container ca_org5 Started 
+>> [org5] enrolling CA admin...
+>> [org5] registering peer0, user1, org admin...
+>> [org5] enrolling peer0...
+>> [org5] enrolling User1 and Admin...
+>> [org5] generating org definition (configtxgen)...
+>> [org5] writing docker compose files...
+>> [org5] starting peer container (peer0.org5.example.com:7451)...
+ Container peer0.org5.example.com Starting 
+ Container peer0.org5.example.com Started 
+>> [org5] adding Org5MSP to channel 'mychannel'...
+[34m2026-09-21 16:24:51.230 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+>> [org5] joining peer0.org5 to the channel...
+>> [org5] peer0.org5 joined the channel.
+>> [org5] setting anchor peer peer0.org5:7451...
+[34m2026-09-21 16:24:51.657 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+>> [org6] starting Fabric CA (port 12254)...
+ Container ca_org6 Starting 
+ Container ca_org6 Started 
+>> [org6] enrolling CA admin...
+>> [org6] registering peer0, user1, org admin...
+>> [org6] enrolling peer0...
+>> [org6] enrolling User1 and Admin...
+>> [org6] generating org definition (configtxgen)...
+>> [org6] writing docker compose files...
+>> [org6] starting peer container (peer0.org6.example.com:7551)...
+ Container peer0.org6.example.com Starting 
+ Container peer0.org6.example.com Started 
+>> [org6] adding Org6MSP to channel 'mychannel'...
+[34m2026-09-21 16:25:04.821 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+>> [org6] joining peer0.org6 to the channel...
+>> [org6] peer0.org6 joined the channel.
+>> [org6] setting anchor peer peer0.org6:7551...
+[34m2026-09-21 16:25:05.348 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+>> [org7] starting Fabric CA (port 12354)...
+ Container ca_org7 Starting 
+ Container ca_org7 Started 
+>> [org7] enrolling CA admin...
+>> [org7] registering peer0, user1, org admin...
+>> [org7] enrolling peer0...
+>> [org7] enrolling User1 and Admin...
+>> [org7] generating org definition (configtxgen)...
+>> [org7] writing docker compose files...
+>> [org7] starting peer container (peer0.org7.example.com:7651)...
+ Container peer0.org7.example.com Starting 
+ Container peer0.org7.example.com Started 
+>> [org7] adding Org7MSP to channel 'mychannel'...
+[34m2026-09-21 16:25:17.380 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+>> [org7] joining peer0.org7 to the channel...
+>> [org7] peer0.org7 joined the channel.
+>> [org7] setting anchor peer peer0.org7:7651...
+[34m2026-09-21 16:25:17.826 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+>> [org8] starting Fabric CA (port 12454)...
+ Container ca_org8 Starting 
+ Container ca_org8 Started 
+>> [org8] enrolling CA admin...
+>> [org8] registering peer0, user1, org admin...
+>> [org8] enrolling peer0...
+>> [org8] enrolling User1 and Admin...
+>> [org8] generating org definition (configtxgen)...
+>> [org8] writing docker compose files...
+>> [org8] starting peer container (peer0.org8.example.com:7751)...
+ Container peer0.org8.example.com Starting 
+ Container peer0.org8.example.com Started 
+>> [org8] adding Org8MSP to channel 'mychannel'...
+[34m2026-09-21 16:25:30.695 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+>> [org8] joining peer0.org8 to the channel...
+>> [org8] peer0.org8 joined the channel.
+>> [org8] setting anchor peer peer0.org8:7751...
+[34m2026-09-21 16:25:31.170 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+>> [org9] starting Fabric CA (port 12554)...
+ Container ca_org9 Starting 
+ Container ca_org9 Started 
+>> [org9] enrolling CA admin...
+>> [org9] registering peer0, user1, org admin...
+>> [org9] enrolling peer0...
+>> [org9] enrolling User1 and Admin...
+>> [org9] generating org definition (configtxgen)...
+>> [org9] writing docker compose files...
+>> [org9] starting peer container (peer0.org9.example.com:7851)...
+ Container peer0.org9.example.com Starting 
+ Container peer0.org9.example.com Started 
+>> [org9] adding Org9MSP to channel 'mychannel'...
+[34m2026-09-21 16:25:44.343 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+>> [org9] joining peer0.org9 to the channel...
+>> [org9] peer0.org9 joined the channel.
+>> [org9] setting anchor peer peer0.org9:7851...
+[34m2026-09-21 16:25:44.858 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+>> [org10] starting Fabric CA (port 12654)...
+ Container ca_org10 Starting 
+ Container ca_org10 Started 
+>> [org10] enrolling CA admin...
+>> [org10] registering peer0, user1, org admin...
+>> [org10] enrolling peer0...
+>> [org10] enrolling User1 and Admin...
+>> [org10] generating org definition (configtxgen)...
+>> [org10] writing docker compose files...
+>> [org10] starting peer container (peer0.org10.example.com:7951)...
+ Container peer0.org10.example.com Starting 
+ Container peer0.org10.example.com Started 
+>> [org10] adding Org10MSP to channel 'mychannel'...
+[34m2026-09-21 16:25:57.510 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+>> [org10] joining peer0.org10 to the channel...
+>> [org10] peer0.org10 joined the channel.
+>> [org10] setting anchor peer peer0.org10:7951...
+[34m2026-09-21 16:25:58.048 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+>> [org11] starting Fabric CA (port 12754)...
+ Container ca_org11 Starting 
+ Container ca_org11 Started 
+>> [org11] enrolling CA admin...
+>> [org11] registering peer0, user1, org admin...
+>> [org11] enrolling peer0...
+>> [org11] enrolling User1 and Admin...
+>> [org11] generating org definition (configtxgen)...
+>> [org11] writing docker compose files...
+>> [org11] starting peer container (peer0.org11.example.com:8051)...
+ Container peer0.org11.example.com Starting 
+ Container peer0.org11.example.com Started 
+>> [org11] adding Org11MSP to channel 'mychannel'...
+[34m2026-09-21 16:26:12.068 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+>> [org11] joining peer0.org11 to the channel...
+>> [org11] peer0.org11 joined the channel.
+>> [org11] setting anchor peer peer0.org11:8051...
+[34m2026-09-21 16:26:12.691 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+>> [org12] starting Fabric CA (port 12854)...
+ Container ca_org12 Starting 
+ Container ca_org12 Started 
+>> [org12] enrolling CA admin...
+>> [org12] registering peer0, user1, org admin...
+>> [org12] enrolling peer0...
+>> [org12] enrolling User1 and Admin...
+>> [org12] generating org definition (configtxgen)...
+>> [org12] writing docker compose files...
+>> [org12] starting peer container (peer0.org12.example.com:8151)...
+ Container peer0.org12.example.com Starting 
+ Container peer0.org12.example.com Started 
+>> [org12] adding Org12MSP to channel 'mychannel'...
+[34m2026-09-21 16:26:25.190 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+>> [org12] joining peer0.org12 to the channel...
+>> [org12] peer0.org12 joined the channel.
+>> [org12] setting anchor peer peer0.org12:8151...
+[34m2026-09-21 16:26:25.758 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+>> [org13] starting Fabric CA (port 12954)...
+ Container ca_org13 Starting 
+ Container ca_org13 Started 
+>> [org13] enrolling CA admin...
+>> [org13] registering peer0, user1, org admin...
+>> [org13] enrolling peer0...
+>> [org13] enrolling User1 and Admin...
+>> [org13] generating org definition (configtxgen)...
+>> [org13] writing docker compose files...
+>> [org13] starting peer container (peer0.org13.example.com:8251)...
+ Container peer0.org13.example.com Starting 
+ Container peer0.org13.example.com Started 
+>> [org13] adding Org13MSP to channel 'mychannel'...
+[34m2026-09-21 16:26:39.089 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+>> [org13] joining peer0.org13 to the channel...
+>> [org13] peer0.org13 joined the channel.
+>> [org13] setting anchor peer peer0.org13:8251...
+[34m2026-09-21 16:26:39.664 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+>> [org14] starting Fabric CA (port 13054)...
+ Container ca_org14 Starting 
+ Container ca_org14 Started 
+>> [org14] enrolling CA admin...
+>> [org14] registering peer0, user1, org admin...
+>> [org14] enrolling peer0...
+>> [org14] enrolling User1 and Admin...
+>> [org14] generating org definition (configtxgen)...
+>> [org14] writing docker compose files...
+>> [org14] starting peer container (peer0.org14.example.com:8351)...
+ Container peer0.org14.example.com Starting 
+ Container peer0.org14.example.com Started 
+>> [org14] adding Org14MSP to channel 'mychannel'...
+[34m2026-09-21 16:26:52.276 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+>> [org14] joining peer0.org14 to the channel...
+>> [org14] peer0.org14 joined the channel.
+>> [org14] setting anchor peer peer0.org14:8351...
+[34m2026-09-21 16:26:52.936 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+>> [org15] starting Fabric CA (port 13154)...
+ Container ca_org15 Starting 
+ Container ca_org15 Started 
+>> [org15] enrolling CA admin...
+>> [org15] registering peer0, user1, org admin...
+>> [org15] enrolling peer0...
+>> [org15] enrolling User1 and Admin...
+>> [org15] generating org definition (configtxgen)...
+>> [org15] writing docker compose files...
+>> [org15] starting peer container (peer0.org15.example.com:8451)...
+ Container peer0.org15.example.com Starting 
+ Container peer0.org15.example.com Started 
+>> [org15] adding Org15MSP to channel 'mychannel'...
+[34m2026-09-21 16:27:06.858 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+>> [org15] joining peer0.org15 to the channel...
+>> [org15] peer0.org15 joined the channel.
+>> [org15] setting anchor peer peer0.org15:8451...
+[34m2026-09-21 16:27:07.615 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+>> [org16] starting Fabric CA (port 13254)...
+ Container ca_org16 Starting 
+ Container ca_org16 Started 
+>> [org16] enrolling CA admin...
+>> [org16] registering peer0, user1, org admin...
+>> [org16] enrolling peer0...
+>> [org16] enrolling User1 and Admin...
+>> [org16] generating org definition (configtxgen)...
+>> [org16] writing docker compose files...
+>> [org16] starting peer container (peer0.org16.example.com:8551)...
+ Container peer0.org16.example.com Starting 
+ Container peer0.org16.example.com Started 
+>> [org16] adding Org16MSP to channel 'mychannel'...
+[34m2026-09-21 16:27:21.124 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+>> [org16] joining peer0.org16 to the channel...
+>> [org16] peer0.org16 joined the channel.
+>> [org16] setting anchor peer peer0.org16:8551...
+[34m2026-09-21 16:27:21.856 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+>> [org17] starting Fabric CA (port 13354)...
+ Container ca_org17 Starting 
+ Container ca_org17 Started 
+>> [org17] enrolling CA admin...
+>> [org17] registering peer0, user1, org admin...
+>> [org17] enrolling peer0...
+>> [org17] enrolling User1 and Admin...
+>> [org17] generating org definition (configtxgen)...
+>> [org17] writing docker compose files...
+>> [org17] starting peer container (peer0.org17.example.com:8651)...
+ Container peer0.org17.example.com Starting 
+ Container peer0.org17.example.com Started 
+>> [org17] adding Org17MSP to channel 'mychannel'...
+[34m2026-09-21 16:27:35.628 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+>> [org17] joining peer0.org17 to the channel...
+>> [org17] peer0.org17 joined the channel.
+>> [org17] setting anchor peer peer0.org17:8651...
+[34m2026-09-21 16:27:36.415 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+>> [org18] starting Fabric CA (port 13454)...
+ Container ca_org18 Starting 
+ Container ca_org18 Started 
+>> [org18] enrolling CA admin...
+>> [org18] registering peer0, user1, org admin...
+>> [org18] enrolling peer0...
+>> [org18] enrolling User1 and Admin...
+>> [org18] generating org definition (configtxgen)...
+>> [org18] writing docker compose files...
+>> [org18] starting peer container (peer0.org18.example.com:8751)...
+ Container peer0.org18.example.com Starting 
+ Container peer0.org18.example.com Started 
+>> [org18] adding Org18MSP to channel 'mychannel'...
+[34m2026-09-21 16:27:50.435 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+>> [org18] joining peer0.org18 to the channel...
+>> [org18] peer0.org18 joined the channel.
+>> [org18] setting anchor peer peer0.org18:8751...
+[34m2026-09-21 16:27:51.270 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+>> [org19] starting Fabric CA (port 13554)...
+ Container ca_org19 Starting 
+ Container ca_org19 Started 
+>> [org19] enrolling CA admin...
+>> [org19] registering peer0, user1, org admin...
+>> [org19] enrolling peer0...
+>> [org19] enrolling User1 and Admin...
+>> [org19] generating org definition (configtxgen)...
+>> [org19] writing docker compose files...
+>> [org19] starting peer container (peer0.org19.example.com:8851)...
+ Container peer0.org19.example.com Starting 
+ Container peer0.org19.example.com Started 
+>> [org19] adding Org19MSP to channel 'mychannel'...
+[34m2026-09-21 16:28:04.659 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+>> [org19] joining peer0.org19 to the channel...
+>> [org19] peer0.org19 joined the channel.
+>> [org19] setting anchor peer peer0.org19:8851...
+[34m2026-09-21 16:28:05.621 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+>> [org20] starting Fabric CA (port 13654)...
+ Container ca_org20 Starting 
+ Container ca_org20 Started 
+>> [org20] enrolling CA admin...
+>> [org20] registering peer0, user1, org admin...
+>> [org20] enrolling peer0...
+>> [org20] enrolling User1 and Admin...
+>> [org20] generating org definition (configtxgen)...
+>> [org20] writing docker compose files...
+>> [org20] starting peer container (peer0.org20.example.com:8951)...
+ Container peer0.org20.example.com Starting 
+ Container peer0.org20.example.com Started 
+>> [org20] adding Org20MSP to channel 'mychannel'...
+[34m2026-09-21 16:28:20.478 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+>> [org20] joining peer0.org20 to the channel...
+>> [org20] peer0.org20 joined the channel.
+>> [org20] setting anchor peer peer0.org20:8951...
+[34m2026-09-21 16:28:21.478 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+>> [org21] starting Fabric CA (port 13754)...
+ Container ca_org21 Starting 
+ Container ca_org21 Started 
+>> [org21] enrolling CA admin...
+>> [org21] registering peer0, user1, org admin...
+>> [org21] enrolling peer0...
+>> [org21] enrolling User1 and Admin...
+>> [org21] generating org definition (configtxgen)...
+>> [org21] writing docker compose files...
+>> [org21] starting peer container (peer0.org21.example.com:9051)...
+ Container peer0.org21.example.com Starting 
+ Container peer0.org21.example.com Started 
+>> [org21] adding Org21MSP to channel 'mychannel'...
+[34m2026-09-21 16:28:35.773 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+>> [org21] joining peer0.org21 to the channel...
+>> [org21] peer0.org21 joined the channel.
+>> [org21] setting anchor peer peer0.org21:9051...
+[34m2026-09-21 16:28:36.881 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+>> [org22] starting Fabric CA (port 13854)...
+ Container ca_org22 Starting 
+ Container ca_org22 Started 
+>> [org22] enrolling CA admin...
+>> [org22] registering peer0, user1, org admin...
+>> [org22] enrolling peer0...
+>> [org22] enrolling User1 and Admin...
+>> [org22] generating org definition (configtxgen)...
+>> [org22] writing docker compose files...
+>> [org22] starting peer container (peer0.org22.example.com:9151)...
+ Container peer0.org22.example.com Starting 
+ Container peer0.org22.example.com Started 
+>> [org22] adding Org22MSP to channel 'mychannel'...
+[34m2026-09-21 16:28:51.705 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+>> [org22] joining peer0.org22 to the channel...
+>> [org22] peer0.org22 joined the channel.
+>> [org22] setting anchor peer peer0.org22:9151...
+[34m2026-09-21 16:28:52.840 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+>> [org23] starting Fabric CA (port 13954)...
+ Container ca_org23 Starting 
+ Container ca_org23 Started 
+>> [org23] enrolling CA admin...
+>> [org23] registering peer0, user1, org admin...
+>> [org23] enrolling peer0...
+>> [org23] enrolling User1 and Admin...
+>> [org23] generating org definition (configtxgen)...
+>> [org23] writing docker compose files...
+>> [org23] starting peer container (peer0.org23.example.com:9251)...
+ Container peer0.org23.example.com Starting 
+ Container peer0.org23.example.com Started 
+>> [org23] adding Org23MSP to channel 'mychannel'...
+[34m2026-09-21 16:29:06.986 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+>> [org23] joining peer0.org23 to the channel...
+>> [org23] peer0.org23 joined the channel.
+>> [org23] setting anchor peer peer0.org23:9251...
+[34m2026-09-21 16:29:08.215 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+>> [org24] starting Fabric CA (port 14054)...
+ Container ca_org24 Starting 
+ Container ca_org24 Started 
+>> [org24] enrolling CA admin...
+>> [org24] registering peer0, user1, org admin...
+>> [org24] enrolling peer0...
+>> [org24] enrolling User1 and Admin...
+>> [org24] generating org definition (configtxgen)...
+>> [org24] writing docker compose files...
+>> [org24] starting peer container (peer0.org24.example.com:9351)...
+ Container peer0.org24.example.com Starting 
+ Container peer0.org24.example.com Started 
+>> [org24] adding Org24MSP to channel 'mychannel'...
+[34m2026-09-21 16:29:23.462 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+>> [org24] joining peer0.org24 to the channel...
+>> [org24] peer0.org24 joined the channel.
+>> [org24] setting anchor peer peer0.org24:9351...
+[34m2026-09-21 16:29:24.581 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+>> [org25] starting Fabric CA (port 14154)...
+ Container ca_org25 Starting 
+ Container ca_org25 Started 
+>> [org25] enrolling CA admin...
+>> [org25] registering peer0, user1, org admin...
+>> [org25] enrolling peer0...
+>> [org25] enrolling User1 and Admin...
+>> [org25] generating org definition (configtxgen)...
+>> [org25] writing docker compose files...
+>> [org25] starting peer container (peer0.org25.example.com:9451)...
+ Container peer0.org25.example.com Starting 
+ Container peer0.org25.example.com Started 
+>> [org25] adding Org25MSP to channel 'mychannel'...
+[34m2026-09-21 16:29:39.520 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+>> [org25] joining peer0.org25 to the channel...
+>> [org25] peer0.org25 joined the channel.
+>> [org25] setting anchor peer peer0.org25:9451...
+[34m2026-09-21 16:29:40.956 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+>> [org26] starting Fabric CA (port 14254)...
+ Container ca_org26 Starting 
+ Container ca_org26 Started 
+>> [org26] enrolling CA admin...
+>> [org26] registering peer0, user1, org admin...
+>> [org26] enrolling peer0...
+>> [org26] enrolling User1 and Admin...
+>> [org26] generating org definition (configtxgen)...
+>> [org26] writing docker compose files...
+>> [org26] starting peer container (peer0.org26.example.com:9551)...
+ Container peer0.org26.example.com Starting 
+ Container peer0.org26.example.com Started 
+>> [org26] adding Org26MSP to channel 'mychannel'...
+[34m2026-09-21 16:29:56.960 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+>> [org26] joining peer0.org26 to the channel...
+>> [org26] peer0.org26 joined the channel.
+>> [org26] setting anchor peer peer0.org26:9551...
+[34m2026-09-21 16:29:58.164 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+>> [org27] starting Fabric CA (port 14354)...
+ Container ca_org27 Starting 
+ Container ca_org27 Started 
+>> [org27] enrolling CA admin...
+>> [org27] registering peer0, user1, org admin...
+>> [org27] enrolling peer0...
+>> [org27] enrolling User1 and Admin...
+>> [org27] generating org definition (configtxgen)...
+>> [org27] writing docker compose files...
+>> [org27] starting peer container (peer0.org27.example.com:9651)...
+ Container peer0.org27.example.com Starting 
+ Container peer0.org27.example.com Started 
+>> [org27] adding Org27MSP to channel 'mychannel'...
+[34m2026-09-21 16:30:14.384 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+>> [org27] joining peer0.org27 to the channel...
+>> [org27] peer0.org27 joined the channel.
+>> [org27] setting anchor peer peer0.org27:9651...
+[34m2026-09-21 16:30:15.783 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+>> [org28] starting Fabric CA (port 14454)...
+ Container ca_org28 Starting 
+ Container ca_org28 Started 
+>> [org28] enrolling CA admin...
+>> [org28] registering peer0, user1, org admin...
+>> [org28] enrolling peer0...
+>> [org28] enrolling User1 and Admin...
+>> [org28] generating org definition (configtxgen)...
+>> [org28] writing docker compose files...
+>> [org28] starting peer container (peer0.org28.example.com:9751)...
+ Container peer0.org28.example.com Starting 
+ Container peer0.org28.example.com Started 
+>> [org28] adding Org28MSP to channel 'mychannel'...
+[34m2026-09-21 16:30:32.115 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+>> [org28] joining peer0.org28 to the channel...
+>> [org28] peer0.org28 joined the channel.
+>> [org28] setting anchor peer peer0.org28:9751...
+[34m2026-09-21 16:30:35.849 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+>> [org29] starting Fabric CA (port 14554)...
+ Container ca_org29 Starting 
+ Container ca_org29 Started 
+>> [org29] enrolling CA admin...
+>> [org29] registering peer0, user1, org admin...
+>> [org29] enrolling peer0...
+>> [org29] enrolling User1 and Admin...
+>> [org29] generating org definition (configtxgen)...
+>> [org29] writing docker compose files...
+>> [org29] starting peer container (peer0.org29.example.com:9851)...
+ Container peer0.org29.example.com Starting 
+ Container peer0.org29.example.com Started 
+>> [org29] adding Org29MSP to channel 'mychannel'...
+[34m2026-09-21 16:30:51.317 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+>> [org29] joining peer0.org29 to the channel...
+>> [org29] peer0.org29 joined the channel.
+>> [org29] setting anchor peer peer0.org29:9851...
+[34m2026-09-21 16:30:55.072 SAST 0002 INFO[0m [channelCmd] [34;1mupdate[0m -> Successfully submitted channel update
+>> [org30] starting Fabric CA (port 14654)...
+ Container ca_org30 Starting 
+ Container ca_org30 Started 
+>> [org30] enrolling CA admin...
+>> [org30] registering peer0, user1, org admin...
+>> [org30] enrolling peer0...
+>> [org30] enrolling User1 and Admin...
+>> [org30] generating org definition (configtxgen)...
+ Image a_blockchain_enabled_framework_for_misinformation_monitoring-submission-worker Building 
+ Image a_blockchain_enabled_framework_for_misinformation_monitoring-fact-checking-service Building 
+ Image a_blockchain_enabled_framework_for_misinformation_monitoring-kafka Building 
+ Image a_blockchain_enabled_framework_for_misinformation_monitoring-claim-ingest-worker Building 
+ Image a_blockchain_enabled_framework_for_misinformation_monitoring-flagging-engine Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 4.17kB done
+#1 DONE 0.0s
+
+#2 [claim-ingest-worker internal] load build definition from Dockerfile
+#2 transferring dockerfile: 286B done
+#2 DONE 0.1s
+
+#3 [flagging-engine internal] load build definition from Dockerfile
+#3 transferring dockerfile: 1.05kB done
+#3 DONE 0.1s
+
+#4 [submission-worker internal] load build definition from Dockerfile
+#4 transferring dockerfile: 286B 0.0s done
+#4 DONE 0.1s
+
+#5 [fact-checking-service internal] load build definition from Dockerfile
+#5 transferring dockerfile: 286B done
+#5 DONE 0.1s
+
+#6 [kafka internal] load build definition from Dockerfile
+#6 transferring dockerfile: 872B done
+#6 DONE 0.2s
+
+#7 [fact-checking-service internal] load metadata for docker.io/library/python:3.11-slim
+#7 ...
+
+#8 [kafka internal] load metadata for docker.io/library/eclipse-temurin:17-jre-jammy
+#8 DONE 1.6s
+
+#9 [kafka internal] load .dockerignore
+#9 transferring context: 2B done
+#9 DONE 0.0s
+
+#10 [kafka internal] load build context
+#10 DONE 0.0s
+
+#11 [kafka 1/5] FROM docker.io/library/eclipse-temurin:17-jre-jammy@sha256:e85989f3e4d136b3d7dde921e157fddb9c7016805a225c1ec483326b825b3ca5
+#11 resolve docker.io/library/eclipse-temurin:17-jre-jammy@sha256:e85989f3e4d136b3d7dde921e157fddb9c7016805a225c1ec483326b825b3ca5 0.1s done
+#11 DONE 0.1s
+
+#10 [kafka internal] load build context
+#10 transferring context: 72B done
+#10 DONE 0.0s
+
+#12 [kafka 2/5] RUN apt-get update     && apt-get install -y --no-install-recommends curl     && curl -fsSL "https://downloads.apache.org/kafka/4.1.2/kafka_2.13-4.1.2.tgz" -o /tmp/kafka.tgz     && mkdir -p "/opt/kafka"     && tar -xzf /tmp/kafka.tgz -C "/opt/kafka" --strip-components=1     && rm /tmp/kafka.tgz     && apt-get purge -y curl     && apt-get autoremove -y     && rm -rf /var/lib/apt/lists/*
+#12 CACHED
+
+#13 [kafka 3/5] COPY server.properties /opt/kafka/config/kraft/server.properties
+#13 CACHED
+
+#14 [kafka 4/5] COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+#14 CACHED
+
+#15 [kafka 5/5] RUN chmod +x /usr/local/bin/entrypoint.sh
+#15 CACHED
+
+#16 [kafka] exporting to image
+#16 exporting layers done
+#16 exporting manifest sha256:ae7e4fd7e539449f15ca28a9891cceca24dde7af468cc897986ac091ed94d8e5 done
+#16 exporting config sha256:9c397867b07cbe2c3c7e4406b1f17bf073d2263fde0b7eb9eb84cadd1b0c533a done
+#16 exporting attestation manifest sha256:32c2f38624b29de98564b70fd35822e686c7f499e2f449b3a5cfcd8166ed13c5
+#16 exporting attestation manifest sha256:32c2f38624b29de98564b70fd35822e686c7f499e2f449b3a5cfcd8166ed13c5 0.1s done
+#16 exporting manifest list sha256:7c8d3a0ee074f66c3af777dff2ac8c6074c62bb1acef76a23a9e51b329c82de0 0.1s done
+#16 naming to docker.io/library/a_blockchain_enabled_framework_for_misinformation_monitoring-kafka:latest
+#16 naming to docker.io/library/a_blockchain_enabled_framework_for_misinformation_monitoring-kafka:latest 0.0s done
+#16 unpacking to docker.io/library/a_blockchain_enabled_framework_for_misinformation_monitoring-kafka:latest 0.0s done
+#16 DONE 0.3s
+
+#7 [claim-ingest-worker internal] load metadata for docker.io/library/python:3.11-slim
+#7 DONE 2.1s
+
+#17 [claim-ingest-worker internal] load .dockerignore
+#17 transferring context: 2B done
+#17 DONE 0.1s
+
+#18 [submission-worker internal] load .dockerignore
+#18 transferring context: 90B done
+#18 DONE 0.1s
+
+#19 [fact-checking-service internal] load .dockerignore
+#19 transferring context: 2B done
+#19 DONE 0.1s
+
+#20 [flagging-engine internal] load .dockerignore
+#20 transferring context: 84B done
+#20 DONE 0.1s
+
+#21 [flagging-engine internal] load build context
+#21 transferring context: 818B done
+#21 DONE 0.1s
+
+#22 [flagging-engine 1/5] FROM docker.io/library/python:3.11-slim@sha256:da047cb8f9d1d98e5c070f5300ba9f7274e33b8fc0e5be5ed88740aed1b95ba9
+#22 resolve docker.io/library/python:3.11-slim@sha256:da047cb8f9d1d98e5c070f5300ba9f7274e33b8fc0e5be5ed88740aed1b95ba9 0.1s done
+#22 DONE 0.1s
+
+#23 [claim-ingest-worker internal] load build context
+#23 transferring context: 156B done
+#23 DONE 0.1s
+
+#24 [submission-worker internal] load build context
+#24 transferring context: 225B done
+#24 DONE 0.1s
+
+#25 [fact-checking-service internal] load build context
+#25 transferring context: 234B done
+#25 DONE 0.1s
+
+#26 [submission-worker 4/5] RUN pip install -r requirements.txt
+#26 CACHED
+
+#27 [submission-worker 2/5] WORKDIR /app
+#27 CACHED
+
+#28 [submission-worker 3/5] COPY requirements.txt .
+#28 CACHED
+
+#29 [submission-worker 5/5] COPY app ./app
+#29 CACHED
+
+#30 [claim-ingest-worker 4/5] RUN pip install -r requirements.txt
+#30 CACHED
+
+#31 [claim-ingest-worker 3/5] COPY requirements.txt .
+#31 CACHED
+
+#32 [claim-ingest-worker 5/5] COPY app ./app
+#32 CACHED
+
+#33 [fact-checking-service 4/5] RUN pip install -r requirements.txt
+#33 CACHED
+
+#34 [fact-checking-service 3/5] COPY requirements.txt .
+#34 CACHED
+
+#35 [fact-checking-service 5/5] COPY app ./app
+#35 CACHED
+
+#36 [flagging-engine 4/7] COPY requirements.txt .
+#36 CACHED
+
+#37 [flagging-engine 6/7] COPY app ./app
+#37 CACHED
+
+#27 [flagging-engine 2/5] WORKDIR /app
+#27 CACHED
+
+#38 [flagging-engine 3/7] RUN pip install torch --index-url https://download.pytorch.org/whl/cpu
+#38 CACHED
+
+#39 [flagging-engine 5/7] RUN pip install -r requirements.txt
+#39 CACHED
+
+#40 [flagging-engine 7/7] COPY model ./model
+#40 CACHED
+
+#41 [submission-worker] exporting to image
+#41 exporting layers done
+#41 exporting manifest sha256:5835482c6cfa1bf4079d91ee1116a2a549e61468c4d5c299f18458902ba429e6 0.0s done
+#41 exporting config sha256:d1d869110d08cada66c30a09ac9af977e3a71bc8b16d19e77fd2f4dd751f8624 0.0s done
+#41 exporting attestation manifest sha256:989636f67f5f9a23f8d462fcf36fef904e15032ba27af6247ca403ff8992656a
+#41 exporting attestation manifest sha256:989636f67f5f9a23f8d462fcf36fef904e15032ba27af6247ca403ff8992656a 0.3s done
+#41 exporting manifest list sha256:a09e08bb146adf3fc13b57a194e57946b55810705c681c6d4007ac500abc3209
+#41 exporting manifest list sha256:a09e08bb146adf3fc13b57a194e57946b55810705c681c6d4007ac500abc3209 0.1s done
+#41 naming to docker.io/library/a_blockchain_enabled_framework_for_misinformation_monitoring-submission-worker:latest
+#41 naming to docker.io/library/a_blockchain_enabled_framework_for_misinformation_monitoring-submission-worker:latest 0.0s done
+#41 unpacking to docker.io/library/a_blockchain_enabled_framework_for_misinformation_monitoring-submission-worker:latest 0.1s done
+#41 DONE 0.7s
+
+#42 [fact-checking-service] exporting to image
+#42 exporting layers done
+#42 exporting manifest sha256:ebaac9fe991001e34f235cf0e5bb35378530f4e49dd2db47f9e80a5d6c1b6dee 0.0s done
+#42 exporting config sha256:88b9980d330a5c5ec11a5c2a9b76bcdb8398ccb766540f31f13be1cb68672a13 0.0s done
+#42 exporting attestation manifest sha256:bbcc893d4b40469e5433240252a18648d13181633558810124bb4dd598ff6634 0.3s done
+#42 exporting manifest list sha256:417aa7babf2b171cc5beb3a03202ff616c9ec5dbb759d85680967cdf43df414b 0.1s done
+#42 naming to docker.io/library/a_blockchain_enabled_framework_for_misinformation_monitoring-fact-checking-service:latest 0.0s done
+#42 unpacking to docker.io/library/a_blockchain_enabled_framework_for_misinformation_monitoring-fact-checking-service:latest 0.1s done
+#42 DONE 0.7s
+
+#43 [kafka] resolving provenance for metadata file
+#43 DONE 0.0s
+
+#44 [claim-ingest-worker] exporting to image
+#44 exporting layers done
+#44 exporting manifest sha256:9a0ae7fe1236476bfac46898b61057fba5cc79d457f7d02c035aea1ab44d2842 0.0s done
+#44 exporting config sha256:41059fdc9a64a7eeb8225a9e1a5bae97ec39898cd3a53138590d0cfd51825976 0.0s done
+#44 exporting attestation manifest sha256:47091c838bd116448b5e03cec435e3fd68cccee5ce4d487a98e4ed4689498e5e 0.3s done
+#44 exporting manifest list sha256:bf52d6500d6ac83c0f1a2addc90914115731615a4393d3bed500e55dac217ff1 0.1s done
+#44 naming to docker.io/library/a_blockchain_enabled_framework_for_misinformation_monitoring-claim-ingest-worker:latest 0.0s done
+#44 unpacking to docker.io/library/a_blockchain_enabled_framework_for_misinformation_monitoring-claim-ingest-worker:latest 0.0s done
+#44 DONE 0.7s
+
+#45 [flagging-engine] exporting to image
+#45 exporting layers done
+#45 exporting manifest sha256:342f0d056d32a6b7e7a929883420d9580229ea641890b187082a92f9b735e283 0.0s done
+#45 exporting config sha256:78a4c851e9ae5fce90b4b147b842b4105fea5dfdaa769c3fc7fa62fff03bf790 0.0s done
+#45 exporting attestation manifest sha256:cf0c7dc5afafbcb817f3c8355a83631b13234bae69c6409d4dc81e05674b4fbe 0.3s done
+#45 exporting manifest list sha256:79bb020d60b7daedb0cdb41bfe08bde6f6c252d8a6a02f1d8661b8ba01811c08 0.1s done
+#45 naming to docker.io/library/a_blockchain_enabled_framework_for_misinformation_monitoring-flagging-engine:latest 0.0s done
+#45 unpacking to docker.io/library/a_blockchain_enabled_framework_for_misinformation_monitoring-flagging-engine:latest 0.1s done
+#45 DONE 0.7s
+
+#46 [submission-worker] resolving provenance for metadata file
+#46 DONE 0.2s
+
+#47 [claim-ingest-worker] resolving provenance for metadata file
+#47 DONE 0.1s
+
+#48 [fact-checking-service] resolving provenance for metadata file
+#48 DONE 0.2s
+
+#49 [flagging-engine] resolving provenance for metadata file
+#49 DONE 0.0s
+ Image a_blockchain_enabled_framework_for_misinformation_monitoring-fact-checking-service Built 
+ Image a_blockchain_enabled_framework_for_misinformation_monitoring-flagging-engine Built 
+ Image a_blockchain_enabled_framework_for_misinformation_monitoring-kafka Built 
+ Image a_blockchain_enabled_framework_for_misinformation_monitoring-submission-worker Built 
+ Image a_blockchain_enabled_framework_for_misinformation_monitoring-claim-ingest-worker Built 
+ Network a_blockchain_enabled_framework_for_misinformation_monitoring_default Creating 
+ Network a_blockchain_enabled_framework_for_misinformation_monitoring_default Created 
+ Container submission-worker Creating 
+ Container fact-checking-service Creating 
+ Container claim-ingest-worker Creating 
+ Container kafka Creating 
+ Container flagging-engine Creating 
+ Container prometheus Creating 
+ Container claim-ingest-worker Created 
+ Container submission-worker Created 
+ Container fact-checking-service Created 
+ Container flagging-engine Created 
+ Container kafka Created 
+ Container prometheus Created 
+ Container grafana Creating 
+ Container grafana Created 
+ Container kafka Starting 
+ Container claim-ingest-worker Starting 
+ Container flagging-engine Starting 
+ Container fact-checking-service Starting 
+ Container prometheus Starting 
+ Container submission-worker Starting 
+ Container claim-ingest-worker Started 
+ Container kafka Started 
+ Container prometheus Started 
+ Container grafana Starting 
+ Container fact-checking-service Started 
+ Container submission-worker Started 
+ Container flagging-engine Started 
+ Container grafana Started 
