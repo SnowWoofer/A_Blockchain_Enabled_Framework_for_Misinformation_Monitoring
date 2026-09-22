@@ -1,0 +1,57 @@
+The system is a blockchain-enabled misinformation monitoring framework with four layers:
+
+APPLICATION LAYER:
+- claim-ingest-worker (FastAPI, port 8003): HTTP endpoint accepting raw claim texts, publishes each claim to Kafka topic "claims.raw"
+- kafka (Apache Kafka 4.1.2, KRaft mode, ports 9092/9094): Message broker with two topics: "claims.raw" (3 partitions) and "claims.flagged" (3 partitions)
+- flagging-engine (FastAPI, port 8004): ML inference service running AfroXLM-R multilingual transformer model, consumes from "claims.raw", classifies claims, publishes to "claims.flagged". Uses dynamic batching with configurable max_batch_size and max_queue_delay_ms
+- submission-worker (port 8001): Kafka consumer that reads from "claims.flagged" and submits each labelled claim to the blockchain gateway via HTTP POST. Failed submissions go to a dead-letter JSONL file
+- blockchain-gateway (FastAPI, port 8000): Central REST API gateway. Stores full reports off-chain on IPFS, anchors content hash and metadata on Fabric ledger. Provides 18 endpoints for report lifecycle, fact-checking, org management, verification. Dual auth: bootstrap API keys (default) and JWT (optional)
+- fact-checking-service (FastAPI, port 8002): Per-organization review interface. Exposes endpoints for pending claims, submitting fact-check votes, and triggering report finalization. Talks to blockchain-gateway
+
+STORAGE LAYER:
+- IPFS 3-node swarm (kubo): Content-addressed off-chain storage. Node 0 (port 5001), Node 1 (port 5101), Node 2 (port 5201). Full report documents stored here, addressed by CID
+- IPFS gateway (FastAPI, port 9101): HTTP bridge to IPFS. Provides /add and /cat endpoints for storing and retrieving content by CID
+- SQLite offchain.db: Fallback storage if IPFS is unreachable. Stores org_keys (API key to org mapping) and reports
+
+BLOCKCHAIN LAYER:
+- Hyperledger Fabric test-network: Permissioned blockchain with Raft ordering service. Channel "mychannel", chaincode "misinformation" (Go)
+- Fabric peers: peer0.org1 (port 7051), peer0.org2 (port 7151), peer0.org3 (port 7251), up to 30 orgs with 100-increment port scheme
+- Fabric CAs: CA org1 (port 7054), CA org2 (port 8054), CA org3 (port 9054)
+- Fabric orderer: orderer.example.com (port 7050)
+- Endorsement policy: OutOf(2, N) where N is the number of registered orgs
+- Chaincode: 14 exported functions including Submit, SubmitFactCheck, FinalizeReport, ExpireReport, RegisterOrg, RequestOrgAdmission, VoteOnOrgAdmission, FinalizeOrgAdmission, SetFoundingOrgLimit, QueryReport, QueryAllReports, QueryReportHistory, QueryOrgAdmission, ListRegisteredOrgs
+- ABAC: 3 roles (official, fact_checker, observer) enforced in chaincode via certificate attributes. Official can governance and expire. Fact_checker can submit and fact-check. Observer is read-only
+- Fabric Gateway SDK sidecar (Node.js, port 9100): gRPC bridge between blockchain-gateway and Fabric peers. Handles identity selection based on GATEWAY_ROLE env var
+
+MONITORING LAYER:
+- Prometheus (port 9090): Scrapes metrics from flagging-engine and submission-worker every 5 seconds
+- Grafana (port 3000): Auto-provisioned with Prometheus datasource, displays dashboards
+- Hyperledger Explorer (port 8080): Blockchain explorer showing blocks, transactions, chaincode, channels
+
+DATA FLOW:
+1. Client sends POST /ingest with raw claim texts to claim-ingest-worker:8003
+2. claim-ingest-worker publishes each claim to Kafka topic "claims.raw"
+3. flagging-engine consumes from "claims.raw", runs ML classification, publishes to "claims.flagged"
+4. submission-worker consumes from "claims.flagged", calls POST /api/reports on blockchain-gateway:8000
+5. blockchain-gateway saves full report to IPFS (gets CID), computes SHA-256 hash, submits Submit chaincode transaction to Fabric (hash + metadata only)
+6. Authorized orgs call fact-checking-service:8002 to review pending claims
+7. fact-checking-service calls blockchain-gateway to submit fact-check votes on-chain
+8. Once 2+ fact-checks with strict majority, FinalizeReport is called on-chain
+9. Background task in blockchain-gateway checks hourly for expired reports (72h deadline)
+
+DOCKER NETWORKS:
+- kafka_net: Application services (kafka, flagging-engine, submission-worker, claim-ingest-worker, prometheus, grafana)
+- fabric_test: Blockchain components (peers, orderers, CAs, fabric-gateway, explorer)
+- ipfs_net: IPFS nodes and IPFS gateway
+
+CONNECTIONS:
+claim-ingest-worker connects to kafka
+kafka connects to flagging-engine
+flagging-engine connects to kafka
+kafka connects to submission-worker
+submission-worker connects to blockchain-gateway
+blockchain-gateway connects to ipfs-gateway
+blockchain-gateway connects to fabric-gateway
+fact-checking-service connects to blockchain-gateway
+fabric-gateway connects to fabric peers
+ipfs-gateway connects to ipfs nodes
