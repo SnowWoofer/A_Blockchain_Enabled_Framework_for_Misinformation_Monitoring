@@ -1,0 +1,885 @@
+FULL SYSTEM TEST CHECKLIST
+==========================
+For the current named Fabric deployment, full feed pipeline and official Caliper.
+Prepared: 18 October 2026. Run commands from the project root in Linux/WSL.
+
+This is a checklist to run manually, not a shell script. Tick each [ ] after
+checking its expected result. Creating this file does not execute these tests.
+
+WHAT COUNTS AS A NORMAL FUNCTIONAL PASS?
+  Complete sections 1-8 for your selected deployment. Section 9 covers additional
+  configurations; section 10 is optional AI evaluation; section 11 deliberately
+  changes synthetic content/credentials in a separate disposable deployment.
+  Section 12 is the evidence/reproducibility checklist.
+
+Before starting:
+  - Use one benchmark at a time. Stop Explorer during timed measurements.
+  - A successful command normally exits with code 0. Run echo $? immediately
+    afterward if unsure. The deliberate rejection test explicitly expects 1.
+  - Startup's smoke check, feed tests and Caliper writes append test records.
+    They are not read-only. Repeating them grows the ledger.
+  - Use the current feed command: benchmarks/pipeline.py. The older command
+    called benchmarks/feed_samples.py is a different, direct-service workflow.
+  - Keep the required scripts if you are following this complete checklist.
+    Some optional research/check tools were listed as removable for normal use.
+  - Do not delete runtime folders, credentials or Docker volumes to fix a failed
+    test. Named deployment state is needed to reopen an existing ledger.
+
+
+1. ENVIRONMENT AND INPUTS
+-------------------------
+[ ] Docker and Compose respond:
+
+    docker --version
+    docker compose version
+    docker ps
+
+    Expected: commands work and Docker is reachable. Docker permission errors
+    must be resolved before attempting application tests.
+
+[ ] The Python environment and required libraries load:
+
+    repair/.venv/bin/python --version
+    repair/.venv/bin/python -c 'import torch, transformers, aiokafka, fastapi, yaml, cryptography; print("Dependency imports passed")'
+
+    Expected: no import errors. The README provides installation instructions.
+    Activation of the virtual environment is optional with these explicit paths.
+
+[ ] Go is available for chaincode builds/tests:
+
+    go version
+
+    Node is needed on the host for the regression syntax checks below:
+
+    node --version
+
+    Normal Caliper execution uses Node inside its Docker image.
+
+[ ] Fabric setup tools and supplied inputs exist:
+
+repair/.venv/bin/python - <<'PY'
+import hashlib, json, os
+from pathlib import Path
+for name in ('cryptogen', 'configtxgen', 'osnadmin'):
+    path = Path('blockchain/fabric-samples/bin') / name
+    assert path.is_file() and os.access(path, os.X_OK), path
+assert Path('blockchain/fabric-samples/config/core.yaml').is_file()
+model = Path('apps/flagging-engine/model')
+for name in ('config.json', 'tokenizer.json', 'tokenizer_config.json', 'special_tokens_map.json'):
+    assert (model / name).is_file(), name
+assert list(model.glob('*.safetensors')), 'Model weights missing'
+path = Path('data/translated_masked_samples_test.json')
+rows = json.loads(path.read_text())
+assert rows and len({(r['language'], r['statement']) for r in rows}) == len(rows)
+print('Input rows:', len(rows))
+print('Languages:', sorted({r['language'] for r in rows}))
+print('Dataset SHA256:', hashlib.sha256(path.read_bytes()).hexdigest())
+print('Prerequisite files passed')
+PY
+
+    Expected: valid, nonempty supplied dataset and model files. Dataset IDs are
+    not unique for every distinct statement; this check deliberately uses
+    language/statement pairs rather than assuming unique IDs.
+
+
+2. STARTUP AND BASIC WORKFLOW
+-----------------------------
+[ ] Start the existing default deployment:
+
+    ./startup.sh
+
+    For a NEW named deployment, choose its settings explicitly, for example:
+
+    ./startup.sh --name fulltest-level3-01 --database leveldb --orgs 3
+
+    These are alternatives, not commands to run simultaneously on the same
+    default ports. A name identifies saved configuration, identities and volumes.
+    Existing names retain their saved database and organisation count.
+
+    Expected: startup ends with "Ready. Stop this deployment with: ...".
+    Its smoke check exercises submission, reviewer majority, finalisation,
+    duplicate submission, rejected self/observer votes, correction,
+    supersession, intervention and evidence verification.
+
+[ ] Inspect the default deployment:
+
+    repair/.venv/bin/python blockchain/scripts/deployment.py status
+
+    Expected: orderer, the configured peers/signers, chaincode, API, storage
+    bridges and IPFS services are running. CouchDB deployments also have their
+    CouchDB services. Kafka is started by the feed command when needed.
+
+    Add --name YOUR_NAME to commands when testing another deployment.
+
+[ ] Confirm the saved configuration rather than assuming defaults:
+
+repair/.venv/bin/python - <<'PY'
+import json
+from blockchain.scripts.deployment import runtime_path
+cfg = json.loads((runtime_path('development') / 'experiment.json').read_text())
+print({k: cfg[k] for k in ('name', 'orgs', 'database', 'backend', 'port_base')})
+PY
+
+    Expected for the current default: development, 3 organisations, leveldb,
+    fabric, port base 18000. For another deployment, change 'development'.
+
+
+3. AUTOMATED CORRECTNESS AND ACCESS CHECKS
+------------------------------------------
+[ ] Run benchmark/Explorer configuration and failure-handling tests:
+
+    repair/.venv/bin/python -m pytest -q -p no:cacheprovider benchmarks/tests blockchain/explorer/tests
+
+    Expected at this version: 62 passed. If tests are added later, the count may
+    change; every collected test should pass. This includes exact sample counts,
+    frozen reviewer majority, Kafka starting offsets, cleanup, Caliper count
+    accounting, log capture, and dynamic Explorer configuration.
+
+[ ] Run contract, API, worker and syntax regression checks:
+
+    repair/.venv/bin/python -c 'from benchmarks.regression import main; raise SystemExit(main())'
+
+    Expected: every check passes and exit code is 0. The API tests use temporary
+    test state; actual Fabric/Kafka behaviour is checked separately below.
+    Logs are under results/repair/validation/; validation.json is the latest
+    summary. This invocation does not depend on the older campaign.py wrapper.
+
+[ ] Check the live signer/storage boundaries on the running deployment:
+
+    repair/.venv/bin/python benchmarks/security.py --name development
+
+    Expected: result "passed" and actual HTTP status matches each expected
+    status. Missing/wrong credentials and observer writes must be rejected;
+    unauthenticated storage reads must be rejected; invalid numeric input must
+    be rejected while valid queries continue working. Deliberate rejection
+    responses are expected results, not failures of the test itself.
+
+
+4. FULL FEED PIPELINE AND REPEATED-RUN DELIVERY
+-----------------------------------------------
+[ ] If Explorer is running, stop it before timing the feed:
+
+    ./blockchain/explorer/manage.sh down
+
+    Skip this command if Explorer has never been configured. It stops only
+    Explorer, retaining its database/wallet and leaving Fabric running.
+
+[ ] Run the full six-example integration workflow:
+
+    repair/.venv/bin/python benchmarks/pipeline.py --samples 6 --seed 100
+
+    Expected: "Feed PASSED: 6/6 verified" and exit 0. Six uses the established
+    balanced English/Sepedi/isiZulu examples. Startup/model loading is separate
+    from the sample timing window.
+
+[ ] Run ten samples, then repeat the SAME command after it finishes:
+
+    repair/.venv/bin/python benchmarks/pipeline.py --samples 10 --seed 100
+    repair/.venv/bin/python benchmarks/pipeline.py --samples 10 --seed 100
+
+    Expected: both runs finish "Feed PASSED: 10/10 verified". The same dataset
+    and seed reproduce the selected rows; new ingestion IDs create separate
+    reports. Every trace should be FINAL and verified, with the ledger's required
+    majority. Do not expect identical latency figures between runs.
+
+[ ] Inspect each printed results/repair/NAME/feed-TIMESTAMP-ID/result.json:
+
+    Expected:
+      result = "passed"
+      summary.samples = summary.succeeded = requested positive count
+      summary.failed = 0
+      every trace: status = "FINAL", verified = true
+      startup_backlog_delivered = true
+      both durable_dead_letters entries = true
+      both delivery_after_poison entries have verified = true
+      seed = 100; source_data_sha256 and model/runtime fingerprints are recorded
+      kafka_group_start_offsets and startup_backlog_offset are recorded
+
+    The benchmark records topic-end boundaries for its own new consumer groups
+    BEFORE publishing its startup probe. Repeated tests must not replay the
+    entire old test backlog. Application consumers keep their normal durable
+    offset/replay behaviour.
+
+[ ] Confirm malformed-message recovery is understood:
+
+    The feed intentionally publishes two malformed messages, checks their exact
+    topic/partition/offset in durable dead-letter files, then verifies valid
+    delivery afterward. Error lines for these deliberate messages are expected.
+    They must not cause the whole feed check to fail or silently lose later data.
+
+    Worker logs/dead letters: worker_log_directory in result.json or failure.json.
+    Top-level diagnostics: the printed logs.txt path.
+
+[ ] OPTIONAL: process every supplied test row when you need a complete feed run:
+
+    repair/.venv/bin/python benchmarks/pipeline.py --samples 0 --seed 100
+
+    Expected: verified trace count equals the supplied dataset row count. This
+    is much longer than a smoke check because every sample gets scripted reviews.
+    It is not necessary after every small code change.
+
+
+5. OFFICIAL CALIPER WRITE/READ CHECKS
+-------------------------------------
+[ ] Keep Explorer stopped and wait for the feed command to finish first.
+
+[ ] Single-transaction check:
+
+    benchmarks/caliper/run-caliper.sh --count 1 --workers 1 --load 1
+
+    Expected: exactly 1 successful write attempt, then 1 successful read attempt;
+    zero failures and "Caliper passed".
+
+[ ] Odd count shared across workers:
+
+    benchmarks/caliper/run-caliper.sh --count 5 --workers 2 --load 2
+
+    Expected: exactly 5 writes and 5 reads TOTAL, not 5 per worker. Each operation
+    has worker counts 3 and 2. Both round count_matches values are true.
+
+[ ] Larger read/write run, when collecting measurements or checking sustained work:
+
+    benchmarks/caliper/run-caliper.sh --count 1000 --workers 2 --load 100
+
+    Expected: exactly 1000 write attempts then 1000 read attempts, all successful,
+    with 500 per worker for each operation. Writes complete before reads begin.
+
+    --count: attempts PER operation, shared across workers.
+    --workers: client processes, not extra peers/organisations.
+    --load: target unfinished transactions across workers, NOT target TPS.
+    Reads are QueryAllReports FULL SCANS, not individual report lookups.
+
+[ ] Inspect the printed Caliper directory:
+
+    report.html exists and opens.
+    result.json has result "passed".
+    Each round: requested = attempted = succeeded; failed = 0; count_matches = true.
+    Official HTML success/failure totals agree with recorded transaction totals.
+    The database, organisation count, workers/load/count and ledger sizes match
+    the intended configuration. Raw Caliper throughput is retained separately
+    from successful throughput because failures can affect Caliper's raw metric.
+
+    Caliper inserts synthetic ledger reports directly. Those records are separate
+    from feed reports and do not exercise IPFS or AI. Verify feed reports using
+    their feed trace IDs, rather than choosing an arbitrary Caliper-only record.
+
+[ ] OPTIONAL deliberate-rejection check on a test deployment:
+
+    benchmarks/caliper/run-caliper.sh --count 5 --workers 2 --load 2 --reject-writes
+
+    This hidden diagnostic deliberately sends invalid write confidence values.
+    Expected: 5 write attempts fail, successful write TPS is 0, reads still run,
+    result is "completed_with_failures", reports remain saved and exit code is 1.
+    Do not include this diagnostic as a normal successful benchmark result.
+
+
+6. LIVE LEDGER RECORDS AND STORED-EVIDENCE VERIFICATION
+------------------------------------------------------
+[ ] With Fabric/API running, query every report from the latest successful feed.
+    This reads live ledger state; result.json supplies the report IDs only.
+
+repair/.venv/bin/python - <<'PY'
+import json
+from pathlib import Path
+from blockchain.scripts.deployment import runtime_path, http
+name = 'development'  # Change this for another deployment.
+runtime = runtime_path(name)
+cfg = json.loads((runtime / 'experiment.json').read_text())
+credentials = json.loads((runtime / 'credentials.json').read_text())
+key = next(c['api_key'] for c in credentials
+           if c['org'] == 'org1' and c['role'] == 'fact_checker')
+base = f"http://127.0.0.1:{cfg['port_base']}"
+assert http(base + '/api/status', key=key)['ledger_backend'] == 'fabric'
+latest = max(Path(f'results/repair/{name}').glob('feed-*/result.json'),
+             key=lambda p: p.stat().st_mtime)
+run = json.loads(latest.read_text())
+assert run['result'] == 'passed'
+print('Checking:', latest)
+for sample in run['traces']:
+    url = base + '/api/reports/' + sample['report_id']
+    record = http(url + '/chain', key=key)
+    proof = http(url + '/verify', key=key)
+    assert record['status'] == 'FINAL', record['id']
+    assert proof['verified'] and proof['history_verified'], proof
+    print(sample['report_id'][:12], record['status'], 'verified:', proof['verified'])
+first = run['traces'][0]['report_id']
+print('First report:', first)
+for entry in http(base + '/api/reports/' + first + '/history', key=key):
+    print(entry['timestamp'], entry['record']['status'], entry['tx_id'])
+print('Live ledger/evidence checks passed')
+PY
+
+    Expected: every report is FINAL and verified; history shows committed
+    submission and review transactions with transaction IDs. Claim text and
+    evidence are stored in IPFS; hashes/CIDs and review state are on-chain.
+    If a report has deliberately been corrected or its content expired, inspect
+    that case separately instead of expecting this unchanged-feed assertion.
+
+
+7. EXPLORER VISUAL CONFIRMATION
+-------------------------------
+[ ] Start Explorer AFTER timed benchmarks:
+
+    ./blockchain/explorer/manage.sh up
+    ./blockchain/explorer/manage.sh credentials
+
+    Expected: "Explorer ready". Open http://localhost:18080, choose development
+    and mychannel, and use the displayed local login. Add --name YOUR_NAME to
+    both commands for another deployment; its default port is port_base + 80.
+
+[ ] Explorer lists the expected channel, peers, misinformation chaincode,
+    nonempty block history and transactions. Allow initial indexing time.
+
+[ ] Copy a transaction ID from section 6 into Explorer's transaction search.
+    Confirm its chaincode is misinformation, validation is VALID, and its write
+    set contains the selected report ID. Inspect the submission/review/final
+    history rather than assuming every network transaction is a feed sample.
+
+[ ] Check Explorer restart persistence:
+
+    ./blockchain/explorer/manage.sh down
+    ./blockchain/explorer/manage.sh up
+
+    Expected: same login works; indexed data remains available. Its PostgreSQL
+    database is an Explorer index, not a replacement for Fabric LevelDB/CouchDB.
+    Generated credentials/profile/wallet details are private; do not publish them.
+
+
+8. APPLICATION RESTART AND DATA PERSISTENCE
+-------------------------------------------
+[ ] Stop Explorer, then stop the application without deleting volumes:
+
+    ./blockchain/explorer/manage.sh down
+    repair/.venv/bin/python blockchain/scripts/deployment.py down
+
+[ ] Reopen the SAME saved deployment:
+
+    ./startup.sh
+
+[ ] Repeat the live query in section 6 using the same feed result/report IDs.
+
+    Expected: earlier reports, votes, history and content still verify. Startup
+    appends new smoke-test records, so the TOTAL ledger size may increase.
+    This checks restart persistence; it is not a backup/restore or host-failure test.
+
+
+9. OPTIONAL DATABASE AND ORGANISATION-COUNT COVERAGE
+----------------------------------------------------
+Do this when checking configurations you intend to claim as supported/measured.
+Existing deployment names cannot be switched to another database/org count.
+
+[ ] Stop Explorer and the current deployment to free default ports/resources.
+    Replace --name with the deployment you actually have running.
+
+    ./blockchain/explorer/manage.sh down --name development
+    repair/.venv/bin/python blockchain/scripts/deployment.py down --name development
+
+[ ] Create one fresh configuration at a time, for example:
+
+    ./startup.sh --name fulltest-couch3-01 --database couchdb --orgs 3
+    repair/.venv/bin/python benchmarks/pipeline.py --name fulltest-couch3-01 --samples 6 --seed 100
+    benchmarks/caliper/run-caliper.sh --name fulltest-couch3-01 --count 5 --workers 2 --load 2
+    repair/.venv/bin/python blockchain/scripts/deployment.py down --name fulltest-couch3-01
+
+    ./startup.sh --name fulltest-level5-01 --database leveldb --orgs 5
+    repair/.venv/bin/python benchmarks/pipeline.py --name fulltest-level5-01 --samples 6 --seed 100
+    benchmarks/caliper/run-caliper.sh --name fulltest-level5-01 --count 5 --workers 2 --load 2
+    repair/.venv/bin/python blockchain/scripts/deployment.py down --name fulltest-level5-01
+
+    Expected: startup, feed and Caliper pass for each case. Three organisations
+    normally require 2 matching independent reviewer votes; five require 3.
+    The report's frozen eligible_reviewers/required_votes are authoritative.
+    Larger N may be tried if hardware permits; configuration generation alone
+    does not establish that a large network runs or achieves a measured TPS.
+
+[ ] Restore the normal deployment when finished:
+
+    ./startup.sh --name development
+
+[ ] For FAIR research measurements, use separate fresh names for every repeat:
+    same initial report counts, sample seed/count, Caliper count/workers/load,
+    operation order, versions and hardware resources. Keep Explorer stopped.
+    Use at least three fresh repetitions per condition when reporting variability.
+    The functional checks above intentionally grow ledgers and are not themselves
+    a controlled performance comparison. Do not call observed TPS a guaranteed
+    maximum or relabel historical custom-SDK results as official Caliper results.
+
+
+10. OPTIONAL CHECKPOINT ACCURACY / QUANTISATION EVALUATION
+---------------------------------------------------------
+Run when AI metrics are needed, separately from blockchain performance tests.
+Keep matching dataset/seed/batch/thread settings for FP32 versus INT8.
+
+[ ] Choose NEW output paths, then evaluate the same 90 examples:
+
+    repair/.venv/bin/python benchmarks/evaluate_model.py --quantization none --samples 90 --seed 619 --batch-size 4 --threads 2 --output results/repair/fulltest-model-fp32-01.json
+    repair/.venv/bin/python benchmarks/evaluate_model.py --quantization int8 --samples 90 --seed 619 --batch-size 4 --threads 2 --output results/repair/fulltest-model-int8-01.json
+
+    Expected: both outputs contain n=90, dataset/weight fingerprints, runtime
+    settings, predictions, language metrics and timings. Existing output paths
+    are rejected; choose a new suffix for another evaluation. --samples 0
+    evaluates the entire supplied file when a complete evaluation is needed.
+
+    Seed 619 here is evaluation sampling; it does not establish how the supplied
+    checkpoint was trained. Feed sampling uses seed 100. Synthetic subset metrics
+    do not prove independent real-world accuracy or validate external training
+    notebooks/LoRA/multiple-training-seed claims. Obtain those from your teammate.
+
+
+11. OPTIONAL RETENTION / REVOCATION TEST (CHANGES TEST STATE)
+-------------------------------------------------------------
+Use a FRESH DISPOSABLE deployment, never development or your poster/demo ledger.
+This test expires its synthetic content and revokes an Org3 observer credential.
+
+[ ] Stop other deployments/Explorer as in section 9, then run:
+
+    ./startup.sh --name fulltest-retention-01 --database leveldb --orgs 3
+    repair/.venv/bin/python benchmarks/retention_check.py --name fulltest-retention-01
+
+    Expected: result "passed"; the selected synthetic object's off-chain content
+    becomes unavailable, its ledger commitment remains, integrity verification
+    visibly fails for that removed content, and revoked access remains rejected
+    after the API restart. This failure of content verification is intentional.
+
+[ ] Stop the disposable deployment and restore normal operation:
+
+    repair/.venv/bin/python blockchain/scripts/deployment.py down --name fulltest-retention-01
+    ./startup.sh --name development
+
+    Retain the test evidence. Choose a fresh name/suffix for a fresh test fixture.
+
+
+12. EVIDENCE, REPRODUCIBILITY AND FINAL SIGN-OFF
+-----------------------------------------------
+[ ] Save the exact commands, deployment names, timestamps, database/org counts,
+    dataset/model hashes, source fingerprints and all result/log/report paths.
+
+[ ] Keep passed, failed and interrupted runs labelled separately. A failure.json,
+    partial trace list or completed_with_failures result is not a successful run.
+    Do not edit raw metric files to improve figures.
+
+[ ] Confirm report/poster statements match the measured boundary:
+    - Feed: sequential end-to-end workflow with scripted synthetic-label reviews.
+    - Caliper: direct ledger writes/full-scan reads, excluding AI/Kafka/IPFS costs.
+    - AI evaluation: supplied checkpoint and the explicitly recorded test subset.
+    - Explorer: visual inspection/indexing, not an independent factual truth check.
+
+[ ] For a fresh-machine reproduction, follow the root README, supply the SAME
+    checkpoint/dataset, rebuild the required images, and rerun core sections on
+    a fresh named deployment. Record OS/WSL, Docker resources, CPU/RAM and versions.
+    Functional outcomes should pass; exact latency/TPS need not match another
+    machine or a different resource allocation.
+
+[ ] If handing the repository to someone else, verify that required source files,
+    Dockerfiles, tests and instructions are included. Model/data provision and
+    ignored result/private-runtime paths must be handled explicitly. A git push
+    transfers committed files, not all local/generated files.
+
+[ ] Before final performance runs, freeze the intended code/configuration and
+    rerun checks affected by subsequent changes. Prefer repeatable evidence over
+    adding unrelated features just before presentation.
+
+Current boundaries: one workstation, single-node Kafka, one Raft orderer,
+scripted reviewers, synthetic data, and no evidence encryption-at-rest feature.
+Passing these checks does not establish Byzantine resistance, orderer failover,
+multi-host resilience, backup recovery, production security or factual truth.
+Those are separate claims and must not be marked passed without their own tests.
+
+
+WHEN SOMETHING FAILS
+---------------------
+1. Stop at the failed stage; retain its printed logs.txt and failure/result JSON.
+2. Check the selected --name and its saved experiment.json first.
+3. Inspect services/logs without resetting data:
+
+    repair/.venv/bin/python blockchain/scripts/deployment.py status --name development
+    repair/.venv/bin/python blockchain/scripts/deployment.py logs --name development --services api signer1 peer1 orderer
+    repair/.venv/bin/python blockchain/scripts/deployment.py logs --name development --services kafka
+    ./blockchain/explorer/manage.sh logs --name development
+
+4. For feed errors, also inspect worker_log_directory from failure.json.
+   The malformed messages intentionally created by a successful feed test belong
+   in its dead-letter files; an unverified startup probe or real sample does not.
+5. Fix the specific cause and rerun the affected check. Do not repeatedly run
+   large campaigns while the small functional check is failing.
+6. Do not use docker system prune, down -v, credential deletion or runtime-folder
+   deletion as routine troubleshooting steps.
+
+13. API TEST CALLS (APPENDIX)
+-----------------------------
+Run these from the project root after ./startup.sh --name development.
+Change API_TEST_NAME below if testing a different named deployment. The example
+reads its actual port and private credentials; it does not print API keys.
+
+The main API also provides interactive documentation and exact request schemas:
+
+    http://127.0.0.1:18000/docs
+    http://127.0.0.1:18000/redoc
+    http://127.0.0.1:18000/openapi.json
+
+These URLs assume development's default port_base of 18000. Every /api/ call
+requires X-API-Key; /health and the documentation do not require that header.
+There is no public account registration/login endpoint. Use provisioned keys.
+
+A. COMPLETE MAIN-API ROUTE LIST
+
+Roles: R = any provisioned role, W = official or fact_checker, O = official.
+GET calls read state. POST calls can append ledger/off-chain records unless
+rejected, or can return an existing result when repeated idempotently.
+{id} means a real report ID; {msp} means an MSP ID such as Org1MSP.
+
+    Method  Path                                      Role / expected behavior
+    GET     /health                                   none / 200, status ok
+    GET     /api/status                               R / 200, Fabric/IPFS status
+    GET     /api/orgs                                 R / 200, registered orgs
+    GET     /api/reports                              R / 200, paginated records
+    POST    /api/reports                              W / 200, id/hash/claim CID
+    GET     /api/reports/{id}/chain                   R / 200, ledger record
+    GET     /api/reports/{id}                         R / 200, stored claim/votes
+    POST    /api/reports/{id}/fact-check              W / 200, independent vote
+    POST    /api/reports/{id}/finalize                O / 200 only if majority met
+    POST    /api/reports/{id}/expire                  O / 200 only if eligible
+    POST    /api/reports/{id}/corrections             W / 200, new linked report
+    POST    /api/reports/{id}/interventions           W / 200, evidence commitment
+    GET     /api/reports/{id}/interventions           R / 200, intervention list
+    GET     /api/reports/{id}/history                 R / 200, committed history
+    GET     /api/reports/{id}/verify                  R / 200, integrity results
+    POST    /api/orgs/{msp}/admission                 O / 200, eligible candidate
+    POST    /api/orgs/{msp}/admission/vote            O / 200, eligible member vote
+    POST    /api/orgs/{msp}/admission/finalize        O / 200, admission decision
+    GET     /api/orgs/{msp}/admission                 R / 200, existing application
+
+Report-list query arguments:
+    status=PENDING, UNDER_REVIEW, FINAL, DISPUTED, EXPIRED or SUPERSEDED;
+    omit status to include all statuses. page_size is 1..200 (default 50).
+    Pass the returned next_bookmark unchanged through URL query encoding to
+    fetch another page. An empty next_bookmark means no further page.
+
+Main POST payloads:
+    /reports and /corrections:
+      {"msg_id":"unique-id","label":"1","confidence":0.9,
+       "model_version":"manual-api-test","content":"Synthetic test claim",
+       "source_platform":"manual-test"}
+      Optional: published_at, inference_timestamp, supersedes (strings).
+      A correction references a current FINAL report. Give it a NEW msg_id.
+    /fact-check:
+      {"outcome":"1","reasoning":"Synthetic review only","support":[]}
+    /interventions:
+      {"intervention_id":"unique-id","action":"Record test notice",
+       "outcome":"Synthetic notice recorded","support":[]}
+    /admission:
+      {"org_name":"Candidate organisation","org_type":"research"}
+    /admission/vote:
+      {"verdict":"1"}
+    /finalize, /expire, /admission/finalize: no JSON body required.
+
+Labels/outcomes/verdicts are the strings "0" or "1". The manual examples below
+choose synthetic labels; they do not run the AI or demonstrate model accuracy.
+Use feed/manual-API report IDs for content verification. Direct Caliper records
+deliberately have no stored IPFS claim and cannot pass full content retrieval.
+
+B. COPYABLE MAIN-API WORKFLOW AND REJECTION CHECKS
+
+[ ] Run this ONE complete block. It prints each method/path/status and asserts
+    expected results. It creates TWO synthetic reports, review evidence and one
+    intervention. Repeating it creates new test records. Do this outside timed
+    feed/Caliper runs. Expected 400/401/403/409/422 rejections are labelled.
+    The script stops at the first unexpected response; it does not roll back
+    successful earlier writes. Keep its output as functional evidence.
+
+    Reviewers are selected from each report's frozen eligible_reviewers and
+    required_votes. This works dynamically with the provisioned org count.
+
+    export API_TEST_NAME=development
+
+repair/.venv/bin/python - <<'PY'
+import json, os, urllib.error, urllib.parse, urllib.request, uuid
+from blockchain.scripts.deployment import runtime_path
+
+runtime = runtime_path(os.environ.get('API_TEST_NAME', 'development'))
+cfg = json.loads((runtime / 'experiment.json').read_text())
+rows = json.loads((runtime / 'credentials.json').read_text())
+keys = {(r['org'], r['role']): r['api_key'] for r in rows}
+base = f'http://127.0.0.1:{cfg["port_base"]}'
+print('Deployment:', cfg['name'], '| organisations:', cfg['orgs'], '|', base)
+
+def api(method, path, body=None, org='org1', role='fact_checker',
+        expected=200, auth=True, bad_key=False):
+    headers = {'Content-Type': 'application/json'}
+    if auth:
+        headers['X-API-Key'] = 'invalid-test-key' if bad_key else keys[(org, role)]
+    request = urllib.request.Request(base + path, method=method, headers=headers,
+        data=None if body is None else json.dumps(body).encode())
+    try:
+        with urllib.request.urlopen(request, timeout=180) as response:
+            status, raw = response.status, response.read()
+    except urllib.error.HTTPError as error:
+        status, raw = error.code, error.read()
+    result = json.loads(raw) if raw else None
+    print(method, path, '->', status, '(expected', str(expected) + ')')
+    if status != expected:
+        print(json.dumps(result, indent=2))
+        raise AssertionError('Unexpected API response; inspect this stage')
+    return result
+
+def chain(report_id):
+    return api('GET', f'/api/reports/{report_id}/chain')
+
+def majority(report_id, outcome):
+    record = chain(report_id)
+    required = record['required_votes']
+    assert required == len(record['eligible_reviewers']) // 2 + 1
+    reviewers = [org for org, role in keys if role == 'fact_checker'
+        and f'Org{org[3:]}MSP' in record['eligible_reviewers']]
+    reviewers.sort(key=lambda org: int(org[3:]))
+    assert len(reviewers) >= required, 'Missing eligible reviewer credentials'
+    for org in reviewers[:required]:
+        api('POST', f'/api/reports/{report_id}/fact-check',
+            {'outcome': outcome, 'reasoning': 'Scripted synthetic API review',
+             'support': []}, org=org)
+    record = chain(report_id)
+    assert record['status'] == 'FINAL' and record['final_label'] == outcome
+    print('Final verdict:', record['final_label'], '| required votes:', required)
+
+assert api('GET', '/health', auth=False)['status'] == 'ok'
+assert api('GET', '/api/status', role='observer')['ledger_backend'] == 'fabric'
+api('GET', '/api/orgs', role='observer')
+api('GET', '/api/status', auth=False, expected=401)
+api('GET', '/api/status', bad_key=True, expected=401)
+api('GET', '/api/reports?page_size=201', expected=422)
+api('POST', '/api/reports', {}, expected=422)
+
+body = {'msg_id': 'manual-api-' + uuid.uuid4().hex, 'label': '1',
+    'confidence': 0.9, 'model_version': 'manual-api-test',
+    'content': 'Synthetic claim for API workflow testing only.',
+    'source_platform': 'manual-test'}
+api('POST', '/api/reports', body, role='observer', expected=403)
+created = api('POST', '/api/reports', body)
+report_id = created['id']
+print('Original report ID:', report_id)
+assert api('POST', '/api/reports', body)['id'] == report_id
+api('POST', '/api/reports', dict(body, content='Conflicting reuse of msg_id'),
+    expected=409)
+assert chain(report_id)['status'] == 'PENDING'
+api('GET', f'/api/reports/{report_id}', role='observer')
+page = api('GET', '/api/reports?' + urllib.parse.urlencode({'page_size': 1}))
+if page['next_bookmark']:
+    api('GET', '/api/reports?' + urllib.parse.urlencode(
+        {'page_size': 1, 'bookmark': page['next_bookmark']}))
+api('GET', '/api/reports?status=PENDING&page_size=50')
+
+vote = {'outcome': '1', 'reasoning': 'Synthetic test review', 'support': []}
+api('POST', f'/api/reports/{report_id}/fact-check', vote,
+    role='observer', expected=403)
+api('POST', f'/api/reports/{report_id}/fact-check', vote, expected=400)
+api('POST', f'/api/reports/{report_id}/finalize', expected=403)
+api('POST', f'/api/reports/{report_id}/finalize', role='official', expected=400)
+api('POST', f'/api/reports/{report_id}/expire', role='observer', expected=403)
+api('POST', f'/api/reports/{report_id}/expire', role='official', expected=400)
+majority(report_id, '1')
+# Votes already finalized it; this official call succeeds idempotently.
+api('POST', f'/api/reports/{report_id}/finalize', role='official')
+
+intervention = {'intervention_id': 'notice-' + uuid.uuid4().hex,
+    'action': 'Record synthetic test notice',
+    'outcome': 'Synthetic notice recorded; no external action', 'support': []}
+api('POST', f'/api/reports/{report_id}/interventions', intervention)
+assert api('GET', f'/api/reports/{report_id}/interventions')
+assert api('GET', f'/api/reports/{report_id}/history')
+assert api('GET', f'/api/reports/{report_id}/verify')['verified'] is True
+
+correction = dict(body, msg_id='manual-correction-' + uuid.uuid4().hex,
+    content='Synthetic correction for API testing only.', label='0')
+corrected_id = api('POST', f'/api/reports/{report_id}/corrections', correction)['id']
+print('Correction report ID:', corrected_id)
+assert chain(report_id)['status'] == 'FINAL'
+majority(corrected_id, '0')
+assert chain(report_id)['status'] == 'SUPERSEDED'
+api('GET', f'/api/reports/{corrected_id}')
+for rid in (report_id, corrected_id):
+    assert api('GET', f'/api/reports/{rid}/history')
+    assert api('GET', f'/api/reports/{rid}/verify')['verified'] is True
+print('Main report API checks PASSED. Admission/overdue-expiry are separate below.')
+PY
+
+    Expected: all assertions pass; original report becomes SUPERSEDED and its
+    correction becomes FINAL. Both pass integrity verification. The submitter's
+    attempted self-vote is rejected, while eligible independent orgs can vote.
+
+C. CONDITIONAL ADMISSION / EXPIRY CALLS
+
+These routes are listed for completeness. A normal startup registers ALL its
+provisioned organisations as founders, so it has no unregistered candidate for
+a successful admission test. Admission also does not create peers/certificates.
+Only test a successful admission after explicitly configuring an authenticated
+candidate MSP which is not yet registered on the ledger.
+
+In a Python session with the api() helper from B, the sequence would be:
+
+    api('POST', '/api/orgs/Org4MSP/admission',
+        {'org_name': 'Candidate organisation', 'org_type': 'research'},
+        org='org4', role='official')
+    api('GET', '/api/orgs/Org4MSP/admission', role='observer')
+    api('POST', '/api/orgs/Org4MSP/admission/vote',
+        {'verdict': '1'}, org='org1', role='official')
+    # Repeat the vote with the required other eligible member identities.
+    api('POST', '/api/orgs/Org4MSP/admission/finalize', role='official')
+    api('GET', '/api/orgs', role='observer')
+
+Org4MSP is only an EXAMPLE; the default three-org deployment has no org4 key.
+The helper in B exists inside that Python block only: put conditional calls
+inside a new copy of the block after its helper definitions, not in Bash.
+Inspect the admission record and actual consortium policy before finalizing;
+membership admission uses its own two-thirds threshold, separate from the
+strict majority of frozen independent reviewers used for report verdicts.
+Expected rejections: fact_checker/observer admission writes -> 403; request for
+a different MSP from the authenticated candidate -> 403; registered founder
+request -> 400; vote {"verdict":"admit"} -> 422. Missing applications produce
+contract errors (normally 400), rather than a guaranteed HTTP 404.
+
+Expiry call with the same helper:
+
+    api('POST', f'/api/reports/{overdue_report_id}/expire', role='official')
+    assert chain(overdue_report_id)['status'] == 'EXPIRED'
+
+Use an actual unresolved PENDING/UNDER_REVIEW report past fact_check_deadline
+(normally 72 hours). A fresh report correctly returns 400, as checked in B.
+The background expiry task may already have expired it; repeating that expiry
+is idempotent. Do not change system time or edit the ledger to force this test.
+For a controlled positive expiry test use the existing automated tests or the
+separate disposable retention check in section 11.
+
+D. FEED WORKER APIS (ONLY WHILE THEIR SERVICES ARE RUNNING)
+
+startup.sh starts the ledger/API services. pipeline.py temporarily starts its
+workers and STOPS them when it exits. Connection refused on these worker ports
+after the feed completes is therefore expected. The feed already exercises
+their ingestion/inference/delivery paths. The calls below are for a separate
+manual worker session; do not inject extra messages into a measured feed run.
+Default port_base=18000 is assumed below; adjust for another deployment.
+
+    Ingest worker (18006):
+      GET  /health
+      POST /ingest   {"claims":["Synthetic manual ingestion test claim."]}
+      POST /ingest   {"claims":[]}                         -> expected 422
+    Flagging engine (18005):
+      GET  /health
+      POST /predict  {"post_text":"Synthetic prediction test claim."}
+      POST /predict  {"post_text":""}                     -> expected 422
+      GET  /metrics                                        -> Prometheus text
+    Submission worker (18001):
+      GET  /health
+      GET  /metrics                                        -> Prometheus text
+
+Example curl calls, only with those workers running:
+
+    curl -sS --max-time 10 http://127.0.0.1:18006/health
+    curl -sS --max-time 10 http://127.0.0.1:18005/health
+    curl -sS --max-time 10 http://127.0.0.1:18001/health
+    curl -sS --max-time 120 -H 'Content-Type: application/json' -d '{"post_text":"Synthetic prediction test claim."}' http://127.0.0.1:18005/predict
+    curl -sS --max-time 10 http://127.0.0.1:18005/metrics
+    curl -sS --max-time 10 http://127.0.0.1:18001/metrics
+    curl -sS --max-time 30 -H 'Content-Type: application/json' -d '{"claims":["Synthetic manual ingestion test claim."]}' http://127.0.0.1:18006/ingest
+
+/predict returns label/confidence/probability/flagged/model_version; it does NOT
+append a blockchain report. /ingest queues messages and returns queued/msg_ids;
+it does not wait for a committed report or a final verdict. Review votes are
+still required. Worker health can return 503 if its consumer has failed.
+Kafka's port (18004 by default) uses the Kafka protocol, not HTTP/curl.
+
+E. EXPLORER API CHECKS (SEPARATE LOGIN)
+
+Use ./blockchain/explorer/manage.sh up --name development first. Explorer has
+its own login/JWT, not the main API's X-API-Key. The block below reads the local
+Explorer credentials without printing its password or token, and queries the
+current channel. These calls only authenticate/read; they do not append reports.
+
+repair/.venv/bin/python - <<'PY'
+import json, os
+from blockchain.scripts.deployment import runtime_path
+from blockchain.explorer.manage import request
+folder = runtime_path(os.environ.get('API_TEST_NAME', 'development')) / 'explorer'
+state = json.loads((folder / 'state.json').read_text())
+private = json.loads((folder / 'secrets.json').read_text())
+base = f'http://127.0.0.1:{state["port"]}'
+print('GET /auth/networklist:', request(base + '/auth/networklist'))
+login = request(base + '/auth/login', {'user': private['username'],
+    'password': private['password'], 'network': state['name']})
+assert login.get('success'), 'Explorer login failed'
+token = login['token']
+channels = request(base + '/api/channels/info', token=token)
+channel = next(c for c in channels['channels'] if c['channelname'] == state['channel'])
+genesis = channel['channel_genesis_hash']
+print('GET /api/channels/info:', json.dumps(channels, indent=2))
+print('GET /api/status/{genesis}:', json.dumps(
+    request(base + '/api/status/' + genesis, token=token), indent=2))
+print('Explorer API checks PASSED; compare blocks/transactions with section 7.')
+PY
+
+For a report history tx_id, Explorer also supports the read-only route:
+    GET /api/transaction/{channel_genesis_hash}/{tx_id}
+    Header: Authorization: Bearer <Explorer login token>
+Expected: the row's txhash matches and validation_code is VALID. Explorer's
+third-party API contains additional UI routes; these are the relevant ledger
+inspection calls, not an exhaustive test of the upstream Explorer application.
+
+F. INTERNAL / OPTIONAL API INVENTORY
+
+These are not additional public ports to open for normal testing. Current
+storage/signers are private Docker-network services. Do not use an unrelated
+old container at localhost:9100/9101 as evidence about this named deployment.
+
+Internal storage bridge (port 9101 INSIDE its Docker network):
+    GET  /health                 -> IPFS availability/version, no key needed
+    POST /add                    -> raw request-body bytes; returns {"cid":...}
+    GET  /cat/{cid}              -> exact stored bytes, not necessarily JSON
+    POST /admin/unpin/{cid}      -> removes pin; disposable retention tests only
+    POST /admin/gc               -> collects unpinned content; same restriction
+    All except /health require X-Service-Key. Expected invalid/missing key: 401.
+    /add empty body -> 400; object over 4 MiB -> 413.
+    Use section 11 to test content removal on disposable state. Do not unpin
+    evidence or run garbage collection on your demo/poster ledger.
+
+Internal organisation signer (port 9100 INSIDE its Docker network):
+    GET  /health                 -> organisation/schema status
+    POST /query                  -> {"function":"QueryReport","args":["ID"]}
+    POST /invoke                 -> {"function":"FinalizeReport","args":["ID"]}
+    Both POST routes require X-API-Key and enforce their function/role allowlist.
+    The signer owns one organisation's identities. Supplying an org selector
+    in the body is rejected (400); invalid key -> 401; forbidden action -> 403.
+    Public /chain and workflow calls exercise these signer paths normally.
+
+Optional fact-checking-service compatibility wrapper:
+    GET  /health
+    GET  /claims/pending
+    GET  /claims/{id}
+    POST /claims/{id}/fact-check  -> {"outcome":"1","reasoning":"Test","support":[]}
+    POST /claims/{id}/finalize   -> no body; official credential still needed
+    /claims routes require X-API-Key from its configured organisation key map.
+    This wrapper is not started by the current startup/feed path. Its presence
+    in the source does not mean an additional service should already be running.
+
+HTTP STATUS / RESULT INTERPRETATION
+    200: request handled; ALSO inspect status/verified/availability in its body.
+    400: workflow/ledger precondition rejected (e.g. self-vote, no majority).
+    401: missing, invalid or revoked main API credential.
+    403: authenticated role/organisation not permitted for this operation.
+    404: unknown HTTP route; missing ledger entities can instead return 400.
+    409: conflicting message ID/content or an integrity/commit conflict.
+    422: request schema/value rejected (missing fields, invalid labels, etc.).
+    503/504: service unavailable/deadline; inspect logs, not a functional pass.
+    Connection refused: no listener on that address/port; check service lifetime.
+
+Integrity verified=true means stored objects/history match their commitments.
+It does not establish that the synthetic claim or a reviewer's verdict is true.
+
+END OF CHECKLIST
+
+repair/.venv/bin/python - <<'PY'
+import json
+from blockchain.scripts.deployment import runtime_path
+
+rows = json.loads((runtime_path('development') / 'credentials.json').read_text())
+print(next(r['api_key'] for r in rows
+           if r['org'] == 'org2' and r['role'] == 'fact_checker'))
+PY

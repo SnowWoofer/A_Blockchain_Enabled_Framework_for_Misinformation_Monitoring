@@ -1,9 +1,5 @@
 {
-  "network-configs": {
-    "test-network": {
-      "name": "test-network",
-      "profile": "./connection-profile/networkConfig.json"
-    }
-  },
+  "_comment": "Template only; use manage.sh to generate the selected deployment configuration.",
+  "network-configs": {},
   "license": "Apache-2.0"
 }

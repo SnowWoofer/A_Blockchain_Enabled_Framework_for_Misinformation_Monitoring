@@ -1,21 +1,23 @@
 volumes:
   pgdata:
+    name: ${EXPLORER_DB_VOLUME:?Use blockchain/explorer/manage.sh}
   walletstore:
+    name: ${EXPLORER_WALLET_VOLUME:?Use blockchain/explorer/manage.sh}
 
 networks:
-  explorer-net:
-    name: fabric_test
+  fabric:
+    name: ${EXPLORER_FABRIC_NETWORK:?Use blockchain/explorer/manage.sh}
     external: true
+  database:
+    internal: true
 
 services:
   explorerdb:
-    image: hyperledger/explorer-db:latest
-    container_name: explorerdb
-    hostname: explorerdb
+    image: ghcr.io/hyperledger-labs/explorer-db:2.0.0@sha256:797c605e130f9f8b197bc717dadcf8d19a09fc9ec5f8a5273121e3d5540ebdaf
     environment:
-      - DATABASE_DATABASE=fabricexplorer
-      - DATABASE_USERNAME=hppoc
-      - DATABASE_PASSWORD=password
+      DATABASE_DATABASE: fabricexplorer
+      DATABASE_USERNAME: hppoc
+      DATABASE_PASSWORD: ${EXPLORER_DATABASE_PASSWORD:?Use blockchain/explorer/manage.sh}
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "postgres", "-h", "localhost", "-p", "5432", "-q"]
       interval: 10s
@@ -24,34 +26,35 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     networks:
-      - explorer-net
+      - database
 
   explorer:
+    image: misinfo-explorer:2.0.0-v3
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: explorer
-    hostname: explorer
     environment:
-      - DATABASE_HOST=explorerdb
-      - DATABASE_DATABASE=fabricexplorer
-      - DATABASE_USERNAME=hppoc
-      - DATABASE_PASSWORD=password
-      - LOG_LEVEL_APP=info
-      - LOG_LEVEL_DB=info
-      - LOG_LEVEL_CONSOLE=debug
-      - LOG_CONSOLE_STDOUT=true
-      - DISCOVERY_AS_LOCALHOST=false
-      - PORT=8080
+      DATABASE_HOST: explorerdb
+      DATABASE_DATABASE: fabricexplorer
+      DATABASE_USERNAME: hppoc
+      DATABASE_PASSWD: ${EXPLORER_DATABASE_PASSWORD:?Use blockchain/explorer/manage.sh}
+      LOG_LEVEL_APP: warn
+      LOG_LEVEL_DB: warn
+      LOG_LEVEL_CONSOLE: warn
+      LOG_CONSOLE_STDOUT: "true"
+      DISCOVERY_AS_LOCALHOST: "false"
+      PORT: "8080"
     ports:
-      - 8080:8080
+      - 127.0.0.1:${EXPLORER_PORT:-18080}:8080
     volumes:
-      - ./config.json:/opt/explorer/app/platform/fabric/config.json
-      - ./connection-profile:/opt/explorer/app/platform/fabric/connection-profile
-      - ../fabric-samples/test-network/organizations:/tmp/crypto
+      - ${EXPLORER_CONFIG_DIR:?Use blockchain/explorer/manage.sh}/config.json:/opt/explorer/app/platform/fabric/config.json:ro
+      - ${EXPLORER_CONFIG_DIR}/connection-profile:/opt/explorer/app/platform/fabric/connection-profile:ro
+      - ${EXPLORER_CONFIG_DIR}/explorerconfig.json:/opt/explorer/app/explorerconfig.json:ro
+      - ${EXPLORER_OBSERVER_MSP:?Use blockchain/explorer/manage.sh}:/identity:ro
       - walletstore:/opt/explorer/wallet
     depends_on:
       explorerdb:
         condition: service_healthy
     networks:
-      - explorer-net
+      - fabric
+      - database

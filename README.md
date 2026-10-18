@@ -187,6 +187,43 @@ failed acknowledgement can also change ledger size. Historical results remain in
 Caliper mounts only Org1's official client MSP and the gateway peer's TLS CA,
 not Fabric CA/admin keys. No host Node/npm installation is needed for this runner.
 
+## 5. Inspect the ledger with Hyperledger Explorer
+
+With the named Fabric deployment running:
+
+```bash
+./blockchain/explorer/manage.sh up
+./blockchain/explorer/manage.sh credentials
+```
+
+Open **http://localhost:18080**, select network **development**, and use the login
+shown by the credentials command. To inspect another deployment, add the same
+`--name YOUR_LABEL` to both commands. Explorer generates its profile from that
+deployment's actual organisation count and uses an Org1 observer identity.
+An Explorer database and wallet are retained separately for each deployment;
+its PostgreSQL database is an index for the viewer, independent of Fabric's
+selected LevelDB/CouchDB state database. The default web port is the deployment's
+port base plus 80; use `up --port 19080` to choose another local port.
+
+In Explorer, choose `mychannel` and inspect Blocks or Transactions. Report IDs are
+in your feed's `result.json`; the corresponding Fabric transaction IDs are in
+`GET /api/reports/REPORT_ID/history`. Search those transaction IDs in Explorer and
+inspect the `misinformation` chaincode write set. Claim text and evidence remain
+in IPFS, with their hashes/CIDs recorded on-chain; `/verify` checks their integrity.
+Initial indexing can take time, and Explorer also lists setup and Caliper transactions.
+
+```bash
+./blockchain/explorer/manage.sh status
+./blockchain/explorer/manage.sh logs
+./blockchain/explorer/manage.sh down
+```
+
+`down` stops only Explorer and retains its database and wallet. Stop Explorer
+before collecting performance measurements to keep background work comparable.
+Private profiles and generated login credentials live under
+`blockchain/runtime/NAME/explorer/` (or the existing legacy runtime location).
+The launcher defaults to `development`; it does not start the Fabric deployment.
+
 ## Names, logs and results
 
 For a different deployment, pass the same label to either benchmark:
@@ -234,6 +271,7 @@ retained. Do not delete volumes as a first troubleshooting step.
 
 ```bash
 repair/.venv/bin/python -m pytest -q -p no:cacheprovider benchmarks/tests
+repair/.venv/bin/python -m pytest -q -p no:cacheprovider blockchain/explorer/tests
 repair/.venv/bin/python benchmarks/campaign.py --phase regression
 ```
 
