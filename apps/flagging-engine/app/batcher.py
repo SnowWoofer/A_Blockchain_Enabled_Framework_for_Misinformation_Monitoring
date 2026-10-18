@@ -26,7 +26,7 @@ class DynamicBatcher:
         self.max_batch_size = max_batch_size
         self.max_delay_s = max_queue_delay_ms / 1000
         self.executor = executor
-        self._queue: "asyncio.Queue[tuple]" = asyncio.Queue()
+        self._queue: "asyncio.Queue[tuple]" = asyncio.Queue(maxsize=1024)
         self._task: asyncio.Task | None = None
 
     async def start(self):
@@ -37,8 +37,12 @@ class DynamicBatcher:
             self._task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await self._task
+        while not self._queue.empty():
+            _,future,_=self._queue.get_nowait()
+            if not future.done():future.cancel()
 
     async def submit(self, text: str) -> dict:
+        if self._task is None or self._task.done():raise RuntimeError('inference batcher is unavailable')
         loop = asyncio.get_running_loop()
         future: asyncio.Future = loop.create_future()
         await self._queue.put((text, future, loop.time()))
@@ -73,6 +77,7 @@ class DynamicBatcher:
         start = time.perf_counter()
         try:
             results = await loop.run_in_executor(self.executor, self.infer_fn, texts)
+            if len(results)!=len(futures):raise RuntimeError('model returned an incomplete batch')
             INFERENCE_LATENCY.observe(time.perf_counter() - start)
             REQUESTS_TOTAL.inc(len(results))
             FLAGGED_TOTAL.inc(sum(1 for r in results if r["flagged"]))

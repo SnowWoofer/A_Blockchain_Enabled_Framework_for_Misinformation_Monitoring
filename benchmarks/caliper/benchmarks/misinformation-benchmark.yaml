@@ -1,45 +1,36 @@
-{
-  "test": {
-    "name": "misinformation-contract-benchmark",
-    "description": "Write + read benchmark for the misinformation chaincode on mychannel.\n    Round 1 anchors synthetic reports on-chain (SubmitReport, endorsed 2-of-3).\n    Round 2 hammers the read path (QueryAllReports via CouchDB world state).\n    Configured: 5000 writes @ 25 TPS, 5000 reads @ 50 TPS.",
-    "workers": {
-      "number": 2
-    },
-    "rounds": [
-      {
-        "label": "submit-report-write",
-        "description": "Anchor synthetic misinformation reports on-chain",
-        "txNumber": 5000,
-        "rateControl": {
-          "type": "fixed-rate",
-          "opts": {
-            "tps": 25
-          }
-        },
-        "workload": {
-          "module": "workload/submitReport.js",
-          "arguments": {
-            "contractId": "misinformation"
-          }
-        }
-      },
-      {
-        "label": "query-all-reports-read",
-        "description": "Range-scan the ledger through the gateway peer",
-        "txNumber": 5000,
-        "rateControl": {
-          "type": "fixed-rate",
-          "opts": {
-            "tps": 50
-          }
-        },
-        "workload": {
-          "module": "workload/queryAllReports.js",
-          "arguments": {
-            "contractId": "misinformation"
-          }
-        }
-      }
-    ]
-  }
-}
+test:
+  name: counted-writes-then-reads
+  description: Reference defaults; run-caliper.sh generates actual settings per run.
+  workers:
+    number: 2
+  rounds:
+  - label: write
+    txNumber: 1000
+    rateControl:
+      type: workload/count-fixed-load.js
+      opts:
+        transactionLoad: 100
+        startTps: 25
+    workload:
+      module: workload/submitReport.js
+      arguments:
+        label: write
+        runId: GENERATED-PER-RUN
+        transactionCount: 1000
+        workerCount: 2
+        rejectWrites: false
+  - label: read
+    txNumber: 1000
+    rateControl:
+      type: workload/count-fixed-load.js
+      opts:
+        transactionLoad: 100
+        startTps: 25
+    workload:
+      module: workload/queryAllReports.js
+      arguments:
+        label: read
+        runId: GENERATED-PER-RUN
+        transactionCount: 1000
+        workerCount: 2
+        rejectWrites: false

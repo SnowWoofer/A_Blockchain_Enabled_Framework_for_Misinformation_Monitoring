@@ -64,7 +64,8 @@ blockchain/chaincode/misinformation/D*
 venv*
 blockchain/fabric-samples/*
 !blockchain/fabric-samples/L*
-info/
+info/*
+!info/ArtyIndo/
 !blockchain/fabric-samples/CHANGELOG.md
 !blockchain/fabric-samples/CO*
 !blockchain/fabric-samples/RE*
@@ -80,7 +81,6 @@ apps/ai_service/app/v1-0-0/api/offchain.db
 node_modules/
 benchmarks/caliper/report.html
 benchmarks/results-live*
-!instruction.txt
 apps/flagging-engine/model/model.safetensors
 apps/flagging-engine/model/model-001.safetensors
 report
@@ -88,3 +88,9 @@ benchmarks/run_remaining.sh
 misinformation-abac.tar.gz
 benchmarks/run_overnight_abac.sh
 swarm.key
+# Generated private deployment identities and configuration
+blockchain/runtime/
+results
+repair
+info
+experiments

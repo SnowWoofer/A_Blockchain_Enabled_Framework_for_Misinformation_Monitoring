@@ -2,7 +2,6 @@ import logging
 from typing import Any, Coroutine
 
 from fastapi import Depends, FastAPI, Header, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
 
 from .blockchain_client import CLIENT, BlockchainError
 from .config import settings
@@ -12,9 +11,6 @@ logging.basicConfig(level=settings.log_level)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Fact-Checking Service")
-app.add_middleware(
-    CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"],
-)
 
 _KEY_TO_ORG = {key: org for org, key in settings.org_api_keys.items()}
 
@@ -38,7 +34,7 @@ async def _chain_call(coro: Coroutine[Any, Any, Any]) -> Any:
     try:
         return await coro
     except BlockchainError as exc:
-        raise HTTPException(status_code=exc.status_code if exc.status_code < 500 else 400, detail=exc.detail)
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail)
 
 
 @app.get("/health")

@@ -30,6 +30,9 @@ app = FastAPI(title="Submission Worker", lifespan=lifespan)
 
 @app.get("/health")
 async def health():
+    consumer=state.get('consumer')
+    if consumer and not consumer.healthy:
+        return Response('{"status":"failed","reason":"consumer stopped; inspect durable replay log"}',status_code=503,media_type='application/json')
     return {
         "status": "ok" if state.get("consumer") else "starting",
         "kafka_input_topic": settings.kafka_input_topic,

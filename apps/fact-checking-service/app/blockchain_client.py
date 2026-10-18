@@ -85,18 +85,25 @@ class BlockchainClient:
         mspid = ORG_MSPID.get(org)
         candidates: List[Dict[str, Any]] = []
         for status in OPEN_STATUSES:
-            records = await self._request("GET", org, "/api/reports", params={"status": status})
-            for record in records:
-                if any(v.get("checker_msp") == mspid for v in record.get("fact_checks", [])):
-                    continue
-                candidates.append(record)
+            bookmark=''
+            while True:
+                page = await self._request("GET", org, "/api/reports", params={"status":status,'page_size':50,'bookmark':bookmark})
+                for record in page['items']:
+                    if mspid not in record.get('eligible_reviewers',[]):continue
+                    if any(v.get("checker_msp") == mspid for v in record.get("fact_checks", [])):continue
+                    candidates.append(record)
+                bookmark=page['next_bookmark']
+                if not bookmark:break
+
+        semaphore=asyncio.Semaphore(max(1,settings.enrichment_concurrency))
 
         async def _enrich(record: Dict[str, Any]) -> Dict[str, Any]:
-            try:
-                doc = await self._document(org, record["id"])
-            except BlockchainError:
-                doc = {}
-            return self._project(record, doc)
+            async with semaphore:
+                try:
+                    doc = await self._document(org, record["id"])
+                except BlockchainError:
+                    doc = {}
+                return self._project(record, doc)
 
         return list(await asyncio.gather(*(_enrich(r) for r in candidates)))
 

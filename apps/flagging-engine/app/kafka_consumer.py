@@ -1,8 +1,10 @@
 import asyncio
+import base64
 import contextlib
 import datetime as dt
 import json
 import logging
+import os
 
 from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
 
@@ -31,8 +33,8 @@ class FlaggingConsumer:
             settings.kafka_input_topic,
             bootstrap_servers=settings.kafka_bootstrap_servers,
             group_id=settings.kafka_consumer_group,
-            value_deserializer=lambda v: json.loads(v.decode("utf-8")),
-            enable_auto_commit=True,
+            enable_auto_commit=False,
+            auto_offset_reset='earliest',
         )
         self.producer = AIOKafkaProducer(
             bootstrap_servers=settings.kafka_bootstrap_servers,
@@ -58,13 +60,35 @@ class FlaggingConsumer:
         if self.producer:
             await self.producer.stop()
 
+    @property
+    def healthy(self):
+        return self._task is not None and not self._task.done()
+
     async def _run(self):
         assert self.consumer is not None
         async for msg in self.consumer:
+            self._kafka_meta={'topic':msg.topic,'partition':msg.partition,'offset':msg.offset}
             try:
-                await self._handle(msg.value)
-            except Exception:
-                logger.exception("Failed to process message at offset %s", msg.offset)
+                payload=json.loads(msg.value.decode('utf-8'))
+            except (ValueError,UnicodeError):
+                self._dead_letter({'raw_base64':base64.b64encode(msg.value).decode('ascii')},'invalid JSON')
+            else:
+                for attempt in range(3):
+                    try:
+                        await self._handle(payload)
+                        break
+                    except Exception as exc:
+                        if attempt==2:
+                            self._dead_letter({'payload':payload},type(exc).__name__)
+                        else:await asyncio.sleep(.5*2**attempt)
+            from aiokafka import TopicPartition
+            await self.consumer.commit({TopicPartition(msg.topic,msg.partition):msg.offset+1})
+
+    def _dead_letter(self,payload,error):
+        os.makedirs(os.path.dirname(settings.dead_letter_path) or '.',exist_ok=True)
+        with open(settings.dead_letter_path,'a',encoding='utf-8') as handle:
+            handle.write(json.dumps({**payload,'_error':error,'_kafka':getattr(self,'_kafka_meta',None)},ensure_ascii=False)+'\n')
+            handle.flush();os.fsync(handle.fileno())
 
     async def _handle(self, payload: dict):
         claim = ClaimMessage.model_validate(payload)

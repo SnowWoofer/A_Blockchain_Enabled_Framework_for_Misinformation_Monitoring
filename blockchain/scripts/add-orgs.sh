@@ -312,11 +312,39 @@ services:
       - ./docker/peercfg:/etc/hyperledger/peercfg
       - \${DOCKER_SOCK}:/host/var/run/docker.sock
 EOF
+  local db="${STATE_DB:-leveldb}"
+  case "$db" in leveldb|couchdb) ;; *) echo 'STATE_DB must be leveldb or couchdb' >&2; exit 1;; esac
+  local db_compose="${ADD_ORG3}/compose/database-org${n}.yaml"
+  if [ "$db" = couchdb ]; then
+    cat > "$db_compose" <<EOF
+services:
+  peer0.org${n}.example.com:
+    environment:
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb${n}:5984
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=admin
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=${COUCHDB_PASSWORD:?Set COUCHDB_PASSWORD for CouchDB deployments}
+  couchdb${n}:
+    image: couchdb:3.4.2
+    environment:
+      COUCHDB_USER: admin
+      COUCHDB_PASSWORD: ${COUCHDB_PASSWORD}
+    networks:
+      - test
+EOF
+  else
+    cat > "$db_compose" <<EOF
+services:
+  peer0.org${n}.example.com:
+    environment:
+      - CORE_LEDGER_STATE_STATEDATABASE=goleveldb
+EOF
+  fi
   echo ">> [org${n}] starting peer container (peer0.org${n}.example.com:${p1})..."
   local sock="${DOCKER_HOST:-/var/run/docker.sock}"
   local docker_sock="${sock##unix://}"
   (cd "${ADD_ORG3}" && DOCKER_SOCK="${docker_sock}" ${CONTAINER_CLI_COMPOSE} \
-    -f compose/compose-org${n}.yaml -f compose/docker/docker-compose-org${n}.yaml up -d 2>&1 | tail -2)
+    -f compose/compose-org${n}.yaml -f compose/docker/docker-compose-org${n}.yaml -f "${db_compose}" up -d 2>&1 | tail -2)
 }
 
 add_org_to_channel() {
@@ -463,7 +491,7 @@ for n in $(seq 4 "${TARGET}"); do
 
     local_sock="${DOCKER_HOST:-/var/run/docker.sock}"
     (cd "${ADD_ORG3}" && DOCKER_SOCK="${local_sock##unix://}" ${CONTAINER_CLI_COMPOSE} \
-      -f compose/compose-org${n}.yaml -f compose/docker/docker-compose-org${n}.yaml up -d 2>&1 | tail -2)
+      -f compose/compose-org${n}.yaml -f compose/docker/docker-compose-org${n}.yaml -f "${db_compose}" up -d 2>&1 | tail -2)
   fi
   add_org_to_channel "${n}"
 done

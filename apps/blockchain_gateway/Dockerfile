@@ -13,10 +13,7 @@ COPY app/v1-0-0/src ./src
 
 EXPOSE 8000
 
-# The peer-CLI fallback bridge (FabricBridge) needs the `peer` binary and
-# fabric-samples/organizations on PATH/disk, which this image deliberately
-# doesn't bundle — containerized, this service only runs with
-# FABRIC_BACKEND=gateway (the official SDK sidecar, apps/fabric_gateway),
-# never the CLI fallback. Run it directly on the host (see README) if you
-# need the CLI fallback path.
+# v3 uses authenticated per-organisation SDK signers, or the explicitly named
+# SQLite reference backend for comparison. No peer CLI or private keys belong
+# in the workflow API image.
 CMD ["uvicorn", "--app-dir", "api", "server:app", "--host", "0.0.0.0", "--port", "8000"]

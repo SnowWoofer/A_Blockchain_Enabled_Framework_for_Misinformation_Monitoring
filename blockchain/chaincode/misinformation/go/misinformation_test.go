@@ -2,11 +2,11 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"math"
 	"testing"
 	"time"
 
-	"github.com/hyperledger/fabric-contract-api-go/v2/contractapi"
 	"github.com/hyperledger/fabric-protos-go-apiv2/peer"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -16,7 +16,7 @@ const validTs = "2025-01-01T00:00:00Z"
 
 func newTestStub(t *testing.T) *MockStub {
 	t.Helper()
-	cc, err := contractapi.NewChaincode(&MisinformationContract{})
+	cc, err := newMisinformationChaincode()
 	if err != nil {
 		t.Fatalf("failed to create chaincode: %v", err)
 	}
@@ -27,7 +27,7 @@ func newTestStub(t *testing.T) *MockStub {
 		TxTimestamp: nil,
 		Attrs:       map[string]string{"role": "official"},
 	}
-	stub.args = [][]byte{} 
+	stub.args = [][]byte{}
 	stub.signedProposal = &peer.SignedProposal{}
 	return stub
 }
@@ -36,7 +36,7 @@ func invokeAs(stub *MockStub, txID, msp string, args ...string) *peer.Response {
 	stub.TxID = txID
 	stub.CreatorMSP = msp
 	call := [][]byte{[]byte(args[0])} //call arg0
-	for _, a := range args[1:] { //append rest fo args to call
+	for _, a := range args[1:] {      //append rest fo args to call
 		call = append(call, []byte(a))
 	}
 	return stub.MockInvoke(txID, call)
@@ -56,566 +56,249 @@ func submitReport(stub *MockStub, txID, msp, reportID string) *peer.Response {
 		"Submit", reportID, validHash, "1", "0.97", "model-v1", validTs)
 }
 
-// ---------- Organisation Registration ----------
-
-func TestRegisterOrgAndList(t *testing.T) {
-	stub := newTestStub(t)
-	registerOrgs(t, stub, "Org1MSP", "Org2MSP", "Org3MSP")
-
-	var orgs []*RegisteredOrg
-	if res := invokeAs(stub, "tx-list", "Org1MSP", "ListRegisteredOrgs"); res.Status != 200 {
-		t.Fatalf("ListRegisteredOrgs failed: %s", res.Message)
-	} else if err := json.Unmarshal(res.Payload, &orgs); err != nil {
-		t.Fatalf("bad payload: %v", err)
+func setup(t *testing.T, n int) *MockStub {
+	s := newTestStub(t)
+	if r := invokeAs(s, "cfg", "Org1MSP", "SetFoundingOrgLimit", fmt.Sprint(n)); r.Status != 200 {
+		t.Fatal(r.Message)
 	}
-	if len(orgs) != 3 {
-		t.Fatalf("expected 3 registered orgs, got %d", len(orgs))
+	for i := 1; i <= n; i++ {
+		registerOrgs(t, s, fmt.Sprintf("Org%dMSP", i))
 	}
+	return s
 }
-
-func TestBootstrapClosedAfterFoundingLimit(t *testing.T) {
-	stub := newTestStub(t)
-	registerOrgs(t, stub, "Org1MSP", "Org2MSP", "Org3MSP")
-	if res := invokeAs(stub, "tx4", "Org4MSP", "RegisterOrg"); res.Status == 200 {
-		t.Fatalf("RegisterOrg should be closed once the founding limit is reached")
-	}
-}
-
-// ---------- Admission Workflow ----------
-
-func TestAdmissionWorkflow(t *testing.T) {
-	stub := newTestStub(t)
-	registerOrgs(t, stub, "Org1MSP", "Org2MSP")
-
-	if res := invokeAs(stub, "tx1", "Org3MSP", "RequestOrgAdmission", "Org 3", "ngo"); res.Status != 200 {
-		t.Fatalf("RequestOrgAdmission failed: %s", res.Message)
-	}
-	if res := invokeAs(stub, "tx2", "Org3MSP", "RequestOrgAdmission", "Org 3", "ngo"); res.Status == 200 {
-		t.Fatalf("duplicate admission request should be rejected")
-	}
-
-	if res := invokeAs(stub, "tx3", "Org3MSP", "VoteOnOrgAdmission", "Org3MSP", "1"); res.Status == 200 {
-		t.Fatalf("candidate should not vote on its own admission")
-	}
-	if res := invokeAs(stub, "tx4", "Org5MSP", "VoteOnOrgAdmission", "Org3MSP", "1"); res.Status == 200 {
-		t.Fatalf("unregistered org should not vote on admission")
-	}
-
-	if res := invokeAs(stub, "tx5", "Org1MSP", "VoteOnOrgAdmission", "Org3MSP", "1"); res.Status != 200 {
-		t.Fatalf("org1 vote failed: %s", res.Message)
-	}
-	if res := invokeAs(stub, "tx6", "Org2MSP", "VoteOnOrgAdmission", "Org3MSP", "1"); res.Status != 200 {
-		t.Fatalf("org2 vote failed: %s", res.Message)
-	}
-	if res := invokeAs(stub, "tx7", "Org2MSP", "FinalizeOrgAdmission", "Org3MSP"); res.Status != 200 {
-		t.Fatalf("finalize admission failed: %s", res.Message)
-	}
-
-	if res := submitReport(stub, "tx8", "Org3MSP", "rep-1"); res.Status != 200 {
-		t.Fatalf("admitted org should be able to submit: %s", res.Message)
-	}
-}
-
-// ---------- Submit and Query ----------
-
-func TestUnregisteredCannotSubmit(t *testing.T) {
-	stub := newTestStub(t)
-	if res := submitReport(stub, "tx1", "Org5MSP", "rep-1"); res.Status == 200 {
-		t.Fatalf("unregistered org should not be able to submit")
-	}
-}
-
-func TestSubmitAndQuery(t *testing.T) {
-	stub := newTestStub(t)
-	registerOrgs(t, stub, "Org1MSP")
-
-	if res := submitReport(stub, "tx1", "Org1MSP", "rep-42"); res.Status != 200 {
-		t.Fatalf("Submit failed: %s", res.Message)
-	}
-
-	res := invokeAs(stub, "tx2", "Org1MSP", "QueryReport", "rep-42")
-	if res.Status != 200 {
-		t.Fatalf("QueryReport failed: %s", res.Message)
-	}
-	var record ReportRecord
-	if err := json.Unmarshal(res.Payload, &record); err != nil {
-		t.Fatalf("bad payload: %v", err)
-	}
-	if record.ReportID != "rep-42" || record.ProposedLabel != "1" || record.Confidence != 0.97 {
-		t.Fatalf("unexpected record: %+v", record)
-	}
-	if record.Status != statusPending {
-		t.Fatalf("expected PENDING, got %s", record.Status)
-	}
-	if record.SubmittedBy != "Org1MSP" {
-		t.Fatalf("expected submitted_by Org1MSP, got %s", record.SubmittedBy)
-	}
-	if record.FactCheckDeadline == "" {
-		t.Fatalf("expected fact_check_deadline to be set")
-	}
-}
-
-func TestDuplicateRejected(t *testing.T) {
-	stub := newTestStub(t)
-	registerOrgs(t, stub, "Org1MSP")
-	if res := submitReport(stub, "tx1", "Org1MSP", "rep-42"); res.Status != 200 {
-		t.Fatalf("first submit failed: %s", res.Message)
-	}
-	if res := submitReport(stub, "tx2", "Org1MSP", "rep-42"); res.Status == 200 {
-		t.Fatalf("duplicate submit should have been rejected")
-	}
-}
-
-func TestInvalidInputsRejected(t *testing.T) {
-	cases := [][]string{
-		{"", validHash, "1", "0.5", "model", validTs},
-		{"rep", validHash, "1", "0.5", "model", validTs},
-		{"rep2", validHash, "2", "0.5", "model", validTs},
-		{"rep3", validHash, "1", "1.5", "model", validTs},
-		{"rep4", "short", "1", "0.5", "model", validTs},
-		{"rep5", validHash, "1", "0.5", "", validTs},
-		{"rep6", validHash, "1", "0.5", "model", "not-a-date"},
-		{"rep7", validHash, "1", "0.5", "model", ""},
-	}
-	for i, args := range cases {
-		stub := newTestStub(t)
-		invokeAs(stub, "tx-reg", "Org1MSP", "RegisterOrg")
-		if i == 1 {
-			invokeAs(stub, "tx-pre", "Org1MSP", "Submit", "rep", validHash, "1", "0.5", "model", validTs)
-		}
-		res := invokeAs(stub, "tx1", "Org1MSP", append([]string{"Submit"}, args...)...)
-		if res.Status == 200 {
-			t.Fatalf("case %d should have been rejected: %s", i, res.Message)
-		}
-	}
-}
-
-// ---------- Fact-Check and Finalization ----------
-
-func TestFactCheckAndFinalize(t *testing.T) {
-	stub := newTestStub(t)
-	registerOrgs(t, stub, "Org1MSP", "Org2MSP", "Org3MSP")
-
-	if res := submitReport(stub, "tx1", "Org1MSP", "rep-42"); res.Status != 200 {
-		t.Fatalf("submit failed: %s", res.Message)
-	}
-
-	// first fact-check -> UNDER_REVIEW
-	if res := invokeAs(stub, "tx2", "Org1MSP", "SubmitFactCheck", "rep-42", "1"); res.Status != 200 {
-		t.Fatalf("org1 fact-check failed: %s", res.Message)
-	}
-	res := invokeAs(stub, "tx-check1", "Org1MSP", "QueryReport", "rep-42")
-	var rec ReportRecord
-	json.Unmarshal(res.Payload, &rec)
-	if rec.Status != statusUnderReview {
-		t.Fatalf("expected UNDER_REVIEW after first fact-check, got %s", rec.Status)
-	}
-
-	// org1 cannot fact-check twice
-	if res := invokeAs(stub, "tx3", "Org1MSP", "SubmitFactCheck", "rep-42", "0"); res.Status == 200 {
-		t.Fatalf("double fact-check should have been rejected")
-	}
-
-	// finalize with only 1 fact-check must fail
-	if res := invokeAs(stub, "tx4", "Org2MSP", "FinalizeReport", "rep-42"); res.Status == 200 {
-		t.Fatalf("finalize before quorum should fail")
-	}
-
-	// second fact-check -> early acceptance triggers (2 "1" votes >= ceil(2/3*3)=2)
-	if res := invokeAs(stub, "tx5", "Org2MSP", "SubmitFactCheck", "rep-42", "1"); res.Status != 200 {
-		t.Fatalf("org2 fact-check failed: %s", res.Message)
-	}
-
-	// report should now be FINAL via early acceptance
-	res = invokeAs(stub, "tx6", "Org3MSP", "QueryReport", "rep-42")
-	if res.Status != 200 || json.Unmarshal(res.Payload, &rec) != nil {
-		t.Fatalf("query failed: %s", res.Message)
-	}
-	if rec.Status != statusFinal {
-		t.Fatalf("expected FINAL (early acceptance), got %s", rec.Status)
-	}
-	if rec.FinalLabel != "1" {
-		t.Fatalf("expected FinalLabel 1, got %s", rec.FinalLabel)
-	}
-	if len(rec.FactChecks) != 2 {
-		t.Fatalf("expected 2 fact-checks, got %d", len(rec.FactChecks))
-	}
-
-	// no more fact-checks accepted after FINAL
-	if res := invokeAs(stub, "tx7", "Org3MSP", "SubmitFactCheck", "rep-42", "1"); res.Status == 200 {
-		t.Fatalf("fact-check after finalize should be rejected")
-	}
-}
-
-func TestManualFinalizeWithMajority(t *testing.T) {
-	stub := newTestStub(t)
-	// raise founding limit to 4 so we can register 4 orgs
-	invokeAs(stub, "tx-cfg", "Org1MSP", "SetFoundingOrgLimit", "4")
-	registerOrgs(t, stub, "Org1MSP", "Org2MSP", "Org3MSP", "Org4MSP")
-
-	if res := submitReport(stub, "tx1", "Org1MSP", "rep-mf"); res.Status != 200 {
-		t.Fatalf("submit failed: %s", res.Message)
-	}
-
-	// 4 orgs: required = ceil(2/3*4) = 3
-	// Org1: "1", Org2: "0" -> tally 1-1, no auto-transition
-	invokeAs(stub, "tx2", "Org1MSP", "SubmitFactCheck", "rep-mf", "1")
-	invokeAs(stub, "tx3", "Org2MSP", "SubmitFactCheck", "rep-mf", "0")
-
-	// Org3: "1" -> tally 2-1, still UNDER_REVIEW (2 < 3)
-	if res := invokeAs(stub, "tx4", "Org3MSP", "SubmitFactCheck", "rep-mf", "1"); res.Status != 200 {
-		t.Fatalf("org3 fact-check failed: %s", res.Message)
-	}
-	res := invokeAs(stub, "tx-q1", "Org4MSP", "QueryReport", "rep-mf")
-	var rec ReportRecord
-	json.Unmarshal(res.Payload, &rec)
-	if rec.Status != statusUnderReview {
-		t.Fatalf("expected UNDER_REVIEW, got %s", rec.Status)
-	}
-
-	// Org4 can finalize: 3 fact-checks, majority is "1"
-	if res := invokeAs(stub, "tx5", "Org4MSP", "FinalizeReport", "rep-mf"); res.Status != 200 {
-		t.Fatalf("finalize failed: %s", res.Message)
-	}
-	res = invokeAs(stub, "tx-q2", "Org4MSP", "QueryReport", "rep-mf")
-	json.Unmarshal(res.Payload, &rec)
-	if rec.Status != statusFinal {
-		t.Fatalf("expected FINAL, got %s", rec.Status)
-	}
-	if rec.FinalLabel != "1" {
-		t.Fatalf("expected FinalLabel 1, got %s", rec.FinalLabel)
-	}
-}
-
-func TestRejectionByFactChecks(t *testing.T) {
-	stub := newTestStub(t)
-	// 6 orgs: required = ceil(2/3*6) = 4
-	invokeAs(stub, "tx-cfg", "Org1MSP", "SetFoundingOrgLimit", "6")
-	registerOrgs(t, stub, "Org1MSP", "Org2MSP", "Org3MSP", "Org4MSP", "Org5MSP", "Org6MSP")
-
-	if res := submitReport(stub, "tx1", "Org1MSP", "rep-rj"); res.Status != 200 {
-		t.Fatalf("submit failed: %s", res.Message)
-	}
-
-	// Org1: "0", Org2: "1", Org3: "0" -> tally 1-2, no auto-transition
-	invokeAs(stub, "tx2", "Org1MSP", "SubmitFactCheck", "rep-rj", "0")
-	invokeAs(stub, "tx3", "Org2MSP", "SubmitFactCheck", "rep-rj", "1")
-
-	// Org3: "0" -> tally 2-1, still UNDER_REVIEW (1 < 4)
-	if res := invokeAs(stub, "tx4", "Org3MSP", "SubmitFactCheck", "rep-rj", "0"); res.Status != 200 {
-		t.Fatalf("org3 fact-check failed: %s", res.Message)
-	}
-
-	// finalize: majority is "0" (misinformation confirmed)
-	if res := invokeAs(stub, "tx5", "Org4MSP", "FinalizeReport", "rep-rj"); res.Status != 200 {
-		t.Fatalf("finalize failed: %s", res.Message)
-	}
-	res := invokeAs(stub, "tx-q", "Org4MSP", "QueryReport", "rep-rj")
-	var rec ReportRecord
-	json.Unmarshal(res.Payload, &rec)
-	if rec.Status != statusFinal {
-		t.Fatalf("expected FINAL, got %s", rec.Status)
-	}
-	if rec.FinalLabel != "0" {
-		t.Fatalf("expected FinalLabel 0, got %s", rec.FinalLabel)
-	}
-}
-
-// ---------- Early Acceptance ----------
-
-func TestEarlyAcceptance(t *testing.T) {
-	stub := newTestStub(t)
-	registerOrgs(t, stub, "Org1MSP", "Org2MSP", "Org3MSP")
-
-	if res := submitReport(stub, "tx1", "Org1MSP", "rep-ea"); res.Status != 200 {
-		t.Fatalf("submit failed: %s", res.Message)
-	}
-
-	// Org1: "1" -> UNDER_REVIEW
-	if res := invokeAs(stub, "tx2", "Org1MSP", "SubmitFactCheck", "rep-ea", "1"); res.Status != 200 {
-		t.Fatalf("org1 fact-check failed: %s", res.Message)
-	}
-
-	// Org2: "1" -> early acceptance (2 >= ceil(2/3*3)=2)
-	if res := invokeAs(stub, "tx3", "Org2MSP", "SubmitFactCheck", "rep-ea", "1"); res.Status != 200 {
-		t.Fatalf("org2 fact-check failed: %s", res.Message)
-	}
-
-	res := invokeAs(stub, "tx4", "Org1MSP", "QueryReport", "rep-ea")
-	var rec ReportRecord
-	if res.Status != 200 || json.Unmarshal(res.Payload, &rec) != nil {
-		t.Fatalf("query failed: %s", res.Message)
-	}
-	if rec.Status != statusFinal {
-		t.Fatalf("expected FINAL via early acceptance, got %s", rec.Status)
-	}
-	if rec.FinalLabel != "1" {
-		t.Fatalf("expected FinalLabel 1, got %s", rec.FinalLabel)
-	}
-	if rec.FinalizedBy != "Org2MSP" {
-		t.Fatalf("expected FinalizedBy Org2MSP, got %s", rec.FinalizedBy)
-	}
-}
-
-// ---------- Early Rejection ----------
-
-func TestEarlyRejection(t *testing.T) {
-	stub := newTestStub(t)
-	registerOrgs(t, stub, "Org1MSP", "Org2MSP", "Org3MSP")
-
-	if res := submitReport(stub, "tx1", "Org1MSP", "rep-er"); res.Status != 200 {
-		t.Fatalf("submit failed: %s", res.Message)
-	}
-
-	// Org1: "0" -> UNDER_REVIEW (tally 0+2=2 >= 2, not rejected)
-	if res := invokeAs(stub, "tx2", "Org1MSP", "SubmitFactCheck", "rep-er", "0"); res.Status != 200 {
-		t.Fatalf("org1 fact-check failed: %s", res.Message)
-	}
-
-	// Org2: "0" -> early rejection (tally 0+1=1 < 2)
-	if res := invokeAs(stub, "tx3", "Org2MSP", "SubmitFactCheck", "rep-er", "0"); res.Status != 200 {
-		t.Fatalf("org2 fact-check failed: %s", res.Message)
-	}
-
-	res := invokeAs(stub, "tx4", "Org1MSP", "QueryReport", "rep-er")
-	var rec ReportRecord
-	if res.Status != 200 || json.Unmarshal(res.Payload, &rec) != nil {
-		t.Fatalf("query failed: %s", res.Message)
-	}
-	if rec.Status != statusRejected {
-		t.Fatalf("expected REJECTED via early rejection, got %s", rec.Status)
-	}
-}
-
-// ---------- Tie Rejected on Finalize ----------
-
-func TestFinalizeTieRejected(t *testing.T) {
-	stub := newTestStub(t)
-	// 6 orgs: required = ceil(2/3*6) = 4
-	invokeAs(stub, "tx-cfg", "Org1MSP", "SetFoundingOrgLimit", "6")
-	registerOrgs(t, stub, "Org1MSP", "Org2MSP", "Org3MSP", "Org4MSP", "Org5MSP", "Org6MSP")
-
-	if res := submitReport(stub, "tx1", "Org1MSP", "rep-tie"); res.Status != 200 {
-		t.Fatalf("submit failed: %s", res.Message)
-	}
-
-	// 2 "1" and 2 "0" -> tie, no auto-transition
-	// Org1: "1", Org2: "0", Org3: "1", Org4: "0"
-	invokeAs(stub, "tx2", "Org1MSP", "SubmitFactCheck", "rep-tie", "1")
-	invokeAs(stub, "tx3", "Org2MSP", "SubmitFactCheck", "rep-tie", "0")
-	invokeAs(stub, "tx4", "Org3MSP", "SubmitFactCheck", "rep-tie", "1")
-	invokeAs(stub, "tx5", "Org4MSP", "SubmitFactCheck", "rep-tie", "0")
-
-	// verify UNDER_REVIEW
-	res := invokeAs(stub, "tx-q", "Org5MSP", "QueryReport", "rep-tie")
-	var rec ReportRecord
-	json.Unmarshal(res.Payload, &rec)
-	if rec.Status != statusUnderReview {
-		t.Fatalf("expected UNDER_REVIEW, got %s", rec.Status)
-	}
-
-	// finalize should fail: tie at 2-2
-	if res := invokeAs(stub, "tx6", "Org5MSP", "FinalizeReport", "rep-tie"); res.Status == 200 {
-		t.Fatalf("finalize with tie should be rejected")
-	}
-
-	// break the tie with 5th fact-check
-	if res := invokeAs(stub, "tx7", "Org5MSP", "SubmitFactCheck", "rep-tie", "1"); res.Status != 200 {
-		t.Fatalf("org5 fact-check failed: %s", res.Message)
-	}
-	// now 3 "1" and 2 "0", majority is "1"
-	if res := invokeAs(stub, "tx8", "Org6MSP", "FinalizeReport", "rep-tie"); res.Status != 200 {
-		t.Fatalf("finalize after tie-break failed: %s", res.Message)
-	}
-	res = invokeAs(stub, "tx-q2", "Org6MSP", "QueryReport", "rep-tie")
-	json.Unmarshal(res.Payload, &rec)
-	if rec.Status != statusFinal {
-		t.Fatalf("expected FINAL, got %s", rec.Status)
-	}
-	if rec.FinalLabel != "1" {
-		t.Fatalf("expected FinalLabel 1, got %s", rec.FinalLabel)
-	}
-}
-
-// ---------- Expiry ----------
-
-func TestExpireReport(t *testing.T) {
-	stub := newTestStub(t)
-	registerOrgs(t, stub, "Org1MSP")
-
-	submitReport(stub, "tx1", "Org1MSP", "rep-fresh")
-	if res := invokeAs(stub, "tx2", "Org1MSP", "ExpireReport", "rep-fresh"); res.Status == 200 {
-		t.Fatalf("fresh report should not be expirable")
-	}
-
-	stub.TxTimestamp = timestamppb.New(time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC))
-	if res := submitReport(stub, "tx3", "Org1MSP", "rep-old"); res.Status != 200 {
-		t.Fatalf("submit failed: %s", res.Message)
-	}
-	if res := invokeAs(stub, "tx4", "Org1MSP", "ExpireReport", "rep-old"); res.Status != 200 {
-		t.Fatalf("expire failed: %s", res.Message)
-	}
-	res := invokeAs(stub, "tx5", "Org1MSP", "QueryReport", "rep-old")
-	var record ReportRecord
-	if res.Status != 200 || json.Unmarshal(res.Payload, &record) != nil {
-		t.Fatalf("query failed")
-	}
-	if record.Status != statusExpired {
-		t.Fatalf("expected EXPIRED, got %s", record.Status)
-	}
-	if res := invokeAs(stub, "tx6", "Org1MSP", "SubmitFactCheck", "rep-old", "0"); res.Status == 200 {
-		t.Fatalf("fact-check after expire should be rejected")
-	}
-}
-
-// ---------- Query ----------
-
-func TestQueryFactChecksAndHistory(t *testing.T) {
-	stub := newTestStub(t)
-	registerOrgs(t, stub, "Org1MSP", "Org2MSP")
-	invokeAs(stub, "tx1", "Org1MSP", "Submit", "rep-1", validHash, "1", "0.9", "model-v1", validTs)
-	invokeAs(stub, "tx2", "Org1MSP", "SubmitFactCheck", "rep-1", "1")
-	invokeAs(stub, "tx3", "Org2MSP", "SubmitFactCheck", "rep-1", "0")
-
-	res := invokeAs(stub, "tx4", "Org1MSP", "QueryReport", "rep-1")
-	var record ReportRecord
-	if res.Status != 200 || json.Unmarshal(res.Payload, &record) != nil {
-		t.Fatalf("QueryReport failed: %s", res.Message)
-	}
-	if len(record.FactChecks) != 2 {
-		t.Fatalf("expected 2 fact-checks, got %d", len(record.FactChecks))
-	}
-
-	res = invokeAs(stub, "tx5", "Org1MSP", "QueryReportHistory", "rep-1")
-	if res.Status != 200 || len(res.Payload) == 0 {
-		t.Fatalf("expected history entries: %s", res.Message)
-	}
-}
-
-func TestQueryAllReports(t *testing.T) {
-	stub := newTestStub(t)
-	registerOrgs(t, stub, "Org1MSP")
-	invokeAs(stub, "tx1", "Org1MSP", "Submit", "rep-1", validHash, "0", "0.80", "model-v1", validTs)
-	invokeAs(stub, "tx2", "Org1MSP", "Submit", "rep-2", validHash, "1", "0.90", "model-v1", validTs)
-
-	res := invokeAs(stub, "tx3", "Org1MSP", "QueryAllReports")
-	var records []*ReportRecord
-	if res.Status != 200 || json.Unmarshal(res.Payload, &records) != nil {
-		t.Fatalf("QueryAll failed: %s", res.Message)
-	}
-	if len(records) != 2 {
-		t.Fatalf("expected 2 records, got %d", len(records))
-	}
-}
-
-// ---------- Quorum Math ----------
-
-func TestQuorumFor(t *testing.T) {
-	cases := []struct {
-		n    int
-		want int
-	}{
-		{1, 1},
-		{2, 2},
-		{3, 2},
-		{4, 3},
-		{5, 4},
-		{6, 4},
-		{9, 6},
-		{10, 7},
-	}
-	for _, tc := range cases {
-		got := quorumFor(tc.n)
-		if got != tc.want {
-			t.Errorf("quorumFor(%d) = %d, want %d", tc.n, got, tc.want)
-		}
-	}
-}
-
-func TestQuorumForMatchesEarlyAcceptanceThreshold(t *testing.T) {
-	for n := 1; n <= 20; n++ {
-		q := quorumFor(n)
-		early := int(math.Ceil(2.0 / 3.0 * float64(n)))
-		if q != early {
-			t.Errorf("quorumFor(%d)=%d but ceil(2/3*%d)=%d — mismatch", n, q, n, early)
-		}
-	}
-}
-
-// ---------- ABAC (Attribute-Based Access Control) ----------
-
-// newTestStubWithRole creates a stub where the caller identity carries the
-// given "role" attribute in its X509 certificate.
-func newTestStubWithRole(t *testing.T, role string) *MockStub {
+func good(t *testing.T, r *peer.Response) {
 	t.Helper()
-	stub := newTestStub(t)
-	stub.Attrs = map[string]string{"role": role}
-	return stub
+	if r.Status != 200 {
+		t.Fatal(r.Message)
+	}
+}
+func bad(t *testing.T, r *peer.Response) {
+	t.Helper()
+	if r.Status == 200 {
+		t.Fatal("expected rejection")
+	}
+}
+func record(t *testing.T, s *MockStub, id string) ReportRecord {
+	t.Helper()
+	r := invokeAs(s, "q", "Org1MSP", "QueryReport", id)
+	good(t, r)
+	var rec ReportRecord
+	if err := json.Unmarshal(r.Payload, &rec); err != nil {
+		t.Fatal(err)
+	}
+	return rec
+}
+func vote(s *MockStub, msp, id, outcome string) *peer.Response {
+	return invokeAs(s, "v-"+msp, msp, "SubmitFactCheck", id, outcome, "cid-"+msp+"-"+id, validHash)
 }
 
-func TestABAC_FactCheckerCanSubmit(t *testing.T) {
-	stub := newTestStubWithRole(t, "fact_checker")
-	registerOrgs(t, stub, "Org1MSP")
-	if res := submitReport(stub, "tx1", "Org1MSP", "rep-abac"); res.Status != 200 {
-		t.Fatalf("fact_checker should be able to submit: %s", res.Message)
+func TestMajorityAcrossConsortiumSizes(t *testing.T) {
+	for _, n := range []int{3, 5, 10, 15, 20} {
+		for _, label := range []string{"0", "1"} {
+			t.Run(fmt.Sprintf("%d-%s", n, label), func(t *testing.T) {
+				s := setup(t, n)
+				good(t, submitReport(s, "s", "Org1MSP", "r"))
+				rec := record(t, s, "r")
+				if rec.RequiredVotes != (n-1)/2+1 || len(rec.EligibleReviewers) != n-1 {
+					t.Fatal(rec)
+				}
+				for i := 2; i <= rec.RequiredVotes; i++ {
+					good(t, vote(s, fmt.Sprintf("Org%dMSP", i), "r", label))
+				}
+				bad(t, invokeAs(s, "f", "Org1MSP", "FinalizeReport", "r"))
+				good(t, vote(s, fmt.Sprintf("Org%dMSP", rec.RequiredVotes+1), "r", label))
+				got := record(t, s, "r")
+				if got.Status != statusFinal || got.FinalLabel != label {
+					t.Fatal(got)
+				}
+				good(t, invokeAs(s, "f", "Org1MSP", "FinalizeReport", "r"))
+			})
+		}
+	}
+}
+func TestSubmitRequiresTwoIndependentReviewers(t *testing.T) {
+	s := setup(t, 2)
+	bad(t, submitReport(s, "s", "Org1MSP", "r"))
+}
+func TestSelfVoteAndConflictingDuplicateRejected(t *testing.T) {
+	s := setup(t, 5)
+	good(t, submitReport(s, "s", "Org1MSP", "r"))
+	bad(t, vote(s, "Org1MSP", "r", "1"))
+	good(t, vote(s, "Org2MSP", "r", "1"))
+	good(t, vote(s, "Org2MSP", "r", "1"))
+	bad(t, vote(s, "Org2MSP", "r", "0"))
+	if len(record(t, s, "r").FactChecks) != 1 {
+		t.Fatal("retry duplicated vote")
+	}
+}
+func TestTieIsDisputedWithoutFactualVerdict(t *testing.T) {
+	s := setup(t, 5)
+	good(t, submitReport(s, "s", "Org1MSP", "r"))
+	for i, label := range []string{"0", "1", "0", "1"} {
+		good(t, vote(s, fmt.Sprintf("Org%dMSP", i+2), "r", label))
+	}
+	rec := record(t, s, "r")
+	if rec.Status != statusDisputed || rec.FinalLabel != "" {
+		t.Fatal(rec)
+	}
+	bad(t, invokeAs(s, "f", "Org1MSP", "FinalizeReport", "r"))
+}
+func TestLateVotesAndExpiryUseProposalTime(t *testing.T) {
+	s := setup(t, 3)
+	s.TxTimestamp = timestamppb.New(time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC))
+	good(t, submitReport(s, "s", "Org1MSP", "r"))
+	good(t, vote(s, "Org2MSP", "r", "1"))
+	bad(t, invokeAs(s, "e", "Org1MSP", "ExpireReport", "r"))
+	s.TxTimestamp = timestamppb.New(time.Date(2026, 1, 4, 0, 0, 0, 0, time.UTC))
+	bad(t, vote(s, "Org3MSP", "r", "1"))
+	bad(t, invokeAs(s, "f", "Org1MSP", "FinalizeReport", "r"))
+	good(t, invokeAs(s, "e", "Org1MSP", "ExpireReport", "r"))
+	if record(t, s, "r").Status != statusExpired {
+		t.Fatal("not expired")
+	}
+}
+func TestBootstrapAndRoleBoundaries(t *testing.T) {
+	s := setup(t, 3)
+	bad(t, invokeAs(s, "cfg2", "Org1MSP", "SetFoundingOrgLimit", "4"))
+	bad(t, invokeAs(s, "reg", "Org4MSP", "RegisterOrg"))
+	good(t, submitReport(s, "s", "Org1MSP", "r"))
+	for _, role := range []string{"observer", ""} {
+		s.Attrs = map[string]string{"role": role}
+		bad(t, submitReport(s, "s2", "Org2MSP", "new"))
+		bad(t, vote(s, "Org2MSP", "r", "1"))
+		bad(t, invokeAs(s, "f", "Org2MSP", "FinalizeReport", "r"))
+		good(t, invokeAs(s, "q", "Org2MSP", "QueryReport", "r"))
+	}
+	empty := newTestStub(t)
+	empty.Attrs = map[string]string{"role": "observer"}
+	bad(t, invokeAs(empty, "reg", "Org1MSP", "RegisterOrg"))
+}
+func TestFactCheckerCanSubmitAndVoteButNotGovern(t *testing.T) {
+	s := setup(t, 3)
+	s.Attrs = map[string]string{"role": "fact_checker"}
+	good(t, submitReport(s, "s", "Org1MSP", "r"))
+	good(t, vote(s, "Org2MSP", "r", "1"))
+	bad(t, invokeAs(s, "f", "Org2MSP", "FinalizeReport", "r"))
+	good(t, vote(s, "Org3MSP", "r", "1"))
+}
+func TestAdmissionDoesNotChangeExistingReviewerSet(t *testing.T) {
+	s := setup(t, 3)
+	good(t, submitReport(s, "s", "Org1MSP", "r"))
+	good(t, invokeAs(s, "a", "Org4MSP", "RequestOrgAdmission", "Fourth", "media"))
+	bad(t, invokeAs(s, "self", "Org4MSP", "VoteOnOrgAdmission", "Org4MSP", "1"))
+	for _, org := range []string{"Org1MSP", "Org2MSP"} {
+		good(t, invokeAs(s, "ad-"+org, org, "VoteOnOrgAdmission", "Org4MSP", "1"))
+	}
+	good(t, invokeAs(s, "fa", "Org1MSP", "FinalizeOrgAdmission", "Org4MSP"))
+	bad(t, vote(s, "Org4MSP", "r", "1"))
+	if record(t, s, "r").RequiredVotes != 2 {
+		t.Fatal("quorum changed")
+	}
+	bad(t, invokeAs(s, "ad", "Org1MSP", "VoteOnOrgAdmission", "Org4MSP", "admit"))
+}
+func TestSubmissionRetryAndConflict(t *testing.T) {
+	s := setup(t, 3)
+	good(t, submitReport(s, "s", "Org1MSP", "r"))
+	good(t, submitReport(s, "retry", "Org1MSP", "r"))
+	bad(t, submitReport(s, "other", "Org2MSP", "r"))
+	bad(t, invokeAs(s, "bad", "Org1MSP", "Submit", "r", validHash, "0", "0.97", "model-v1", validTs))
+}
+func TestInvalidEvidenceAndInputRejected(t *testing.T) {
+	if validateReportInput("r", validHash, "1", "v", validTs, math.NaN()) == nil {
+		t.Fatal("NaN accepted")
+	}
+	s := setup(t, 3)
+	good(t, submitReport(s, "s", "Org1MSP", "r"))
+	bad(t, invokeAs(s, "v", "Org2MSP", "SubmitFactCheck", "r", "1", "", "short"))
+	bad(t, invokeAs(s, "hash", "Org2MSP", "SubmitFactCheck", "r", "1", "valid-cid", "short"))
+	bad(t, invokeAs(s, "label", "Org2MSP", "SubmitFactCheck", "r", "2", "valid-cid", validHash))
+	for _, args := range [][]string{{"r2", "short", "1", ".9", "v", validTs}, {"r2", validHash, "2", ".9", "v", validTs}, {"r2", validHash, "1", "1.1", "v", validTs}} {
+		bad(t, invokeAs(s, "sbad", "Org1MSP", append([]string{"Submit"}, args...)...))
 	}
 }
 
-func TestABAC_ObserverCannotSubmit(t *testing.T) {
-	stub := newTestStubWithRole(t, "observer")
-	registerOrgs(t, stub, "Org1MSP")
-	if res := submitReport(stub, "tx1", "Org1MSP", "rep-abac"); res.Status == 200 {
-		t.Fatalf("observer should not be able to submit")
+func TestNonFiniteWireInputDoesNotTerminateService(t *testing.T) {
+	s := setup(t, 3)
+	for _, value := range []string{"NaN", "+Inf", "-Inf"} {
+		bad(t, invokeAs(s, "bad-number", "Org1MSP", "Submit", "bad", validHash, "1", value, "v", validTs))
 	}
+	good(t, submitReport(s, "valid-after-malformed", "Org1MSP", "valid"))
 }
 
-func TestABAC_NoRoleRejected(t *testing.T) {
-	stub := newTestStub(t)
-	stub.Attrs = nil // no role attribute
-	registerOrgs(t, stub, "Org1MSP")
-	if res := submitReport(stub, "tx1", "Org1MSP", "rep-abac"); res.Status == 200 {
-		t.Fatalf("identity with no role should be rejected")
+func TestUnsuccessfulCorrectionReleasesSlot(t *testing.T) {
+	for _, outcome := range []string{"disputed", "expired"} {
+		t.Run(outcome, func(t *testing.T) {
+			s := setup(t, 3)
+			start := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+			s.TxTimestamp = timestamppb.New(start)
+			good(t, submitReport(s, "original", "Org1MSP", "old"))
+			good(t, vote(s, "Org2MSP", "old", "1"))
+			good(t, vote(s, "Org3MSP", "old", "1"))
+			sub := Submission{ReportID: "correction", ContentHash: validHash, ClaimCID: "cid-correction", Label: "0", Confidence: .9, ModelVersion: "v", Timestamp: validTs, Supersedes: "old"}
+			payload, _ := json.Marshal(sub)
+			good(t, invokeAs(s, "correction", "Org1MSP", "SubmitReport", string(payload)))
+			if outcome == "disputed" {
+				good(t, vote(s, "Org2MSP", "correction", "0"))
+				good(t, vote(s, "Org3MSP", "correction", "1"))
+			} else {
+				s.TxTimestamp = timestamppb.New(start.Add(72 * time.Hour))
+				good(t, invokeAs(s, "expire", "Org1MSP", "ExpireReport", "correction"))
+			}
+			if record(t, s, "old").Status != statusFinal {
+				t.Fatal("unsuccessful correction superseded predecessor")
+			}
+			sub.ReportID, sub.ClaimCID = "next-attempt", "next-cid"
+			payload, _ = json.Marshal(sub)
+			good(t, invokeAs(s, "retry-correction", "Org1MSP", "SubmitReport", string(payload)))
+		})
 	}
 }
-
-func TestABAC_FactCheckerCanFactCheck(t *testing.T) {
-	stub := newTestStubWithRole(t, "fact_checker")
-	registerOrgs(t, stub, "Org1MSP")
-	submitReport(stub, "tx1", "Org1MSP", "rep-abac")
-	if res := invokeAs(stub, "tx2", "Org1MSP", "SubmitFactCheck", "rep-abac", "1"); res.Status != 200 {
-		t.Fatalf("fact_checker should be able to fact-check: %s", res.Message)
+func TestCorrectionsAndInterventionsPreserveHistory(t *testing.T) {
+	s := setup(t, 3)
+	good(t, submitReport(s, "s", "Org1MSP", "old"))
+	good(t, vote(s, "Org2MSP", "old", "1"))
+	good(t, vote(s, "Org3MSP", "old", "1"))
+	sub := Submission{ReportID: "new", ContentHash: validHash, ClaimCID: "new-cid", Label: "0", Confidence: .9, ModelVersion: "v", Timestamp: validTs, Supersedes: "old"}
+	payload, _ := json.Marshal(sub)
+	good(t, invokeAs(s, "c", "Org1MSP", "SubmitReport", string(payload)))
+	sub.ReportID = "competing"
+	p, _ := json.Marshal(sub)
+	bad(t, invokeAs(s, "c2", "Org1MSP", "SubmitReport", string(p)))
+	good(t, vote(s, "Org2MSP", "new", "0"))
+	good(t, vote(s, "Org3MSP", "new", "0"))
+	old := record(t, s, "old")
+	if old.Status != statusSuperseded || old.FinalLabel != "1" || old.SupersededBy != "new" {
+		t.Fatal(old)
 	}
+	good(t, invokeAs(s, "i", "Org2MSP", "RecordIntervention", "new", "notice", "evidence-cid", validHash))
+	good(t, invokeAs(s, "iq", "Org1MSP", "QueryInterventions", "new"))
+	good(t, invokeAs(s, "h", "Org1MSP", "QueryReportHistory", "old"))
 }
-
-func TestABAC_ObserverCannotFactCheck(t *testing.T) {
-	stub := newTestStubWithRole(t, "observer")
-	registerOrgs(t, stub, "Org1MSP")
-	submitReport(stub, "tx1", "Org1MSP", "rep-abac")
-	if res := invokeAs(stub, "tx2", "Org1MSP", "SubmitFactCheck", "rep-abac", "1"); res.Status == 200 {
-		t.Fatalf("observer should not be able to fact-check")
+func TestPaginationAndStatusIndex(t *testing.T) {
+	s := setup(t, 3)
+	for _, id := range []string{"a", "b", "c"} {
+		good(t, submitReport(s, "s"+id, "Org1MSP", id))
 	}
-}
-
-func TestABAC_FactCheckerCannotFinalize(t *testing.T) {
-	stub := newTestStubWithRole(t, "fact_checker")
-	registerOrgs(t, stub, "Org1MSP")
-	submitReport(stub, "tx1", "Org1MSP", "rep-abac")
-	invokeAs(stub, "tx2", "Org1MSP", "SubmitFactCheck", "rep-abac", "1")
-	// FinalizeReport requires "official"
-	if res := invokeAs(stub, "tx3", "Org1MSP", "FinalizeReport", "rep-abac"); res.Status == 200 {
-		t.Fatalf("fact_checker should not be able to finalize")
+	r := invokeAs(s, "p", "Org1MSP", "QueryReportsPage", statusPending, "2", "")
+	good(t, r)
+	var page ReportPage
+	json.Unmarshal(r.Payload, &page)
+	if len(page.Items) != 2 || page.NextBookmark == "" {
+		t.Fatal(page)
 	}
-}
-
-func TestABAC_ObserverCanQuery(t *testing.T) {
-	stub := newTestStubWithRole(t, "official")
-	registerOrgs(t, stub, "Org1MSP")
-	submitReport(stub, "tx1", "Org1MSP", "rep-abac")
-
-	// Create observer stub sharing the same ledger state
-	obs := newTestStubWithRole(t, "observer")
-	obs.State = stub.State
-	if res := invokeAs(obs, "tx2", "Org1MSP", "QueryReport", "rep-abac"); res.Status != 200 {
-		t.Fatalf("observer should be able to query: %s", res.Message)
+	r = invokeAs(s, "p2", "Org1MSP", "QueryReportsPage", statusPending, "2", page.NextBookmark)
+	good(t, r)
+	json.Unmarshal(r.Payload, &page)
+	if len(page.Items) != 1 {
+		t.Fatal(page)
 	}
+	good(t, vote(s, "Org2MSP", "a", "1"))
+	good(t, vote(s, "Org3MSP", "a", "1"))
+	r = invokeAs(s, "p3", "Org1MSP", "QueryReportsPage", statusPending, "50", "")
+	good(t, r)
+	json.Unmarshal(r.Payload, &page)
+	if len(page.Items) != 2 {
+		t.Fatal(page)
+	}
+	bad(t, invokeAs(s, "p4", "Org1MSP", "QueryReportsPage", "", "201", ""))
 }

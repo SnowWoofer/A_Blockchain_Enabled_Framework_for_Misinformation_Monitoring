@@ -33,7 +33,8 @@ for N in "${ORGS[@]}"; do
   echo "  ORGS=$N"
   echo "==========="
 
-  docker rm -f $(docker ps -aq) 2>/dev/null || true
+  echo "Legacy benchmark runner retired: use blockchain/scripts/deployment.py for isolated v3 experiments." >&2
+  exit 2
 
   ./startup.sh --orgs "$N" --test-samples 10 --skip-caliper
 

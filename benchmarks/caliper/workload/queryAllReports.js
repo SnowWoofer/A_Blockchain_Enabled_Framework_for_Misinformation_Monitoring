@@ -1,28 +1,10 @@
 'use strict';
-
-const { WorkloadModuleBase } = require('@hyperledger/caliper-core');
-
-/**
- * Read benchmark: range-scans the full world state through the gateway peer.
- * Exercises the CouchDB rich-query path that powers GET /reports on the API.
- */
-class QueryAllReportsWorkload extends WorkloadModuleBase {
+const {RecordedWorkload} = require('./common');
+// Full world-state range scan on either LevelDB or CouchDB; not a rich query.
+class QueryAllReportsWorkload extends RecordedWorkload {
     async submitTransaction() {
-        this.txIndex++;
-
-        const request = {
-            contractId: this.roundArguments.contractId,
-            contractFunction: 'QueryAllReports',
-            contractArguments: [],
-            readOnly: true
-        };
-
-        await this.sutAdapter.sendRequests(request);
+        await this.recorded({contractId:'misinformation',contractFunction:'QueryAllReports',contractArguments:[],
+            readOnly:true,invokerIdentity:'official1',invokerMspId:'Org1MSP'});
     }
 }
-
-function createWorkloadModule() {
-    return new QueryAllReportsWorkload();
-}
-
-module.exports.createWorkloadModule = createWorkloadModule;
+module.exports.createWorkloadModule = () => new QueryAllReportsWorkload();

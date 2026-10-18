@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import contextlib
 import json
 import logging
@@ -43,8 +44,8 @@ class SubmissionConsumer:
             settings.kafka_input_topic,
             bootstrap_servers=settings.kafka_bootstrap_servers,
             group_id=settings.kafka_consumer_group,
-            value_deserializer=lambda v: json.loads(v.decode("utf-8")),
-            enable_auto_commit=True,
+            enable_auto_commit=False,
+            auto_offset_reset='earliest',
         )
         await self.consumer.start()
         self._task = asyncio.create_task(self._run())
@@ -66,19 +67,38 @@ class SubmissionConsumer:
         if self.http:
             await self.http.aclose()
 
+    @property
+    def healthy(self):
+        return self._task is not None and not self._task.done()
+
     async def _run(self):
         assert self.consumer is not None
         async for msg in self.consumer:
+            self._kafka_meta={'topic':msg.topic,'partition':msg.partition,'offset':msg.offset}
             try:
-                await self._submit(msg.value)
-            except Exception:
-                logger.exception("Failed to register claim at offset %s", msg.offset)
+                payload = json.loads(msg.value.decode('utf-8'))
+            except (ValueError,UnicodeError):
+                self._dead_letter({'raw_base64':base64.b64encode(msg.value).decode('ascii')},'invalid JSON')
+            else:
+                await self._submit(payload)
+            # Do not continue after a failed durable write or offset commit.
+            # Replay is safe because the gateway deduplicates (org,msg_id).
+            from aiokafka import TopicPartition
+            await self.consumer.commit({TopicPartition(msg.topic,msg.partition):msg.offset+1})
 
     async def _submit(self, payload: dict):
         assert self.http is not None
-        missing = [f for f in REQUIRED_FIELDS if not payload.get(f)]
+        if not isinstance(payload,dict):
+            self._dead_letter({'invalid_payload':payload},'claim must be an object')
+            CLAIMS_REGISTRATION_FAILED_TOTAL.inc()
+            return
+        missing = [f for f in (*REQUIRED_FIELDS,'flagged') if payload.get(f) is None or payload.get(f)=='']
         if missing:
             self._dead_letter(payload, f"claim is missing required field(s): {', '.join(missing)}")
+            CLAIMS_REGISTRATION_FAILED_TOTAL.inc()
+            return
+        if not isinstance(payload['flagged'],bool):
+            self._dead_letter(payload,'flagged must be a boolean')
             CLAIMS_REGISTRATION_FAILED_TOTAL.inc()
             return
         body = {
@@ -91,17 +111,25 @@ class SubmissionConsumer:
             "published_at": payload.get("ingest_timestamp", ""),
             "inference_timestamp": payload.get("inference_timestamp", ""),
         }
-        try:
-            resp = await self.http.post("/api/reports", json=body)
-            resp.raise_for_status()
-        except httpx.HTTPError as exc:
-            self._dead_letter(payload, str(exc))
-            CLAIMS_REGISTRATION_FAILED_TOTAL.inc()
-            return
+        for attempt in range(3):
+            try:
+                resp = await self.http.post("/api/reports", json=body)
+                resp.raise_for_status()
+                break
+            except httpx.HTTPError as exc:
+                retryable = not isinstance(exc,httpx.HTTPStatusError) or exc.response.status_code>=500 or (
+                    exc.response.status_code==409 and 'commit rejected' in exc.response.text)
+                if attempt==2 or not retryable:
+                    self._dead_letter(payload, type(exc).__name__)
+                    CLAIMS_REGISTRATION_FAILED_TOTAL.inc()
+                    return
+                await asyncio.sleep(.5*2**attempt)
         CLAIMS_REGISTERED_TOTAL.inc()
         LAST_WRITE_TIMESTAMP.set(time.time())
 
     def _dead_letter(self, payload: dict, error: str):
         logger.error("Blockchain submission failed, writing to dead-letter file: %s", error)
-        with open(settings.output_path, "a") as f:
-            f.write(json.dumps({**payload, "_error": error}) + "\n")
+        with open(settings.output_path, "a", encoding='utf-8') as f:
+            f.write(json.dumps({**payload, "_error": error,'_kafka':getattr(self,'_kafka_meta',None)}) + "\n")
+            f.flush()
+            os.fsync(f.fileno())

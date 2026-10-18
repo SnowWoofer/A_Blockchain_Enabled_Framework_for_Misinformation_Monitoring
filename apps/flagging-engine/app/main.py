@@ -15,8 +15,6 @@ from .schemas import PredictRequest, PredictResponse
 logging.basicConfig(level=settings.log_level)
 logger = logging.getLogger(__name__)
 
-MODEL_VERSION = "afro-xlmr-large-76L-misinfo-v1"
-
 state: dict = {}
 
 
@@ -43,7 +41,7 @@ async def lifespan(app: FastAPI):
 
     consumer = None
     if settings.kafka_enabled:
-        consumer = FlaggingConsumer(batcher, MODEL_VERSION)
+        consumer = FlaggingConsumer(batcher, model.model_version)
         await consumer.start()
     state["consumer"] = consumer
 
@@ -61,14 +59,19 @@ app = FastAPI(title="Flagging Engine", lifespan=lifespan)
 @app.get("/health")
 async def health():
     model: MisinfoModel | None = state.get("model")
+    consumer=state.get('consumer')
+    if consumer and not consumer.healthy:
+        return Response('{"status":"failed","reason":"consumer stopped; inspect durable replay log"}',status_code=503,media_type='application/json')
     return {
         "status": "ok" if model else "starting",
         "device": str(model.device) if model else None,
-        "quantization": settings.model_quantization,
+        "quantization": model.actual_quantization if model else None,
+        "requested_quantization": settings.model_quantization,
         "max_batch_size": settings.max_batch_size,
         "max_queue_delay_ms": settings.max_queue_delay_ms,
         "kafka_enabled": settings.kafka_enabled,
-        "model_version": MODEL_VERSION,
+        "model_version": model.model_version if model else None,
+        "runtime_manifest": model.runtime_manifest if model else None,
     }
 
 
@@ -78,7 +81,7 @@ async def predict(req: PredictRequest):
         raise HTTPException(status_code=422, detail="post_text must not be empty")
     batcher: DynamicBatcher = state["batcher"]
     result = await batcher.submit(req.post_text)
-    return PredictResponse(**result, model_version=MODEL_VERSION)
+    return PredictResponse(**result, model_version=state['model'].model_version)
 
 
 @app.get("/metrics")

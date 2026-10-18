@@ -1,31 +1,28 @@
-name: Caliper Benchmarks
-version: "2.0.0"
-
+# Reference template only. The runner generates network.json for the named deployment.
+name: GENERATED-PER-RUN
+version: 2.0.0
 caliper:
   blockchain: fabric
-
 info:
-  Framework: Misinformation Monitoring Consortium
-  Channel: mychannel
-  Chaincode: misinformation v2.1
-  Endorsement: OutOf(2, Org1MSP, Org2MSP, Org3MSP)
-  StateDB: CouchDB
-
+  StateDB: selected-at-startup
+  Organisations: selected-at-startup
+  Endorsement: 2-of-N
 channels:
-  - channelName: mychannel
-    contracts:
-      - id: misinformation
-
+- channelName: mychannel
+  contracts:
+  - id: misinformation
 organizations:
-  - mspid: Org1MSP
-    identities:
-      certificates:
-        - name: 'Admin'
-          admin: true
-          clientPrivateKey:
-            path: '/crypto/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp/keystore/priv_sk'
-          clientSignedCert:
-            path: '/crypto/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp/signcerts/Admin@org1.example.com-cert.pem'
-    connectionProfile:
-      path: 'networks/fabric/ccp.json'
-      discover: true
+- mspid: Org1MSP
+  identities:
+    certificates:
+    - name: official1
+      clientPrivateKey:
+        path: /identity/keystore/key.pem
+      clientSignedCert:
+        path: /identity/signcerts/cert.pem
+  peers:
+  - endpoint: peer1:7051
+    tlsCACerts:
+      path: /peer-tls.pem
+    grpcOptions:
+      ssl-target-name-override: peer0.org1.example.com

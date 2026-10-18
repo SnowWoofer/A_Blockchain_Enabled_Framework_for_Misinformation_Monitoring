@@ -1,31 +1,32 @@
-"""Generic IPFS read/write bridge — a "dumb pipe" over kubo's HTTP API,
-mirroring how apps/fabric_gateway is a dumb pipe over the Fabric SDK: it
-knows nothing about report schemas, verdicts, or any other application
-concept, just raw bytes in (POST /add -> CID) and raw bytes out
-(GET /cat/{cid} -> bytes). blockchain_gateway is the only thing that knows
-what those bytes mean.
+"""Authenticated internal bridge to a managed private Kubo node.
 
-Also independently reachable — downstream consumers that just need to fetch
-a report by CID (a public-transparency dashboard, an archival tool, another
-org's own systems) can hit this directly without going through
-blockchain_gateway's org-authenticated API at all, since IPFS content is
-already content-addressed: knowing the CID is itself the access grant, the
-same trust model any public IPFS gateway uses."""
+Possession of a CID does not grant access through this service. The caller
+needs the provisioned service credential; end users use the workflow API.
+Private swarm membership protects transport, not encryption at rest.
+"""
 import json
+import hmac
+import urllib.parse
 import time
 import urllib.error
 import urllib.request
 from typing import Optional
 
 from fastapi import FastAPI, HTTPException, Request, Response
-from fastapi.middleware.cors import CORSMiddleware
 
 from .config import settings
 
 app = FastAPI(title="IPFS Gateway")
-app.add_middleware(
-    CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"],
-)
+
+
+@app.middleware('http')
+async def authenticate(request: Request, call_next):
+    if request.url.path != '/health':
+        if not settings.service_key:
+            return Response('storage service key is not configured', status_code=503)
+        if not hmac.compare_digest(request.headers.get('X-Service-Key',''), settings.service_key):
+            return Response('invalid service credential', status_code=401)
+    return await call_next(request)
 
 
 class IpfsError(Exception):
@@ -37,6 +38,9 @@ def _request(endpoint: str, timeout: int, data: Optional[bytes] = None) -> dict:
     try:
         with urllib.request.urlopen(req, timeout=timeout) as r:
             return json.loads(r.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        detail=exc.read(2000).decode(errors='replace')
+        raise IpfsError(f'IPFS operation rejected ({exc.code}): {detail}') from exc
     except (urllib.error.URLError, OSError, json.JSONDecodeError) as exc:
         raise IpfsError(f"IPFS {endpoint} failed: {exc}") from exc
 
@@ -54,6 +58,8 @@ def health():
 async def add(request: Request):
     """Store raw request-body bytes in IPFS, return its CID."""
     data = await request.body()
+    if len(data) > 4 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail='object exceeds 4 MiB')
     if not data:
         raise HTTPException(status_code=400, detail="empty body")
     boundary = "----ipfsgw" + str(time.time_ns())
@@ -82,7 +88,7 @@ async def add(request: Request):
 @app.get("/cat/{cid}")
 def cat(cid: str):
     """Fetch raw bytes for a CID, exactly as stored — no reinterpretation."""
-    req = urllib.request.Request(f"{settings.ipfs_api_url}/cat?arg={cid}", data=b"", method="POST")
+    req = urllib.request.Request(f"{settings.ipfs_api_url}/cat?arg={urllib.parse.quote(cid, safe='')}", data=b"", method="POST")
     try:
         with urllib.request.urlopen(req, timeout=15) as r:
             data = r.read()
@@ -93,3 +99,25 @@ def cat(cid: str):
     except (urllib.error.URLError, OSError) as exc:
         raise HTTPException(status_code=502, detail=f"IPFS cat failed: {exc}")
     return Response(content=data, media_type="application/octet-stream")
+
+
+@app.post('/admin/unpin/{cid}')
+def unpin(cid: str):
+    try:
+        return _request('pin/rm?arg='+urllib.parse.quote(cid,safe=''),timeout=15)
+    except IpfsError as exc:
+        if 'not pinned' in str(exc):return {'already_unpinned':True}
+        raise HTTPException(502,'unpin failed') from exc
+
+
+@app.post('/admin/gc')
+def garbage_collect():
+    # Kubo streams newline-delimited JSON; do not parse it as one JSON object.
+    req=urllib.request.Request(f'{settings.ipfs_api_url}/repo/gc',data=b'',method='POST')
+    try:
+        with urllib.request.urlopen(req,timeout=60) as response:
+            result=[json.loads(line) for line in response if line.strip()]
+        if any(row.get('Error') for row in result):raise IpfsError('garbage collector reported an error')
+        return {'results':result}
+    except (urllib.error.URLError,OSError,ValueError,IpfsError) as exc:
+        raise HTTPException(502,'garbage collection failed') from exc

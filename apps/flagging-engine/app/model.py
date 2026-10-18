@@ -1,7 +1,10 @@
 import logging
+import hashlib
+import json
+from pathlib import Path
 
 import torch
-from transformers import AutoModelForSequenceClassification, AutoTokenizer
+from transformers import AutoModelForSequenceClassification, AutoTokenizer, __version__ as transformers_version
 
 from .config import settings
 
@@ -15,8 +18,8 @@ class MisinfoModel:
     Quantization support is backend-dependent:
       - cuda: int8 / 4bit via bitsandbytes (BitsAndBytesConfig), fp16 via
         torch_dtype, none = full fp32 precision (max-throughput server test).
-      - cpu:  int8 via torch's built-in dynamic quantization (CPU-only kernel,
-        no CUDA needed) to shrink AfroXLM-R Large towards ~700MB. 4bit has no
+      - cpu:  int8 via torch's built-in dynamic quantization of Linear layers
+        (embedding weights remain floating point). 4bit has no
         CPU kernel in stock PyTorch, so it falls back to int8 with a warning.
       - mps:  bitsandbytes and torch dynamic quantization both lack MPS
         kernels, so int8/4bit requests fall back to unquantized fp32/fp16 on
@@ -25,10 +28,24 @@ class MisinfoModel:
 
     def __init__(self):
         self.device = self._resolve_device(settings.torch_device)
-        self.tokenizer = AutoTokenizer.from_pretrained(settings.model_path)
+        weights=Path(settings.model_path)/'model.safetensors'
+        with weights.open('rb') as handle:self.weights_sha256=hashlib.file_digest(handle,'sha256').hexdigest()
+        self.actual_quantization=settings.model_quantization.lower()
+        self.tokenizer = AutoTokenizer.from_pretrained(settings.model_path,local_files_only=True)
         self.model = self._load_model()
         self.model.eval()
         self.id2label = self.model.config.id2label
+        if self.id2label!={0:'non-misinformation',1:'misinformation'}:
+            raise ValueError('checkpoint class mapping must identify non-misinformation=0 and misinformation=1')
+        artifacts={}
+        for name in ('config.json','tokenizer.json','tokenizer_config.json','special_tokens_map.json'):
+            path=Path(settings.model_path)/name
+            with path.open('rb') as handle:artifacts[name]=hashlib.file_digest(handle,'sha256').hexdigest()
+        self.runtime_manifest={'weights_sha256':self.weights_sha256,'artifacts_sha256':artifacts,
+            'device':str(self.device),'quantization':self.actual_quantization,'max_length':settings.model_max_length,
+            'threshold':settings.flag_threshold,'torch':torch.__version__,'transformers':transformers_version}
+        runtime_digest=hashlib.sha256(json.dumps(self.runtime_manifest,sort_keys=True,separators=(',',':')).encode()).hexdigest()
+        self.model_version='checkpoint:'+self.weights_sha256+';runtime:'+runtime_digest
 
     @staticmethod
     def _resolve_device(requested: str) -> torch.device:
@@ -66,6 +83,7 @@ class MisinfoModel:
                 "Falling back to int8 dynamic quantization." if device_type == "cpu" else "Running unquantized.",
             )
             quant = "int8" if device_type == "cpu" else "none"
+            self.actual_quantization=quant
 
         if quant == "int8" and device_type != "cpu":
             logger.warning(
@@ -74,11 +92,12 @@ class MisinfoModel:
                 device_type,
             )
             quant = "none"
+            self.actual_quantization=quant
 
         if quant == "int8" and device_type == "cpu":
             logger.info("Loading fp32 model then applying dynamic int8 quantization on cpu")
             model = AutoModelForSequenceClassification.from_pretrained(settings.model_path)
-            return torch.quantization.quantize_dynamic(model, {torch.nn.Linear}, dtype=torch.qint8)
+            return torch.quantization.quantize_dynamic(model, {torch.nn.Linear}, dtype=torch.qint8,inplace=True)
 
         torch_dtype = torch.float16 if quant == "fp16" else None
         logger.info("Loading model dtype=%s on device=%s", torch_dtype or "fp32", self.device)

@@ -5,10 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/hyperledger/fabric-chaincode-go/v2/pkg/cid"
+	"github.com/hyperledger/fabric-chaincode-go/v2/shim"
 	"github.com/hyperledger/fabric-contract-api-go/v2/contractapi"
 )
 
@@ -18,6 +20,8 @@ const (
 	statusFinal             = "FINAL"
 	statusRejected          = "REJECTED"
 	statusExpired           = "EXPIRED"
+	statusDisputed          = "DISPUTED"
+	statusSuperseded        = "SUPERSEDED"
 	admissionPending        = "PENDING"
 	admissionAdmitted       = "ADMITTED"
 	admissionRejected       = "REJECTED"
@@ -36,6 +40,9 @@ func isValidOutcome(v string) bool {
 // requireRole checks that the transaction submitter carries one of the
 // allowed ABAC roles in its X509 certificate attribute extension.
 func requireRole(ctx contractapi.TransactionContextInterface, allowedRoles ...string) error {
+	if _, err := transactionTime(ctx); err != nil {
+		return err
+	}
 	role, found, err := cid.GetAttributeValue(ctx.GetStub(), "role")
 	if err != nil {
 		return fmt.Errorf("failed to read role attribute: %v", err)
@@ -53,12 +60,16 @@ func requireRole(ctx contractapi.TransactionContextInterface, allowedRoles ...st
 
 // FactCheck deliberately carries only what the on-chain consensus tally needs.
 type FactCheck struct {
-	CheckerMSP string `json:"checker_msp"`
-	Outcome    string `json:"outcome"`
-	TxID       string `json:"txid"`
+	CheckerMSP   string `json:"checker_msp"`
+	Outcome      string `json:"outcome"`
+	TxID         string `json:"txid"`
+	EvidenceCID  string `json:"evidence_cid"`
+	EvidenceHash string `json:"evidence_hash"`
+	Timestamp    string `json:"timestamp"`
 }
 
 type ReportRecord struct {
+	SchemaVersion     int         `json:"schema_version"`
 	ReportID          string      `json:"id"`
 	ContentHash       string      `json:"content_hash"`
 	ProposedLabel     string      `json:"inference_label"`
@@ -69,6 +80,11 @@ type ReportRecord struct {
 	FactCheckDeadline string      `json:"fact_check_deadline"`
 	Status            string      `json:"status"`
 	FactChecks        []FactCheck `json:"fact_checks"`
+	EligibleReviewers []string    `json:"eligible_reviewers"`
+	RequiredVotes     int         `json:"required_votes"`
+	ClaimCID          string      `json:"claim_cid"`
+	Supersedes        string      `json:"supersedes,omitempty" metadata:",optional"`
+	SupersededBy      string      `json:"superseded_by,omitempty" metadata:",optional"`
 	FinalLabel        string      `json:"final_label,omitempty" metadata:",optional"`
 	FinalizedBy       string      `json:"finalized_by,omitempty" metadata:",optional"`
 	FinalizedAt       string      `json:"finalized_at,omitempty" metadata:",optional"`
@@ -145,6 +161,13 @@ func (c *MisinformationContract) SetFoundingOrgLimit(
 	if limit < 1 {
 		return 0, fmt.Errorf("founding org limit must be >= 1, got %d", limit)
 	}
+	orgs, err := c.getRegisteredOrgs(ctx)
+	if err != nil {
+		return 0, err
+	}
+	if len(orgs) != 0 {
+		return 0, fmt.Errorf("founding configuration is locked after registration starts")
+	}
 	key, err := newConfigKey(ctx, "foundingOrgLimit")
 	if err != nil {
 		return 0, fmt.Errorf("failed to build config key: %v", err)
@@ -166,7 +189,7 @@ func validateReportInput(reportID, contentHash, label, modelVersion, timestamp s
 	if label != "0" && label != "1" {
 		return fmt.Errorf("label must be \"0\" or \"1\", got %q", label)
 	}
-	if confidence < 0 || confidence > 1 {
+	if math.IsNaN(confidence) || math.IsInf(confidence, 0) || confidence < 0 || confidence > 1 {
 		return fmt.Errorf("confidence must be in [0,1], got %f", confidence)
 	}
 	if strings.TrimSpace(modelVersion) == "" {
@@ -229,15 +252,16 @@ func quorumFor(registeredCount int) int {
 }
 
 func deterministicTimestamp(ctx contractapi.TransactionContextInterface) string {
-	if txTS, err := ctx.GetStub().GetTxTimestamp(); err == nil && txTS != nil {
-		return txTS.AsTime().UTC().Format(time.RFC3339)
-	}
-	return time.Now().UTC().Format(time.RFC3339)
+	t, _ := transactionTime(ctx) // every mutator validates this before writing
+	return t.Format(time.RFC3339Nano)
 }
 
 func (c *MisinformationContract) RegisterOrg(
 	ctx contractapi.TransactionContextInterface,
 ) (string, error) {
+	if err := requireRole(ctx, "official"); err != nil {
+		return "", err
+	}
 	mspid, err := ctx.GetClientIdentity().GetMSPID()
 	if err != nil {
 		return "", fmt.Errorf("failed to read caller MSP: %v", err)
@@ -291,6 +315,9 @@ func (c *MisinformationContract) RequestOrgAdmission(
 	ctx contractapi.TransactionContextInterface,
 	orgName, orgType string,
 ) (string, error) {
+	if err := requireRole(ctx, "official"); err != nil {
+		return "", err
+	}
 	candidateMSP, err := ctx.GetClientIdentity().GetMSPID()
 	if err != nil {
 		return "", fmt.Errorf("failed to read caller MSP: %v", err)
@@ -495,278 +522,6 @@ func (c *MisinformationContract) QueryOrgAdmission(
 	return &req, nil
 }
 
-func (c *MisinformationContract) Submit(
-	ctx contractapi.TransactionContextInterface,
-	reportID, contentHash, label string,
-	confidence float64,
-	modelVersion, timestamp string,
-) error {
-	if err := validateReportInput(reportID, contentHash, label, modelVersion, timestamp, confidence); err != nil {
-		return err
-	}
-	submittedBy, err := ctx.GetClientIdentity().GetMSPID()
-	if err != nil {
-		return fmt.Errorf("failed to read caller MSP: %v", err)
-	}
-	if ok, err := c.isRegisteredOrg(ctx, submittedBy); err != nil {
-		return err
-	} else if !ok {
-		return fmt.Errorf("org %s is not a registered stakeholder; call RegisterOrg first", submittedBy)
-	}
-	if err := requireRole(ctx, "official", "fact_checker"); err != nil {
-		return err
-	}
-	key, err := newReportKey(ctx, reportID)
-	if err != nil {
-		return fmt.Errorf("failed to build key: %v", err)
-	}
-	if exists, _ := ctx.GetStub().GetState(key); exists != nil {
-		return fmt.Errorf("report %s already exists (immutable once finalised)", reportID)
-	}
-	deadline := time.Now().UTC().Add(factCheckWindow).Format(time.RFC3339)
-	if txTS, err := ctx.GetStub().GetTxTimestamp(); err == nil && txTS != nil {
-		deadline = txTS.AsTime().Add(factCheckWindow).UTC().Format(time.RFC3339)
-	}
-	record := ReportRecord{
-		ReportID:          reportID,
-		ContentHash:       contentHash,
-		ProposedLabel:     label,
-		Confidence:        confidence,
-		ModelVersion:      modelVersion,
-		Timestamp:         timestamp,
-		SubmittedBy:       submittedBy,
-		FactCheckDeadline: deadline,
-		Status:            statusPending,
-		FactChecks:        []FactCheck{},
-	}
-	recordBytes, err := json.Marshal(record)
-	if err != nil {
-		return fmt.Errorf("failed to marshal record: %v", err)
-	}
-	if err := ctx.GetStub().PutState(key, recordBytes); err != nil {
-		return fmt.Errorf("failed to write record: %v", err)
-	}
-	return nil
-}
-
-// SubmitFactCheck records a fact-checker's outcome on a claim 
-func (c *MisinformationContract) SubmitFactCheck(
-	ctx contractapi.TransactionContextInterface,
-	reportID, outcome string,
-) error {
-	checkerMSP, err := ctx.GetClientIdentity().GetMSPID()
-	if err != nil {
-		return fmt.Errorf("failed to read caller MSP: %v", err)
-	}
-	if ok, err := c.isRegisteredOrg(ctx, checkerMSP); err != nil {
-		return err
-	} else if !ok {
-		return fmt.Errorf("org %s is not a registered stakeholder; call RegisterOrg first", checkerMSP)
-	}
-	if err := requireRole(ctx, "official", "fact_checker"); err != nil {
-		return err
-	}
-	if !isValidOutcome(outcome) {
-		return fmt.Errorf("outcome must be \"0\" or \"1\", got %q", outcome)
-	}
-	key, err := newReportKey(ctx, reportID)
-	if err != nil {
-		return fmt.Errorf("failed to build key: %v", err)
-	}
-	recordBytes, err := ctx.GetStub().GetState(key)
-	if err != nil {
-		return fmt.Errorf("failed to read state: %v", err)
-	}
-	if recordBytes == nil {
-		return fmt.Errorf("no report found for %s", reportID)
-	}
-	var record ReportRecord
-	if err := json.Unmarshal(recordBytes, &record); err != nil {
-		return fmt.Errorf("failed to unmarshal record: %v", err)
-	}
-	if record.Status != statusPending && record.Status != statusUnderReview {
-		return fmt.Errorf("report %s is %s; only PENDING/UNDER_REVIEW reports accept fact-checks", reportID, record.Status)
-	}
-	for _, v := range record.FactChecks {
-		if v.CheckerMSP == checkerMSP {
-			return fmt.Errorf("org %s has already fact-checked report %s", checkerMSP, reportID)
-		}
-	}
-	record.FactChecks = append(record.FactChecks, FactCheck{
-		CheckerMSP: checkerMSP,
-		Outcome:    outcome,
-		TxID:       ctx.GetStub().GetTxID(),
-	})
-	record.Status = statusUnderReview
-
-	//early acceptance/early rejection
-	totalOrgs, err := c.getRegisteredOrgs(ctx)
-	if err == nil && len(totalOrgs) > 0 {
-		required := int(math.Ceil(2.0 / 3.0 * float64(len(totalOrgs))))
-		tally := tallyFactChecks(record.FactChecks)
-		remaining := len(totalOrgs) - len(record.FactChecks)
-
-		//early acceptance
-		if tally["1"] >= required {
-			record.Status = statusFinal
-			record.FinalLabel = "1"
-			record.FinalizedBy = checkerMSP
-			record.FinalizedAt = deterministicTimestamp(ctx)
-		}
-
-		// early rejection
-		// even if ALL remaining orgs vote YES, can't reach threshold
-		if record.Status == statusUnderReview && tally["1"]+remaining < required {
-			record.Status = statusRejected
-		}
-	}
-
-	recordBytes, err = json.Marshal(record)
-	if err != nil {
-		return fmt.Errorf("failed to marshal record: %v", err)
-	}
-	if err := ctx.GetStub().PutState(key, recordBytes); err != nil {
-		return fmt.Errorf("failed to write record: %v", err)
-	}
-	return nil
-}
-
-// tallyFactChecks counts fact-checks per outcome.
-func tallyFactChecks(checks []FactCheck) map[string]int {
-	tally := make(map[string]int)
-	for _, v := range checks {
-		tally[v.Outcome]++
-	}
-	return tally
-}
-
-// FinalizeReport closes a report once at least 2 ouyt of 3 fact-checks exist and one outcome has a strict majority
-func (c *MisinformationContract) FinalizeReport(
-	ctx contractapi.TransactionContextInterface,
-	reportID string,
-) error {
-	finalizerMSP, err := ctx.GetClientIdentity().GetMSPID()
-	if err != nil {
-		return fmt.Errorf("failed to read caller MSP: %v", err)
-	}
-	if ok, err := c.isRegisteredOrg(ctx, finalizerMSP); err != nil {
-		return err
-	} else if !ok {
-		return fmt.Errorf("org %s is not a registered stakeholder; call RegisterOrg first", finalizerMSP)
-	}
-	if err := requireRole(ctx, "official"); err != nil {
-		return err
-	}
-	key, err := newReportKey(ctx, reportID)
-	if err != nil {
-		return fmt.Errorf("failed to build key: %v", err)
-	}
-	recordBytes, err := ctx.GetStub().GetState(key)
-	if err != nil {
-		return fmt.Errorf("failed to read state: %v", err)
-	}
-	if recordBytes == nil {
-		return fmt.Errorf("no report found for %s", reportID)
-	}
-	var record ReportRecord
-	if err := json.Unmarshal(recordBytes, &record); err != nil {
-		return fmt.Errorf("failed to unmarshal record: %v", err)
-	}
-	if record.Status != statusPending && record.Status != statusUnderReview {
-		return fmt.Errorf("report %s is %s; only PENDING/UNDER_REVIEW reports can be finalised", reportID, record.Status)
-	}
-	if len(record.FactChecks) < 2 {
-		return fmt.Errorf("report %s has %d fact-check(s); at least 2 fact-checks are required to finalise", reportID, len(record.FactChecks))
-	}
-	tally := tallyFactChecks(record.FactChecks)
-	winner, winnerCount, tied := "", 0, false
-	for outcome, count := range tally {
-		switch {
-		case count > winnerCount:
-			winner, winnerCount, tied = outcome, count, false
-		case count == winnerCount && winnerCount > 0:
-			tied = true
-		}
-	}
-	if tied {
-		return fmt.Errorf("report %s is tied at %d-%d; a tie-breaking fact-check is required to finalise", reportID, winnerCount, winnerCount)
-	}
-	record.FinalLabel = winner
-	record.Status = statusFinal
-	record.FinalizedBy = finalizerMSP
-	record.FinalizedAt = deterministicTimestamp(ctx)
-	recordBytes, err = json.Marshal(record)
-	if err != nil {
-		return fmt.Errorf("failed to marshal record: %v", err)
-	}
-	if err := ctx.GetStub().PutState(key, recordBytes); err != nil {
-		return fmt.Errorf("failed to write finalised record: %v", err)
-	}
-	return nil
-}
-
-func (c *MisinformationContract) ExpireReport(
-	ctx contractapi.TransactionContextInterface,
-	reportID string,
-) error {
-	finalizerMSP, err := ctx.GetClientIdentity().GetMSPID()
-	if err != nil {
-		return fmt.Errorf("failed to read caller MSP: %v", err)
-	}
-	if ok, err := c.isRegisteredOrg(ctx, finalizerMSP); err != nil {
-		return err
-	} else if !ok {
-		return fmt.Errorf("org %s is not a registered stakeholder; call RegisterOrg first", finalizerMSP)
-	}
-	if err := requireRole(ctx, "official"); err != nil {
-		return err
-	}
-	key, err := newReportKey(ctx, reportID)
-	if err != nil {
-		return fmt.Errorf("failed to build key: %v", err)
-	}
-	recordBytes, err := ctx.GetStub().GetState(key)
-	if err != nil {
-		return fmt.Errorf("failed to read state: %v", err)
-	}
-	if recordBytes == nil {
-		return fmt.Errorf("no report found for %s", reportID)
-	}
-	var record ReportRecord
-	if err := json.Unmarshal(recordBytes, &record); err != nil {
-		return fmt.Errorf("failed to unmarshal record: %v", err)
-	}
-	if record.Status != statusPending && record.Status != statusUnderReview {
-		return fmt.Errorf("report %s is %s; only PENDING/UNDER_REVIEW reports can expire", reportID, record.Status)
-	}
-	expired, err := isPastDeadline(record.FactCheckDeadline)
-	if err != nil {
-		return err
-	}
-	if !expired {
-		return fmt.Errorf("report %s is still within its fact-check window (deadline %s)", reportID, record.FactCheckDeadline)
-	}
-	record.Status = statusExpired
-	record.FinalizedBy = finalizerMSP
-	record.FinalizedAt = deterministicTimestamp(ctx)
-	recordBytes, err = json.Marshal(record)
-	if err != nil {
-		return fmt.Errorf("failed to marshal record: %v", err)
-	}
-	if err := ctx.GetStub().PutState(key, recordBytes); err != nil {
-		return fmt.Errorf("failed to write expired record: %v", err)
-	}
-	return nil
-}
-
-func isPastDeadline(rfc3339 string) (bool, error) {
-	deadline, err := time.Parse(time.RFC3339, rfc3339)
-	if err != nil {
-		return false, fmt.Errorf("invalid fact_check_deadline %q: %v", rfc3339, err)
-	}
-	return time.Now().UTC().After(deadline), nil
-}
-
 func (c *MisinformationContract) QueryReport(
 	ctx contractapi.TransactionContextInterface,
 	reportID string,
@@ -861,12 +616,19 @@ func (c *MisinformationContract) QueryAllReports(
 }
 
 func main() {
-	chaincode, err := contractapi.NewChaincode(&MisinformationContract{})
+	chaincode, err := newMisinformationChaincode()
 	if err != nil {
 		fmt.Printf("Error creating misinformation chaincode: %v\n", err)
 		panic(err)
 	}
-	if err := chaincode.Start(); err != nil {
+	var startErr error
+	if address := os.Getenv("CHAINCODE_SERVER_ADDRESS"); address != "" {
+		server := &shim.ChaincodeServer{CCID: os.Getenv("CHAINCODE_ID"), Address: address, CC: chaincode, TLSProps: shim.TLSProperties{Disabled: true}}
+		startErr = server.Start()
+	} else {
+		startErr = chaincode.Start()
+	}
+	if err := startErr; err != nil {
 		fmt.Printf("Error starting misinformation chaincode: %v\n", err)
 		panic(err)
 	}

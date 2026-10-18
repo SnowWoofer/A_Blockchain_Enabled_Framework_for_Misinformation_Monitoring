@@ -28,8 +28,11 @@ CC_VERSION="2.2"
 CC_SEQUENCE="1"
 CC_SRC_LANGUAGE="go"
 CHANNEL_NAME="mychannel"
-STATE_DB="${STATE_DB:--s couchdb}"
-STATE_DB_ARGS=${STATE_DB}
+STATE_DB="${STATE_DB:-leveldb}"
+# Accept the old environment spelling without expanding arbitrary shell flags.
+STATE_DB="${STATE_DB#-s }"
+case "${STATE_DB}" in leveldb|couchdb) ;; *) echo 'STATE_DB must be leveldb or couchdb' >&2; exit 1;; esac
+export STATE_DB
 CC_ENDORSEMENT_POLICY=""
 THREE_ORG="1"
 FOUNDING_LIMIT=3
@@ -77,7 +80,7 @@ if [ -n "${RESET_NETWORK}" ]; then
 fi
 
 echo ">> Starting the test network (Fabric CA mode)..."
-./network.sh up -ca ${STATE_DB_ARGS}
+./network.sh up -ca -s "${STATE_DB}"
 echo ">> Creating channel ${CHANNEL_NAME}..."
 ./network.sh createChannel -c "${CHANNEL_NAME}"
 
@@ -101,7 +104,7 @@ echo ">> Deploying ${CC_NAME} v${CC_VERSION} (${CC_SRC_LANGUAGE})..."
 
 if [ -n "${THREE_ORG}" ]; then
   echo ">> Bringing up org3 (addOrg3, Fabric CA mode)..."
-  (cd "${TEST_NETWORK}/addOrg3" && ./addOrg3.sh up -ca)
+  (cd "${TEST_NETWORK}/addOrg3" && ./addOrg3.sh up -ca -s "${STATE_DB}")
 
   # Fabric CA names keys with random hex; Explorer expects "priv_sk"
   org3_keystore="${TEST_NETWORK}/organizations/peerOrganizations/org3.example.com/users/Admin@org3.example.com/msp/keystore"

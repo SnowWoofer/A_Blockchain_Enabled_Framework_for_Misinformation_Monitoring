@@ -1,27 +1,4 @@
-services:
-  fabric-gateway:
-    build: .
-    image: misinfo-gateway:latest
-    container_name: fabric-gateway
-    environment:
-      - CRYPTO_PATH=/crypto
-      - ORGS=${ORGS_LIST}
-      - GATEWAY_ROLE=official
-      - IDENTITY_ORG4=${IDENTITY_ORG4:-User1}
-      - IDENTITY_ORG5=${IDENTITY_ORG5:-User1}
-      - CHANNEL=mychannel
-      - CHAINCODE=misinformation
-      - GATEWAY_PEER=peer0.org1.example.com
-      - GATEWAY_TARGET=peer0.org1.example.com:7051
-      - TLS_NAME_OVERRIDE=0
-    ports:
-      - "9100:9100"
-    volumes:
-      - ../../blockchain/fabric-samples/test-network/organizations:/crypto:ro
-    networks:
-      - fabric_test
-    restart: unless-stopped
-
-networks:
-  fabric_test:
-    external: true
+# v3: use the generated isolated project; legacy configuration is archived.
+# Normal entry point: ./startup.sh from the repository root.
+include:
+  - path: ${MISINFO_COMPOSE_FILE:?Legacy v2 gateway composition retired. Use ./startup.sh or blockchain/scripts/deployment.py}

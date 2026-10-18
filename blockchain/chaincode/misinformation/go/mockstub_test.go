@@ -133,9 +133,20 @@ func (stub *MockStub) MockInit(txID string, args [][]byte) *peer.Response {
 
 // MockInvoke Invoke this chaincode, also starts and ends a transaction.
 func (stub *MockStub) MockInvoke(txID string, args [][]byte) *peer.Response {
+	previous := map[string][]byte{}
+	for k, v := range stub.State {
+		previous[k] = append([]byte(nil), v...)
+	}
+	history := map[string][]*queryresult.KeyModification{}
+	for k, v := range stub.History {
+		history[k] = append([]*queryresult.KeyModification(nil), v...)
+	}
 	stub.args = args
 	stub.MockTransactionStart(txID)
 	res := stub.cc.Invoke(stub)
+	if res.Status != 200 {
+		stub.State, stub.History = previous, history
+	}
 	stub.MockTransactionEnd(txID)
 	return res
 }
@@ -365,7 +376,23 @@ func (stub *MockStub) GetStateByRangeWithPagination(startKey, endKey string, pag
 // GetStateByPartialCompositeKeyWithPagination ...
 func (stub *MockStub) GetStateByPartialCompositeKeyWithPagination(objectType string, keys []string,
 	pageSize int32, bookmark string) (shim.StateQueryIteratorInterface, *peer.QueryResponseMetadata, error) {
-	return nil, nil, errors.New("not implemented")
+	prefix, err := stub.CreateCompositeKey(objectType, keys)
+	if err != nil {
+		return nil, nil, err
+	}
+	matching := []string{}
+	for k := range stub.State {
+		if strings.HasPrefix(k, prefix) && k > bookmark {
+			matching = append(matching, k)
+		}
+	}
+	sort.Strings(matching)
+	next := ""
+	if len(matching) > int(pageSize) {
+		matching = matching[:pageSize]
+		next = matching[len(matching)-1]
+	}
+	return &mockStateIterator{keys: matching, state: stub.State}, &peer.QueryResponseMetadata{FetchedRecordsCount: int32(len(matching)), Bookmark: next}, nil
 }
 
 // GetQueryResultWithPagination ...
