@@ -9,13 +9,14 @@ import uuid
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from blockchain.scripts.deployment import ROOT,RUNTIME,http,compose,write,runtime_path
+from blockchain.scripts.transport import configure_client
 from benchmarks.security import probe
 
 EXPIRE=r'''
 import os,sys,time
 from objects import OffChainStore,IpfsStore
 store=OffChainStore(os.environ['OFFCHAIN_DB']);cid=sys.argv[1]
-for host in ('storage1','storage2'):IpfsStore('http://'+host+':9101').cat_bytes(cid)
+for host in ('storage1','storage2'):IpfsStore('https://'+host+':9101').cat_bytes(cid)
 with store._conn:store._conn.execute('UPDATE objects_v3 SET retain_until=? WHERE cid=?',(time.time()-1,cid))
 store.close();print('Expired only the explicitly selected synthetic retention-check object.')
 '''
@@ -25,7 +26,7 @@ def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--name',required=True);a=p.parse_args()
     runtime=runtime_path(a.name);cfg=json.loads((runtime/'experiment.json').read_text())
     credentials=json.loads((runtime/'credentials.json').read_text());keys={(r['org'],r['role']):r['api_key'] for r in credentials}
-    base=f'http://127.0.0.1:{cfg["port_base"]}';key=keys['org1','fact_checker']
+    base=configure_client(runtime,cfg);key=keys['org1','fact_checker']
     msg='retention-check-'+uuid.uuid4().hex
     report=http(base+'/api/reports',{'msg_id':msg,'label':'0','confidence':1,'model_version':'synthetic-retention-check',
         'content':'Synthetic object created solely for managed retention verification.','source_platform':'test'},key)

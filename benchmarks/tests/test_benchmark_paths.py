@@ -14,6 +14,15 @@ from benchmarks.caliper.run import benchmark_config,network_config,parse_args,su
 from blockchain.scripts.run_support import benchmark_lock
 
 
+def test_older_contract_is_not_silently_restarted_with_new_api(tmp_path):
+    from blockchain.scripts import deployment
+    (tmp_path/'experiment.json').write_text(json.dumps({'orgs':3,'backend':'fabric'}))
+    with patch.object(deployment,'compose') as compose:
+        with pytest.raises(ValueError,match='fresh --name'):
+            deployment.provision(tmp_path)
+        compose.assert_not_called()
+
+
 @pytest.fixture
 def data():return json.loads((ROOT/'data/translated_masked_samples_test.json').read_text())
 
@@ -116,7 +125,7 @@ def test_benchmark_lock(tmp_path):
 
 
 def test_counted_writes_before_reads_and_dynamic_config():
-    args=argparse.Namespace(workers=2,load=100,count=1000,reject_writes=False)
+    args=argparse.Namespace(workers=2,load=100,count=1000)
     config=benchmark_config(args,'test')['test'];rounds=config['rounds']
     assert [r['label'] for r in rounds]==['write','read']
     assert config['workers']['number']==2
@@ -129,7 +138,7 @@ def test_counted_writes_before_reads_and_dynamic_config():
 
 
 def test_failure_counts_and_peak_selection(tmp_path):
-    config=benchmark_config(argparse.Namespace(workers=1,load=10,count=1,reject_writes=False),'test')['test']['rounds']
+    config=benchmark_config(argparse.Namespace(workers=1,load=10,count=1),'test')['test']['rounds']
     rows=[{'round':'read','worker':0,'success':True,'started_ms':0,'finished_ms':1000,'latency_ms':1000},
           {'round':'write','worker':0,'success':False,'started_ms':0,'finished_ms':500,'latency_ms':500}]
     (tmp_path/'transactions-0.jsonl').write_text('\n'.join(json.dumps(r) for r in rows))
@@ -170,12 +179,12 @@ def test_worker_cleanup_on_startup_failure(tmp_path):
         events.append('worker');worker_groups.append(kwargs['env'].get('KAFKA_CONSUMER_GROUP'))
         process=Mock();workers.append(process);return process
     seeded={}
-    async def seed(broker,groups):events.append('offsets');seeded.update(groups);return []
+    async def seed(broker,groups,tls):events.append('offsets');seeded.update(groups);return []
     async def publish(*args,**kwargs):events.append('probe');return [{'topic':'claims.raw','partition':0,'offset':23}]
     log=SimpleNamespace(folder=tmp_path,step=lambda text:None,say=lambda text:None)
-    with patch('benchmarks.pipeline.compose'),patch('benchmarks.pipeline.wait_kafka'),patch('benchmarks.pipeline.prepare_benchmark_groups',seed),patch('benchmarks.pipeline.publish',publish),patch('benchmarks.pipeline.subprocess.Popen',side_effect=spawn),patch('benchmarks.pipeline.wait_health',side_effect=RuntimeError('worker failed')):
+    with patch('benchmarks.pipeline.configure_client',return_value='https://127.0.0.1:18000'),patch('benchmarks.pipeline.kafka_options',return_value={}),patch('benchmarks.pipeline.kafka_service',return_value={}),patch('benchmarks.pipeline.compose'),patch('benchmarks.pipeline.wait_kafka'),patch('benchmarks.pipeline.prepare_benchmark_groups',seed),patch('benchmarks.pipeline.publish',publish),patch('benchmarks.pipeline.subprocess.Popen',side_effect=spawn),patch('benchmarks.pipeline.wait_health',side_effect=RuntimeError('worker failed')):
         with pytest.raises(RuntimeError,match='worker failed'):
-            run_pipeline(SimpleNamespace(),runtime,{'orgs':3,'database':'leveldb'},18000,[{}],tmp_path/'data.json',log)
+            run_pipeline(SimpleNamespace(seed=100,rejection_percent=None,random_percent=0),runtime,{'orgs':3,'database':'leveldb'},18000,[{}],tmp_path/'data.json',log)
     assert events==['offsets','probe','worker','worker','worker']
     assert worker_groups[:2]==[seeded['claims.flagged'],seeded['claims.raw']]
     assert len(workers)==3
@@ -184,7 +193,7 @@ def test_worker_cleanup_on_startup_failure(tmp_path):
 
 
 def test_caliper_all_failed_latency_placeholder(tmp_path):
-    config=benchmark_config(argparse.Namespace(workers=1,load=2,count=1,reject_writes=False),'test')['test']['rounds']
+    config=benchmark_config(argparse.Namespace(workers=1,load=2,count=1),'test')['test']['rounds']
     (tmp_path/'transactions-0.jsonl').write_text(json.dumps({'round':'write','worker':0,'success':False,'started_ms':0,'finished_ms':1000,'latency_ms':1000})+'\n')
     headers=['Name','Succ','Fail','Send Rate (TPS)','Avg Latency (s)','Min Latency (s)','Max Latency (s)','Throughput (TPS)']
     values=['write','0','1','1.0','-','-','-','999.0']
@@ -205,7 +214,7 @@ def test_caliper_cli_defaults():
 
 
 def test_caliper_empty_official_round_with_placeholder_values(tmp_path):
-    config=benchmark_config(argparse.Namespace(workers=2,load=2,count=5,reject_writes=False),'test')['test']['rounds']
+    config=benchmark_config(argparse.Namespace(workers=2,load=2,count=5),'test')['test']['rounds']
     headers=['Name','Succ','Fail','Send Rate (TPS)','Avg Latency (s)','Min Latency (s)','Max Latency (s)','Throughput (TPS)']
     (tmp_path/'report.html').write_text('<table><tr>'+''.join('<th>'+h+'</th>' for h in headers)+
         '</tr><tr>'+''.join('<td>'+v+'</td>' for v in ['write','0','0','-','-','-','-','-'])+'</tr></table>')
@@ -218,6 +227,7 @@ def test_caliper_empty_official_round_with_placeholder_values(tmp_path):
     ['--count','0'],['--count','-1'],['--count','1'],['--workers','0'],
     ['--workers','3','--load','2'],['--load','0'],['--count','1.5'],['--count',str(2**53)],
     ['--duration','5'],['--loads','2','4'],['--fixtures=100'],['--repeats','2'],
+    ['--reject-writes'],
 ])
 def test_caliper_invalid_cli_before_start(argv,capsys):
     with pytest.raises(SystemExit) as error:parse_args(argv)
@@ -230,7 +240,7 @@ def test_caliper_invalid_cli_before_start(argv,capsys):
     ([3,2],True),([2,2],False),([2,3],False),([3,3],False),([5,0],False),([3,1,1],False),
 ])
 def test_caliper_exact_counts_and_worker_allocation(tmp_path,allocations,count_matches):
-    config=benchmark_config(argparse.Namespace(workers=2,load=10,count=5,reject_writes=False),'test')['test']['rounds']
+    config=benchmark_config(argparse.Namespace(workers=2,load=10,count=5),'test')['test']['rounds']
     rows=[{'round':op,'worker':worker,'success':True,'started_ms':0,'finished_ms':1000,'latency_ms':1000}
         for op in ('write','read') for worker,count in enumerate(allocations) for _ in range(count)]
     (tmp_path/'transactions-0.jsonl').write_text('\n'.join(json.dumps(r) for r in rows))

@@ -9,7 +9,7 @@ import os
 from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
 
 from .batcher import DynamicBatcher
-from .config import settings
+from .config import settings, kafka_tls_options
 from .schemas import ClaimMessage
 
 logger = logging.getLogger(__name__)
@@ -32,12 +32,14 @@ class FlaggingConsumer:
         self.consumer = AIOKafkaConsumer(
             settings.kafka_input_topic,
             bootstrap_servers=settings.kafka_bootstrap_servers,
+            **kafka_tls_options(),
             group_id=settings.kafka_consumer_group,
             enable_auto_commit=False,
             auto_offset_reset='earliest',
         )
         self.producer = AIOKafkaProducer(
             bootstrap_servers=settings.kafka_bootstrap_servers,
+            **kafka_tls_options(),
             value_serializer=lambda v: json.dumps(v).encode("utf-8"),
         )
         await self.consumer.start()

@@ -111,7 +111,7 @@ func TestMajorityAcrossConsortiumSizes(t *testing.T) {
 				if got.Status != statusFinal || got.FinalLabel != label {
 					t.Fatal(got)
 				}
-				good(t, invokeAs(s, "f", "Org1MSP", "FinalizeReport", "r"))
+				bad(t, invokeAs(s, "f", "Org1MSP", "FinalizeReport", "r"))
 			})
 		}
 	}
@@ -225,55 +225,78 @@ func TestNonFiniteWireInputDoesNotTerminateService(t *testing.T) {
 	good(t, submitReport(s, "valid-after-malformed", "Org1MSP", "valid"))
 }
 
-func TestUnsuccessfulCorrectionReleasesSlot(t *testing.T) {
-	for _, outcome := range []string{"disputed", "expired"} {
-		t.Run(outcome, func(t *testing.T) {
-			s := setup(t, 3)
-			start := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
-			s.TxTimestamp = timestamppb.New(start)
-			good(t, submitReport(s, "original", "Org1MSP", "old"))
-			good(t, vote(s, "Org2MSP", "old", "1"))
-			good(t, vote(s, "Org3MSP", "old", "1"))
-			sub := Submission{ReportID: "correction", ContentHash: validHash, ClaimCID: "cid-correction", Label: "0", Confidence: .9, ModelVersion: "v", Timestamp: validTs, Supersedes: "old"}
-			payload, _ := json.Marshal(sub)
-			good(t, invokeAs(s, "correction", "Org1MSP", "SubmitReport", string(payload)))
-			if outcome == "disputed" {
-				good(t, vote(s, "Org2MSP", "correction", "0"))
-				good(t, vote(s, "Org3MSP", "correction", "1"))
-			} else {
-				s.TxTimestamp = timestamppb.New(start.Add(72 * time.Hour))
-				good(t, invokeAs(s, "expire", "Org1MSP", "ExpireReport", "correction"))
-			}
-			if record(t, s, "old").Status != statusFinal {
-				t.Fatal("unsuccessful correction superseded predecessor")
-			}
-			sub.ReportID, sub.ClaimCID = "next-attempt", "next-cid"
-			payload, _ = json.Marshal(sub)
-			good(t, invokeAs(s, "retry-correction", "Org1MSP", "SubmitReport", string(payload)))
-		})
-	}
-}
-func TestCorrectionsAndInterventionsPreserveHistory(t *testing.T) {
+func TestSupersessionAndLegacyWritesRetired(t *testing.T) {
 	s := setup(t, 3)
 	good(t, submitReport(s, "s", "Org1MSP", "old"))
 	good(t, vote(s, "Org2MSP", "old", "1"))
 	good(t, vote(s, "Org3MSP", "old", "1"))
-	sub := Submission{ReportID: "new", ContentHash: validHash, ClaimCID: "new-cid", Label: "0", Confidence: .9, ModelVersion: "v", Timestamp: validTs, Supersedes: "old"}
+	sub := Submission{ReportID: "new", ContentHash: validHash, ClaimCID: "cid", Label: "0", Confidence: .9, ModelVersion: "v", Timestamp: validTs, Supersedes: "old"}
 	payload, _ := json.Marshal(sub)
-	good(t, invokeAs(s, "c", "Org1MSP", "SubmitReport", string(payload)))
-	sub.ReportID = "competing"
-	p, _ := json.Marshal(sub)
-	bad(t, invokeAs(s, "c2", "Org1MSP", "SubmitReport", string(p)))
-	good(t, vote(s, "Org2MSP", "new", "0"))
-	good(t, vote(s, "Org3MSP", "new", "0"))
-	old := record(t, s, "old")
-	if old.Status != statusSuperseded || old.FinalLabel != "1" || old.SupersededBy != "new" {
-		t.Fatal(old)
+	bad(t, invokeAs(s, "c", "Org1MSP", "SubmitReport", string(payload)))
+	bad(t, invokeAs(s, "i", "Org1MSP", "RecordIntervention", "old", "notice", "cid", validHash))
+	bad(t, invokeAs(s, "f", "Org1MSP", "FinalizeReport", "old"))
+	if record(t, s, "old").Status != statusFinal {
+		t.Fatal("parent changed")
 	}
-	good(t, invokeAs(s, "i", "Org2MSP", "RecordIntervention", "new", "notice", "evidence-cid", validHash))
-	good(t, invokeAs(s, "iq", "Org1MSP", "QueryInterventions", "new"))
-	good(t, invokeAs(s, "h", "Org1MSP", "QueryReportHistory", "old"))
 }
+
+func TestNotesEnforceSubmitterOwnershipAndPreserveEveryStatus(t *testing.T) {
+	for _, status := range []string{statusPending, statusUnderReview, statusFinal, statusDisputed, statusExpired, statusSuperseded} {
+		t.Run(status, func(t *testing.T) {
+			s := setup(t, 3)
+			good(t, submitReport(s, "s", "Org1MSP", "r"))
+			// Seed terminal/historical fixtures directly, without re-enabling
+			// removed transitions solely to manufacture the test fixture.
+			original := record(t, s, "r")
+			original.Status = status
+			key, _ := s.CreateCompositeKey("pred", []string{"r"})
+			before, _ := json.Marshal(original)
+			s.State[key] = before
+			for _, role := range []string{"official", "fact_checker"} {
+				s.Attrs = map[string]string{"role": role}
+				good(t, invokeAs(s, "n-"+role, "Org1MSP", "RecordReportNote", "r", role, "cid-"+role, validHash))
+				good(t, invokeAs(s, "retry", "Org1MSP", "RecordReportNote", "r", role, "cid-"+role, validHash))
+				bad(t, invokeAs(s, "conflict", "Org1MSP", "RecordReportNote", "r", role, "other-cid", validHash))
+				bad(t, invokeAs(s, "other", "Org2MSP", "RecordReportNote", "r", "forbidden", "cid", validHash))
+			}
+			s.Attrs = map[string]string{"role": "observer"}
+			bad(t, invokeAs(s, "observer", "Org1MSP", "RecordReportNote", "r", "forbidden", "cid", validHash))
+			r := invokeAs(s, "read", "Org2MSP", "QueryReportNotes", "r")
+			good(t, r)
+			var notes []ReportNote
+			if err := json.Unmarshal(r.Payload, &notes); err != nil {
+				t.Fatal(err)
+			}
+			if len(notes) != 2 || notes[0].Organisation != "Org1MSP" || notes[0].TxID == "" {
+				t.Fatal(notes)
+			}
+			if string(s.State[key]) != string(before) {
+				t.Fatal("note modified report state")
+			}
+		})
+	}
+}
+
+func TestNoteValidationAndLegacyReads(t *testing.T) {
+	s := setup(t, 3)
+	good(t, submitReport(s, "s", "Org1MSP", "r"))
+	for _, args := range [][]string{{"r", " ", "cid", validHash}, {"r", "id", "", "short"}, {"r", "id", "cid", "short"}, {"missing", "id", "cid", validHash}} {
+		bad(t, invokeAs(s, "bad", "Org1MSP", append([]string{"RecordReportNote"}, args...)...))
+	}
+	old := Intervention{"notice", "r", "Org2MSP", "old-cid", validHash, validTs, "old-tx"}
+	key, _ := s.CreateCompositeKey("intervention", []string{"r", "Org2MSP", "notice"})
+	s.State[key], _ = json.Marshal(old)
+	r := invokeAs(s, "legacy", "Org1MSP", "QueryInterventions", "r")
+	good(t, r)
+	var legacy []Intervention
+	if err := json.Unmarshal(r.Payload, &legacy); err != nil {
+		t.Fatal(err)
+	}
+	if len(legacy) != 1 || legacy[0].TxID != "old-tx" {
+		t.Fatal(legacy)
+	}
+}
+
 func TestPaginationAndStatusIndex(t *testing.T) {
 	s := setup(t, 3)
 	for _, id := range []string{"a", "b", "c"} {

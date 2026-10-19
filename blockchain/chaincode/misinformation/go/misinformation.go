@@ -623,7 +623,15 @@ func main() {
 	}
 	var startErr error
 	if address := os.Getenv("CHAINCODE_SERVER_ADDRESS"); address != "" {
-		server := &shim.ChaincodeServer{CCID: os.Getenv("CHAINCODE_ID"), Address: address, CC: chaincode, TLSProps: shim.TLSProperties{Disabled: true}}
+		cert, err := os.ReadFile(os.Getenv("CHAINCODE_TLS_CERT"))
+		if err != nil {
+			panic(fmt.Errorf("chaincode TLS certificate: %w", err))
+		}
+		key, err := os.ReadFile(os.Getenv("CHAINCODE_TLS_KEY"))
+		if err != nil {
+			panic(fmt.Errorf("chaincode TLS key: %w", err))
+		}
+		server := &shim.ChaincodeServer{CCID: os.Getenv("CHAINCODE_ID"), Address: address, CC: chaincode, TLSProps: shim.TLSProperties{Cert: cert, Key: key}}
 		startErr = server.Start()
 	} else {
 		startErr = chaincode.Start()

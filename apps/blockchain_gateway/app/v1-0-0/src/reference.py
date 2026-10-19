@@ -69,7 +69,7 @@ class ReferenceBridge:
 
     def _call(self,fn,a,query):
         l=self.ledger; msp=self.identity.msp;role=self.identity.role;now=l.clock();ts=now.isoformat();tx=uuid.uuid4().hex
-        reads={'QueryReport','QueryAllReports','QueryReportsPage','QueryReportHistory','QueryInterventions','ListRegisteredOrgs','QueryOrgAdmission'}
+        reads={'QueryReport','QueryAllReports','QueryReportsPage','QueryReportHistory','QueryInterventions','QueryReportNotes','ListRegisteredOrgs','QueryOrgAdmission'}
         if query != (fn in reads):raise LedgerError('incorrect operation type')
         if fn=='ListRegisteredOrgs':return l.rows('org:')
         if fn=='QueryReport':return l.get('report:'+a[0])
@@ -87,6 +87,7 @@ class ReferenceBridge:
             l.get('report:'+a[0])
             return [{'tx_id':txid,'timestamp':time,'is_delete':False,'record':json.loads(data)} for data,txid,time in l.conn.execute('SELECT v,tx,ts FROM history WHERE k=? ORDER BY seq',('report:'+a[0],))]
         if fn=='QueryInterventions':l.get('report:'+a[0]);return l.rows('intervention:'+a[0]+':')
+        if fn=='QueryReportNotes':l.get('report:'+a[0]);return l.rows('report_note:'+a[0]+':')
         if fn=='QueryOrgAdmission':return l.get('admission:'+a[0])
         if role not in ('fact_checker','official'):raise LedgerError('role is not permitted')
         if fn=='RequestOrgAdmission':
@@ -132,29 +133,27 @@ class ReferenceBridge:
             eligible=sorted(r['mspid'] for r in l.rows('org:') if r['mspid']!=msp)
             if len(eligible)<2:raise LedgerError('at least two independent reviewers required')
             parent=s.get('supersedes','')
-            if parent:
-                if l.get('report:'+parent)['status']!='FINAL':raise LedgerError('correction must reference current FINAL report')
-                if any(r.get('supersedes')==parent and r['status'] in ('PENDING','UNDER_REVIEW','FINAL') for r in l.rows('report:')):raise LedgerError('correction already active')
+            if parent:raise LedgerError('supersession is retired; append a report note instead')
             r={'schema_version':3,'id':s['id'],'content_hash':s['content_hash'],'claim_cid':s.get('claim_cid',''),
                'inference_label':s['label'],'confidence':s['confidence'],'model_version':s['model_version'],
                'timestamp':ts,'submitted_by':msp,'fact_check_deadline':(now+dt.timedelta(hours=72)).isoformat(),
                'status':'PENDING','fact_checks':[],'eligible_reviewers':eligible,'required_votes':len(eligible)//2+1,'supersedes':parent}
             l.put('report:'+s['id'],r,tx,ts);return None
         r=l.get('report:'+a[0])
-        if fn=='RecordIntervention':
+        if fn=='RecordReportNote':
+            if r['submitted_by']!=msp:raise LedgerError('only the submitting organisation may append notes')
             _,id_,cid,digest=a
-            if not id_ or not cid or len(digest)!=64:raise LedgerError('invalid intervention')
+            if not id_.strip() or len(id_)>256 or not cid.strip() or len(digest)!=64:raise LedgerError('invalid note')
             try:int(digest,16)
             except ValueError:raise LedgerError('invalid digest')
-            key=f'intervention:{a[0]}:{msp}:{id_}'
+            key=f'report_note:{a[0]}:{msp}:{id_}'
             try:old=l.get(key)
             except LedgerError:old=None
             if old:
                 if old['evidence_cid']==cid and old['evidence_hash']==digest:return None
-                raise LedgerError('conflicting intervention')
+                raise LedgerError('conflicting note id',409)
             l.put(key,{'id':id_,'report_id':a[0],'organisation':msp,'evidence_cid':cid,'evidence_hash':digest,'timestamp':ts,'txid':tx},tx,ts);return None
-        if fn in ('FinalizeReport','ExpireReport') and role!='official':raise LedgerError('official required')
-        if fn=='FinalizeReport' and r['status']=='FINAL':return None
+        if fn=='ExpireReport' and role!='official':raise LedgerError('official required')
         if fn=='ExpireReport' and r['status']=='EXPIRED':return None
         if fn=='SubmitFactCheck':
             if len(a)!=4 or a[1] not in ('0','1') or not a[2] or len(a[3])!=64:raise LedgerError('invalid evidence commitment')
@@ -174,15 +173,10 @@ class ReferenceBridge:
             if fn=='SubmitFactCheck':
                 if msp not in r['eligible_reviewers']:raise LedgerError('not an eligible independent reviewer')
                 r['fact_checks'].append({'checker_msp':msp,'outcome':a[1],'evidence_cid':a[2],'evidence_hash':a[3],'timestamp':ts,'txid':tx});r['status']='UNDER_REVIEW'
-            elif fn!='FinalizeReport':raise LedgerError('unsupported operation')
+            else:raise LedgerError('unsupported operation')
             for label in ('0','1'):
                 if sum(v['outcome']==label for v in r['fact_checks'])>=r['required_votes']:
                     r.update(status='FINAL',final_label=label,finalized_by=msp,finalized_at=ts);break
-            if fn=='FinalizeReport' and r['status']!='FINAL':raise LedgerError('strict majority has not agreed')
             if r['status']!='FINAL' and len(r['fact_checks'])==len(r['eligible_reviewers']):r.update(status='DISPUTED',finalized_by=msp,finalized_at=ts)
-        if r.get('supersedes') and r['status']=='FINAL':
-            parent=l.get('report:'+r['supersedes'])
-            if parent['status']!='FINAL':raise LedgerError('predecessor is no longer current')
-            parent.update(status='SUPERSEDED',superseded_by=r['id']);l.put('report:'+parent['id'],parent,tx,ts)
         l.put('report:'+r['id'],r,tx,ts)
         return None

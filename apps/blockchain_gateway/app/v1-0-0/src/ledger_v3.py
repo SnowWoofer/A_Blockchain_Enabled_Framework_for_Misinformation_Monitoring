@@ -17,6 +17,8 @@ class FabricLedger:
         if identity.org not in routes:
             raise LedgerError('no signer configured for organisation',503)
         self.url = routes[identity.org].rstrip('/')
+        if not self.url.startswith('https://'):
+            raise LedgerError('ledger signer requires HTTPS',503)
 
     def call(self, function, *args, query=False):
         data=json.dumps({'function':function,'args':[str(a) for a in args]},allow_nan=False).encode()

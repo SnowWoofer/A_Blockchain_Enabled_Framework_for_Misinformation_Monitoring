@@ -16,10 +16,10 @@ const ROOT = process.env.CRYPTO_PATH || '/crypto';
 const registryPath = process.env.SIGNER_CREDENTIALS_FILE;
 JSON.parse(fs.readFileSync(registryPath, 'utf8')); // fail closed at startup
 const roleUsers = { official: `official${NUM}`, fact_checker: `factchecker${NUM}`, observer: `observer${NUM}` };
-const reads = new Set(['QueryReport', 'QueryAllReports', 'QueryReportsPage', 'QueryReportHistory', 'QueryInterventions', 'ListRegisteredOrgs', 'QueryOrgAdmission']);
+const reads = new Set(['QueryReport', 'QueryAllReports', 'QueryReportsPage', 'QueryReportHistory', 'QueryInterventions', 'QueryReportNotes', 'ListRegisteredOrgs', 'QueryOrgAdmission']);
 const writes = {
-  official: new Set(['RegisterOrg', 'SetFoundingOrgLimit', 'RequestOrgAdmission', 'VoteOnOrgAdmission', 'FinalizeOrgAdmission', 'Submit', 'SubmitReport', 'SubmitFactCheck', 'FinalizeReport', 'ExpireReport', 'RecordIntervention']),
-  fact_checker: new Set(['Submit', 'SubmitReport', 'SubmitFactCheck', 'RecordIntervention']),
+  official: new Set(['RegisterOrg', 'SetFoundingOrgLimit', 'RequestOrgAdmission', 'VoteOnOrgAdmission', 'FinalizeOrgAdmission', 'Submit', 'SubmitReport', 'SubmitFactCheck', 'ExpireReport', 'RecordReportNote']),
+  fact_checker: new Set(['Submit', 'SubmitReport', 'SubmitFactCheck', 'RecordReportNote']),
   observer: new Set(),
 };
 
@@ -92,5 +92,8 @@ for (const route of ['query', 'invoke']) {
   });
 }
 
-app.listen(Number(process.env.PORT || 9100), '0.0.0.0');
+require('node:https').createServer({
+  cert: fs.readFileSync(process.env.TLS_CERT_FILE),
+  key: fs.readFileSync(process.env.TLS_KEY_FILE), minVersion: 'TLSv1.2',
+}, app).listen(Number(process.env.PORT || 9100), '0.0.0.0');
 process.on('SIGTERM', () => { for (const g of gateways.values()) g.close(); grpcClient.close(); process.exit(0); });

@@ -5,7 +5,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     # --- Blockchain gateway (apps/blockchain_gateway) ---
-    blockchain_api_base: str = "http://localhost:8000"
+    blockchain_api_base: str = "https://localhost:18000"
     # Explicit provisioned caller credentials; no predictable bootstrap keys.
     # — the same keys blockchain_gateway itself accepts. A fact-checking org
     # authenticates to this service by presenting its own key directly (as

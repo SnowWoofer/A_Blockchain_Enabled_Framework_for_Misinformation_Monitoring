@@ -85,3 +85,60 @@ def test_permanent_error_has_one_attempt_and_durable_dlq(tmp_path,monkeypatch):
             await worker._submit(payload())
     asyncio.run(run())
     assert len(seen)==1 and json.loads((tmp_path/'dlq').read_text())['msg_id']=='same'
+
+
+def routing_file(tmp_path,org='org3'):
+    import hashlib
+    spec={'credentials':{org:'other-org-test-key-'+'x'*32},'messages':{'same':{
+        'org':org,'source_platform':'test','content_sha256':hashlib.sha256(b'synthetic').hexdigest()}}}
+    path=tmp_path/'routes.json';path.write_text(json.dumps(spec));path.chmod(0o600)
+    return path,spec
+
+
+def test_private_route_selects_actual_credential_and_preserves_it_on_retry(tmp_path,monkeypatch):
+    path,spec=routing_file(tmp_path);seen=[]
+    monkeypatch.setattr(settings,'output_path',str(tmp_path/'dlq'))
+    async def no_sleep(_):pass
+    monkeypatch.setattr(asyncio,'sleep',no_sleep)
+    def handler(request):
+        seen.append((request.headers['X-API-Key'],json.loads(request.content)))
+        return httpx.Response(503 if len(seen)==1 else 200,json={'ok':True})
+    async def run():
+        worker=SubmissionConsumer();worker._load_benchmark_routes(path)
+        async with httpx.AsyncClient(base_url='https://test',headers={'X-API-Key':'org1-default'},transport=httpx.MockTransport(handler)) as worker.http:
+            await worker._submit(payload()|{'submitter_org':'org99'})
+            await worker._submit(payload()|{'msg_id':'unplanned','submitter_org':'org3'})
+    asyncio.run(run())
+    assert [key for key,_ in seen]==[spec['credentials']['org3'],spec['credentials']['org3'],'org1-default']
+    assert seen[0][1]==seen[1][1] and seen[0][1]['content']=='synthetic'
+    assert all('submitter_org' not in body for _,body in seen)
+
+
+@pytest.mark.parametrize('change',[{'content':'tampered'},{'source_platform':'other'},{'msg_id':[]}])
+def test_route_mismatch_is_dead_lettered_without_any_gateway_request(tmp_path,monkeypatch,change):
+    path,_=routing_file(tmp_path);seen=[]
+    monkeypatch.setattr(settings,'output_path',str(tmp_path/'dlq'))
+    def handler(request):seen.append(request);return httpx.Response(200)
+    async def run():
+        worker=SubmissionConsumer();worker._load_benchmark_routes(path)
+        async with httpx.AsyncClient(base_url='https://test',transport=httpx.MockTransport(handler)) as worker.http:
+            await worker._submit(payload()|change)
+    asyncio.run(run())
+    assert not seen and (tmp_path/'dlq').exists()
+
+
+def test_routed_failure_keeps_submitter_hint_but_never_key(tmp_path,monkeypatch):
+    path,spec=routing_file(tmp_path);monkeypatch.setattr(settings,'output_path',str(tmp_path/'dlq'))
+    async def run():
+        worker=SubmissionConsumer();worker._load_benchmark_routes(path)
+        async with httpx.AsyncClient(base_url='https://test',transport=httpx.MockTransport(lambda request:httpx.Response(422))) as worker.http:
+            await worker._submit(payload()|{'_submission_org':'org99'})
+    asyncio.run(run())
+    text=(tmp_path/'dlq').read_text()
+    assert json.loads(text)['_submission_org']=='org3'
+    assert spec['credentials']['org3'] not in text
+
+
+def test_world_readable_routing_file_refused(tmp_path):
+    path,_=routing_file(tmp_path);path.chmod(0o644)
+    with pytest.raises(ValueError,match='private'):SubmissionConsumer()._load_benchmark_routes(path)

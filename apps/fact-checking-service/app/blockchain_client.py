@@ -29,6 +29,8 @@ class BlockchainClient:
     individual fact-checker made the call is known here, not there."""
 
     def __init__(self):
+        if not settings.blockchain_api_base.startswith('https://'):
+            raise ValueError('Blockchain API requires HTTPS')
         self.http = httpx.AsyncClient(base_url=settings.blockchain_api_base, timeout=20.0)
 
     async def aclose(self):
@@ -125,9 +127,6 @@ class BlockchainClient:
             "POST", org, f"/api/reports/{report_id}/fact-check",
             json={"outcome": outcome, "reasoning": reasoning, "support": support},
         )
-
-    async def finalize(self, org: str, report_id: str) -> Dict[str, Any]:
-        return await self._request("POST", org, f"/api/reports/{report_id}/finalize")
 
 
 CLIENT = BlockchainClient()

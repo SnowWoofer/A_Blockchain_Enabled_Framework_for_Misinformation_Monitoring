@@ -16,6 +16,7 @@ import uuid
 sys.path.insert(0,str(Path(__file__).resolve().parents[2]))
 from blockchain.scripts.deployment import ROOT, runtime_path, compose, write, source_manifest
 from blockchain.scripts.run_support import RunLog, benchmark_lock
+from blockchain.scripts.transport import configure_client
 
 IMAGE='misinfo-caliper:0.7.1-v3'
 
@@ -36,7 +37,7 @@ def benchmark_config(a,run_id):
         rounds.append({'label':operation,'txNumber':a.count,
             'rateControl':{'type':'workload/count-fixed-load.js','opts':{'transactionLoad':a.load,'startTps':25}},
             'workload':{'module':'workload/'+module,'arguments':{'label':operation,'runId':run_id,
-                'transactionCount':a.count,'workerCount':a.workers,'rejectWrites':a.reject_writes}}})
+                'transactionCount':a.count,'workerCount':a.workers}}})
     return {'test':{'name':'counted-writes-then-reads','description':'Counted committed Submit write attempts, then full-scan read attempts; no REST/IPFS/AI.',
         'workers':{'number':a.workers},'rounds':rounds}}
 
@@ -184,7 +185,6 @@ def parse_args(argv=None):
     p.add_argument('--name',default='development',help='existing deployment name')
     p.add_argument('--verbose',action='store_true',help='also stream detailed logs to the terminal')
     p.add_argument('--rebuild',action='store_true',help=argparse.SUPPRESS)
-    p.add_argument('--reject-writes',action='store_true',help=argparse.SUPPRESS)
     argv=list(sys.argv[1:] if argv is None else argv)
     obsolete={'--duration','--loads','--fixtures','--repeats'}
     if any(arg.split('=',1)[0] in obsolete for arg in argv):
@@ -203,6 +203,7 @@ def main():
     if not (runtime/'experiment.json').is_file():p.error('deployment not found; run ./startup.sh first')
     cfg=json.loads((runtime/'experiment.json').read_text())
     if cfg['backend']!='fabric':p.error('Caliper requires a Fabric deployment')
+    configure_client(runtime,cfg)
     with RunLog(ROOT,a.name,'caliper',a.verbose) as log:
         try:
             with benchmark_lock(runtime):return run(a,runtime,cfg,log)

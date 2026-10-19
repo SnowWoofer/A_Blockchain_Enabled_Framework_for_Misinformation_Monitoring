@@ -1,15 +1,18 @@
 import asyncio
 import base64
 import contextlib
+import hashlib
 import json
 import logging
 import os
+from pathlib import Path
+import re
 import time
 
 import httpx
 from aiokafka import AIOKafkaConsumer
 
-from .config import settings
+from .config import settings, kafka_tls_options
 from .metrics import CLAIMS_REGISTERED_TOTAL, CLAIMS_REGISTRATION_FAILED_TOTAL, LAST_WRITE_TIMESTAMP
 
 logger = logging.getLogger(__name__)
@@ -32,8 +35,39 @@ class SubmissionConsumer:
         self.consumer: AIOKafkaConsumer | None = None
         self.http: httpx.AsyncClient | None = None
         self._task: asyncio.Task | None = None
+        self._benchmark_keys = {}
+        self._benchmark_routes = {}
+
+    def _load_benchmark_routes(self, path):
+        if Path(path).stat().st_mode & 0o077:
+            raise ValueError('benchmark routing file must be private (mode 600)')
+        spec=json.loads(Path(path).read_text())
+        keys=spec['credentials'];routes=spec['messages']
+        if not isinstance(keys,dict) or not isinstance(routes,dict):
+            raise ValueError('invalid benchmark routing configuration')
+        for org,key in keys.items():
+            if not re.fullmatch(r'org[1-9][0-9]*',org) or not isinstance(key,str) or len(key)<32:
+                raise ValueError('invalid benchmark organisation credential')
+        for msg_id,route in routes.items():
+            if (not isinstance(msg_id,str) or not 1<=len(msg_id)<=256 or not isinstance(route,dict)
+                or not isinstance(route.get('org'),str) or route['org'] not in keys or route.get('source_platform')!='test'
+                or not re.fullmatch(r'[0-9a-f]{64}',str(route.get('content_sha256','')))):
+                raise ValueError('invalid benchmark message route')
+        self._benchmark_keys=keys;self._benchmark_routes=routes
+
+    def _submission_headers(self,payload):
+        if not isinstance(payload['msg_id'],str):raise ValueError('msg_id must be a string')
+        route=self._benchmark_routes.get(payload['msg_id'])
+        if route is None:return {} # normal configured identity
+        if (not isinstance(payload['content'],str) or payload['source_platform']!=route['source_platform']
+            or hashlib.sha256(payload['content'].encode()).hexdigest()!=route['content_sha256']):
+            raise ValueError('message does not match its private benchmark route')
+        return {'X-API-Key':self._benchmark_keys[route['org']]}
 
     async def start(self):
+        if not settings.blockchain_api_base.startswith('https://'):
+            raise ValueError('Blockchain API requires HTTPS')
+        if settings.benchmark_routes_file:self._load_benchmark_routes(settings.benchmark_routes_file)
         os.makedirs(os.path.dirname(settings.output_path) or ".", exist_ok=True)
         self.http = httpx.AsyncClient(
             base_url=settings.blockchain_api_base,
@@ -43,6 +77,7 @@ class SubmissionConsumer:
         self.consumer = AIOKafkaConsumer(
             settings.kafka_input_topic,
             bootstrap_servers=settings.kafka_bootstrap_servers,
+            **kafka_tls_options(),
             group_id=settings.kafka_consumer_group,
             enable_auto_commit=False,
             auto_offset_reset='earliest',
@@ -101,6 +136,11 @@ class SubmissionConsumer:
             self._dead_letter(payload,'flagged must be a boolean')
             CLAIMS_REGISTRATION_FAILED_TOTAL.inc()
             return
+        try:headers=self._submission_headers(payload)
+        except ValueError as exc:
+            self._dead_letter(payload,str(exc))
+            CLAIMS_REGISTRATION_FAILED_TOTAL.inc()
+            return
         body = {
             "msg_id": payload["msg_id"],
             "label": "1" if payload.get("flagged") else "0",
@@ -113,7 +153,7 @@ class SubmissionConsumer:
         }
         for attempt in range(3):
             try:
-                resp = await self.http.post("/api/reports", json=body)
+                resp = await self.http.post("/api/reports", json=body,headers=headers)
                 resp.raise_for_status()
                 break
             except httpx.HTTPError as exc:
@@ -129,6 +169,9 @@ class SubmissionConsumer:
 
     def _dead_letter(self, payload: dict, error: str):
         logger.error("Blockchain submission failed, writing to dead-letter file: %s", error)
+        msg_id=payload.get('msg_id')
+        route=self._benchmark_routes.get(msg_id) if isinstance(msg_id,str) else None
+        if route:payload=payload | {'_submission_org':route['org']}
         with open(settings.output_path, "a", encoding='utf-8') as f:
             f.write(json.dumps({**payload, "_error": error,'_kafka':getattr(self,'_kafka_meta',None)}) + "\n")
             f.flush()

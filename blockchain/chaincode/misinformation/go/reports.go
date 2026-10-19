@@ -162,25 +162,9 @@ func (c *MisinformationContract) submit(ctx contractapi.TransactionContextInterf
 		FactChecks: []FactCheck{}, EligibleReviewers: eligible, RequiredVotes: len(eligible)/2 + 1,
 		ClaimCID: sub.ClaimCID, Supersedes: sub.Supersedes}
 	if sub.Supersedes != "" {
-		parent, err := c.QueryReport(ctx, sub.Supersedes)
-		if err != nil {
-			return err
-		}
-		if parent.Status != statusFinal {
-			return fmt.Errorf("corrections must reference a current FINAL report")
-		}
-		lock, _ := ctx.GetStub().CreateCompositeKey("correction", []string{sub.Supersedes})
-		active, err := ctx.GetStub().GetState(lock)
-		if err != nil {
-			return err
-		}
-		if active != nil {
-			return fmt.Errorf("a correction is already active for this report")
-		}
-		if err := ctx.GetStub().PutState(lock, []byte(sub.ReportID)); err != nil {
-			return err
-		}
+		return fmt.Errorf("supersession is retired; append a report note instead")
 	}
+
 	return c.putReport(ctx, rec, "")
 }
 
@@ -251,9 +235,6 @@ func (c *MisinformationContract) SubmitFactCheck(ctx contractapi.TransactionCont
 		Timestamp: deterministicTimestamp(ctx)})
 	rec.Status = statusUnderReview
 	c.decide(rec, msp, deterministicTimestamp(ctx))
-	if err := c.finishCorrection(ctx, rec); err != nil {
-		return err
-	}
 	return c.putReport(ctx, rec, old)
 }
 
@@ -278,54 +259,6 @@ func (c *MisinformationContract) decide(rec *ReportRecord, actor, timestamp stri
 		rec.Status = statusDisputed
 		rec.FinalizedBy, rec.FinalizedAt = actor, timestamp
 	}
-}
-
-func (c *MisinformationContract) finishCorrection(ctx contractapi.TransactionContextInterface, rec *ReportRecord) error {
-	if rec.Supersedes == "" {
-		return nil
-	}
-	if rec.Status == statusFinal {
-		parent, err := c.QueryReport(ctx, rec.Supersedes)
-		if err != nil {
-			return err
-		}
-		if parent.Status != statusFinal {
-			return fmt.Errorf("predecessor is no longer current")
-		}
-		parent.Status, parent.SupersededBy = statusSuperseded, rec.ReportID
-		return c.putReport(ctx, parent, statusFinal)
-	}
-	if rec.Status == statusDisputed || rec.Status == statusExpired {
-		key, _ := ctx.GetStub().CreateCompositeKey("correction", []string{rec.Supersedes})
-		return ctx.GetStub().DelState(key)
-	}
-	return nil
-}
-
-func (c *MisinformationContract) FinalizeReport(ctx contractapi.TransactionContextInterface, reportID string) error {
-	msp, err := c.writer(ctx, "official")
-	if err != nil {
-		return err
-	}
-	rec, err := c.QueryReport(ctx, reportID)
-	if err != nil {
-		return err
-	}
-	if rec.SchemaVersion == 3 && rec.Status == statusFinal {
-		return nil
-	}
-	if err := validateOpen(ctx, rec); err != nil {
-		return err
-	}
-	old := rec.Status
-	c.decide(rec, msp, deterministicTimestamp(ctx))
-	if rec.Status != statusFinal {
-		return fmt.Errorf("strict majority of eligible reviewers has not agreed")
-	}
-	if err := c.finishCorrection(ctx, rec); err != nil {
-		return err
-	}
-	return c.putReport(ctx, rec, old)
 }
 
 func (c *MisinformationContract) ExpireReport(ctx contractapi.TransactionContextInterface, reportID string) error {
@@ -356,9 +289,6 @@ func (c *MisinformationContract) ExpireReport(ctx contractapi.TransactionContext
 	}
 	old := rec.Status
 	rec.Status, rec.FinalizedBy, rec.FinalizedAt = statusExpired, msp, now.Format(time.RFC3339Nano)
-	if err := c.finishCorrection(ctx, rec); err != nil {
-		return err
-	}
 	return c.putReport(ctx, rec, old)
 }
 
@@ -372,22 +302,30 @@ type Intervention struct {
 	TxID         string `json:"txid"`
 }
 
-func (c *MisinformationContract) RecordIntervention(ctx contractapi.TransactionContextInterface,
+// ReportNote commits immutable evidence separately from the report state.
+// Intervention is retained as the legacy read shape for historical evidence.
+type ReportNote = Intervention
+
+func (c *MisinformationContract) RecordReportNote(ctx contractapi.TransactionContextInterface,
 	reportID, id, cid, hash string) error {
 	msp, err := c.writer(ctx, "official", "fact_checker")
 	if err != nil {
 		return err
 	}
-	if _, err := c.QueryReport(ctx, reportID); err != nil {
+	rec, err := c.QueryReport(ctx, reportID)
+	if err != nil {
 		return err
 	}
-	if strings.TrimSpace(id) == "" || strings.TrimSpace(cid) == "" {
-		return fmt.Errorf("id and evidence_cid required")
+	if rec.SubmittedBy != msp {
+		return fmt.Errorf("only the submitting organisation may append notes")
+	}
+	if strings.TrimSpace(id) == "" || len([]rune(id)) > 256 || strings.TrimSpace(cid) == "" {
+		return fmt.Errorf("note id (1..256 characters) and evidence_cid required")
 	}
 	if err := checkDigest(hash); err != nil {
 		return err
 	}
-	key, err := ctx.GetStub().CreateCompositeKey("intervention", []string{reportID, msp, id})
+	key, err := ctx.GetStub().CreateCompositeKey("report_note", []string{reportID, msp, id})
 	if err != nil {
 		return err
 	}
@@ -396,20 +334,46 @@ func (c *MisinformationContract) RecordIntervention(ctx contractapi.TransactionC
 		return err
 	}
 	if raw != nil {
-		var prev Intervention
-		if err := json.Unmarshal(raw, &prev); err != nil {
+		var previous ReportNote
+		if err := json.Unmarshal(raw, &previous); err != nil {
 			return err
 		}
-		if prev.EvidenceCID == cid && prev.EvidenceHash == hash {
+		if previous.EvidenceCID == cid && previous.EvidenceHash == hash {
 			return nil
 		}
-		return fmt.Errorf("conflicting intervention id")
+		return fmt.Errorf("conflicting note id")
 	}
-	data, err := json.Marshal(Intervention{id, reportID, msp, cid, hash, deterministicTimestamp(ctx), ctx.GetStub().GetTxID()})
+	row := ReportNote{id, reportID, msp, cid, hash, deterministicTimestamp(ctx), ctx.GetStub().GetTxID()}
+	data, err := json.Marshal(row)
 	if err != nil {
 		return err
 	}
 	return ctx.GetStub().PutState(key, data)
+}
+
+func (c *MisinformationContract) QueryReportNotes(ctx contractapi.TransactionContextInterface,
+	reportID string) ([]*ReportNote, error) {
+	if _, err := c.QueryReport(ctx, reportID); err != nil {
+		return nil, err
+	}
+	it, err := ctx.GetStub().GetStateByPartialCompositeKey("report_note", []string{reportID})
+	if err != nil {
+		return nil, err
+	}
+	defer it.Close()
+	rows := []*ReportNote{}
+	for it.HasNext() {
+		kv, err := it.Next()
+		if err != nil {
+			return nil, err
+		}
+		var row ReportNote
+		if err := json.Unmarshal(kv.Value, &row); err != nil {
+			return nil, err
+		}
+		rows = append(rows, &row)
+	}
+	return rows, nil
 }
 
 func (c *MisinformationContract) QueryInterventions(ctx contractapi.TransactionContextInterface, reportID string) ([]*Intervention, error) {

@@ -9,15 +9,20 @@ import os
 from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from blockchain.scripts.deployment import http
+from blockchain.scripts.deployment import http,runtime_path
+from blockchain.scripts.transport import configure_client,kafka_options
 
 
 def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--input',required=True);p.add_argument('--output',required=True)
     p.add_argument('--stage',choices=['scored','raw'],default='scored')
-    p.add_argument('--credentials');p.add_argument('--org',default='org1');p.add_argument('--api',default='http://127.0.0.1:18000')
-    p.add_argument('--broker',default='localhost:18004');p.add_argument('--topic',default='claims.raw')
+    p.add_argument('--name',default='development');p.add_argument('--credentials');p.add_argument('--org',default='org1');p.add_argument('--api')
+    p.add_argument('--broker');p.add_argument('--topic',default='claims.raw')
     a=p.parse_args();key=None
+    runtime=runtime_path(a.name);cfg=json.loads((runtime/'experiment.json').read_text())
+    base=configure_client(runtime,cfg);tls=kafka_options(runtime)
+    a.api=a.api or base;a.broker=a.broker or f'localhost:{cfg["port_base"]+4}'
+    if not a.api.startswith('https://'):p.error('--api must use HTTPS')
     if a.stage=='scored':
         if not a.credentials:p.error('scored replay requires --credentials')
         creds=json.loads(Path(a.credentials).read_text());key=next(r['api_key'] for r in creds if r['org']==a.org and r['role']=='fact_checker')
@@ -30,7 +35,7 @@ def main():
                     raw=row.get('payload')
                     if raw is None:raw=json.loads(base64.b64decode(row['raw_base64'],validate=True))
                     if not isinstance(raw,dict) or not raw.get('msg_id'):raise ValueError('invalid raw claim requires manual correction in a new input file')
-                    asyncio.run(publish(a.broker,a.topic,raw))
+                    asyncio.run(publish(a.broker,a.topic,raw,tls))
                     entry={'line':number,'success':True,'msg_id':raw['msg_id']}
                 else:
                     if not isinstance(row.get('flagged'),bool):raise ValueError('flagged must be a boolean')
@@ -42,9 +47,9 @@ def main():
     return int(failed>0)
 
 
-async def publish(broker,topic,payload):
+async def publish(broker,topic,payload,tls):
     from aiokafka import AIOKafkaProducer
-    producer=AIOKafkaProducer(bootstrap_servers=broker,enable_idempotence=True)
+    producer=AIOKafkaProducer(bootstrap_servers=broker,enable_idempotence=True,**tls)
     await producer.start()
     try:await producer.send_and_wait(topic,json.dumps(payload).encode())
     finally:await producer.stop()

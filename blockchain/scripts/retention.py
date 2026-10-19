@@ -17,7 +17,7 @@ from objects import OffChainStore
 options=json.loads(sys.argv[1]);store=OffChainStore(os.environ['OFFCHAIN_DB'])
 rows=store.retention_candidates();events=[]
 def request(host,path):
-    req=urllib.request.Request('http://'+host+':9101'+path,data=b'',method='POST',headers={'X-Service-Key':os.environ['IPFS_SERVICE_KEY']})
+    req=urllib.request.Request('https://'+host+':9101'+path,data=b'',method='POST',headers={'X-Service-Key':os.environ['IPFS_SERVICE_KEY']})
     with urllib.request.urlopen(req,timeout=65) as r:return json.load(r)
 for row in rows:
     event={'cid':row['cid'],'kind':row['kind'],'retain_until':row['retain_until'],'executed':False}

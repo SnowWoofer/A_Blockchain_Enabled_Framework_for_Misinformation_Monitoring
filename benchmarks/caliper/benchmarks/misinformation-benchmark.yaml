@@ -18,7 +18,6 @@ test:
         runId: GENERATED-PER-RUN
         transactionCount: 1000
         workerCount: 2
-        rejectWrites: false
   - label: read
     txNumber: 1000
     rateControl:
@@ -33,4 +32,3 @@ test:
         runId: GENERATED-PER-RUN
         transactionCount: 1000
         workerCount: 2
-        rejectWrites: false

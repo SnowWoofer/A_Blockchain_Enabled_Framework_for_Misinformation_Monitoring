@@ -13,10 +13,10 @@ import uuid
 from contextlib import asynccontextmanager
 
 from aiokafka import AIOKafkaProducer
-from fastapi import FastAPI
-from pydantic import BaseModel, Field
+from fastapi import FastAPI,HTTPException
+from pydantic import BaseModel, Field,model_validator
 
-from .config import settings
+from .config import settings, kafka_tls_options
 
 logging.basicConfig(level=settings.log_level)
 logger = logging.getLogger(__name__)
@@ -28,6 +28,7 @@ state: dict = {}
 async def lifespan(app: FastAPI):
     producer = AIOKafkaProducer(
         bootstrap_servers=settings.kafka_bootstrap_servers,
+        **kafka_tls_options(),
         value_serializer=lambda v: json.dumps(v).encode("utf-8"),
     )
     await producer.start()
@@ -43,6 +44,15 @@ app = FastAPI(title="Claim Ingest Worker (dummy/testing)", lifespan=lifespan)
 
 class IngestRequest(BaseModel):
     claims: list[str] = Field(..., min_length=1)
+    msg_ids: list[str] | None = None
+
+    @model_validator(mode='after')
+    def validate_ids(self):
+        if self.msg_ids is not None and (len(self.msg_ids)!=len(self.claims)
+            or len(set(self.msg_ids))!=len(self.msg_ids)
+            or any(not 1<=len(value)<=256 for value in self.msg_ids)):
+            raise ValueError('msg_ids must be unique, 1..256 characters, and match the claims count')
+        return self
 
 
 @app.get("/health")
@@ -52,10 +62,12 @@ def health():
 
 @app.post("/ingest")
 async def ingest(body: IngestRequest):
+    if body.msg_ids is not None and not settings.benchmark_message_ids:
+        raise HTTPException(400,'client message IDs are enabled only for benchmark runs')
     producer: AIOKafkaProducer = state["producer"]
     msg_ids = []
-    for text in body.claims:
-        msg_id = f"test_{uuid.uuid4().hex}"
+    for index,text in enumerate(body.claims):
+        msg_id = body.msg_ids[index] if body.msg_ids is not None else f"test_{uuid.uuid4().hex}"
         message = {
             "msg_id": msg_id,
             "source_platform": settings.source_platform,

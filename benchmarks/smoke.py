@@ -8,6 +8,7 @@ import uuid
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from blockchain.scripts.deployment import ROOT,RUNTIME,http,write,runtime_path
+from blockchain.scripts.transport import configure_client
 
 
 from benchmarks.review import review_to_majority
@@ -17,7 +18,7 @@ def smoke(name):
     runtime=runtime_path(name);cfg=json.loads((runtime/'experiment.json').read_text())
     credentials=json.loads((runtime/'credentials.json').read_text())
     keys={(r['org'],r['role']):r['api_key'] for r in credentials}
-    base=f'http://127.0.0.1:{cfg["port_base"]}'
+    base=configure_client(runtime,cfg)
     key=lambda org='org1',role='fact_checker':keys[org,role]
     id_=uuid.uuid4().hex
     payload={'msg_id':'smoke-'+id_,'label':'1','confidence':.9,'model_version':'synthetic-smoke-v3',
@@ -39,13 +40,19 @@ def smoke(name):
         try:http(path+'/fact-check',{'outcome':'1','reasoning':'test','support':[]},key(org,role))
         except RuntimeError:rejected.append(org+':'+role)
         else:raise AssertionError('unauthorised/self vote succeeded')
-    correction=http(path+'/corrections',payload|{'msg_id':'correction-'+id_,'content':'Synthetic corrected claim.','label':'0'},key())
-    newer=base+'/api/reports/'+correction['id']
-    review_to_majority(newer,http(newer+'/chain',key=key()),reviewers,'0','Synthetic correction assessment')
-    old=http(path+'/chain',key=key());assert old['status']=='SUPERSEDED' and old['final_label']=='1'
-    http(newer+'/interventions',{'intervention_id':'notice','action':'Publish synthetic correction','outcome':'Recorded for demonstration','support':[]},key('org2'))
-    assert http(newer+'/verify',key=key())['verified']
-    result={'configuration':cfg,'report_id':report_id,'correction_id':correction['id'],
+    original=http(path+'/chain',key=key())
+    note={'note_id':'notice','text':'Synthetic clarification/action outcome recorded for demonstration only.','support':[]}
+    first=http(path+'/notes',note,key())
+    assert http(path+'/notes',note,key('org1','official'))==first
+    listed=http(path+'/notes',key=key('org2','observer'))
+    assert len(listed)==1 and listed[0]['verified'] and listed[0]['organisation']=='Org1MSP'
+    try:http(path+'/notes',note|{'note_id':'forbidden'},key('org2'))
+    except RuntimeError as exc:
+        assert 'HTTP 403' in str(exc);rejected.append('org2:note_on_other_org_report')
+    else:raise AssertionError('other organisation appended a note')
+    assert http(path+'/chain',key=key())==original
+    assert http(path+'/verify',key=key())['verified']
+    result={'configuration':cfg,'report_id':report_id,'note':first,
         'timeline':timeline,'rejected_operations':rejected,'verification':verification,
         'history':http(path+'/history',key=key()),'result':'passed',
         'note':'Scripted reviewer operations; not human review time, AI accuracy or perceived trust.'}

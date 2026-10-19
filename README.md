@@ -5,7 +5,8 @@ commitments on Hyperledger Fabric. This is a single-host research prototype.
 
 **Normal use has three commands:** initialise your chosen database/organisation
 count, then run either the feed benchmark or the Caliper benchmark. Run the two
-benchmarks sequentially.
+benchmarks sequentially. For tonight’s functional checks and matched overnight
+commands, see [the short run guide](info/ArtyIndo/TONIGHT.md).
 
 ## 1. Install once
 
@@ -56,10 +57,15 @@ list of options. Names use lowercase letters, digits and hyphens, start with a
 letter and contain at most 40 characters. All normal commands use `development`
 unless you supply another `--name`.
 
+**TLS and notes update:** older saved deployments use an older chaincode package
+and cannot be upgraded by restarting. Their data is retained. To reuse your normal
+`development` name, follow **Reset an old test deployment** below. You do not need
+a special “freeze” deployment; after your checks, save the source to GitHub as usual.
+
 Startup provisions Fabric/IPFS/API services, then tests a claim, majority reviews,
-a correction, an intervention and evidence verification. Wait for the final
+submitter-only notes, retry/permission checks and evidence verification. Wait for the final
 `Ready. Stop this deployment with: ...` message. The API binds to
-`http://127.0.0.1:18000` by default.
+`https://127.0.0.1:18000` by default.
 
 Reusing a name keeps that deployment's database, organisation count, keys and
 volumes. Explicitly conflicting arguments are rejected. Restart it with
@@ -69,10 +75,81 @@ volumes. Explicitly conflicting arguments are rejected. Restart it with
 ./startup.sh --name couch-five --database couchdb --orgs 5
 ```
 
-(Above is not needed) Stop the other deployment first if both would use the same ports. Advanced users
+Stop the other deployment first if both would use the same ports. Advanced users
 can select another port base with `blockchain/scripts/deployment.py up --port-base`.
 The benchmarks read their endpoints and configuration from the named deployment.
 The root Docker Compose file is not the normal startup entry point.
+
+### Reset an old test deployment
+
+Run this only when you intend to discard **development's test ledger, stored
+objects and identities**. Source code and saved benchmark results remain. Do not
+use this to troubleshoot a deployment whose history you need to keep.
+
+```bash
+(
+  set -e
+  # Stop this deployment's Explorer if it was configured:
+  if [ -f blockchain/runtime/development/explorer/state.json ]; then
+    ./blockchain/explorer/manage.sh down --name development
+  fi
+  # Remove only development's containers and persistent test volumes:
+  docker compose -p misinfo-v3-development -f blockchain/runtime/development/compose.json down --volumes --remove-orphans
+  # Remove its old generated configuration/identities after Compose succeeds:
+  rm -rf -- blockchain/runtime/development
+  # Provision the current contract and TLS profile:
+  ./startup.sh --database leveldb --orgs 3
+)
+```
+
+If `development` is stored under `experiments/runtime/`, use that path in both
+commands instead. The block stops if a command fails. Never
+remove a runtime directory before removing its Compose volumes: losing the
+identities while retaining the ledger leaves mismatched state.
+
+### Transport encryption and trust
+
+Normal startup generates a private deployment CA and separate service keys.
+The API, internal signers, evidence bridges and host feed-worker HTTP listeners
+use HTTPS. Kafka broker/controller/client connections use TLS; Kafka clients must
+present a certificate. Fabric peer/orderer and external chaincode connections use
+TLS. Python/Node clients verify the certificate chain and hostname. Keys are not
+committed; the transport CA private key stays on the host.
+
+For a direct API check:
+
+```bash
+curl --cacert blockchain/runtime/development/transport/ca.crt https://127.0.0.1:18000/health
+```
+
+Use this same public CA with API clients. A browser needs to trust that CA to use
+`https://127.0.0.1:18000/docs` without a certificate warning. Do not disable
+certificate verification in benchmarks. Existing helper scripts load the selected
+deployment's CA automatically. Certificate lifetimes: service certificates 180
+days, CA 365 days; this prototype does not automate certificate rotation.
+
+Local exceptions are explicit: Kubo's management HTTP API is bound to loopback
+inside its IPFS container's shared namespace with the HTTPS bridge. CouchDB HTTP
+is bound to loopback inside its peer's shared namespace. Those RPCs do not cross
+a Docker bridge. IPFS swarm transfers use libp2p's secure transport. Explorer is
+an optional **loopback HTTP viewer**, with a TLS Fabric connection; stop it during
+measurements. This is not a claim that every local RPC uses TLS. The optional
+fact-checking compatibility wrapper is not launched or tested by this profile.
+
+TLS decrypts data at the receiving process. It does **not** encrypt subsequent
+disk writes: IPFS content, Kafka logs and dead-letter payloads remain unencrypted.
+The API SQLite index stores unencrypted metadata (also payloads in the optional
+SQLite development mode). Fabric state/history and runtime private keys also
+remain readable to someone with the required filesystem or volume access.
+Application-level encryption at rest is not implemented; deployment operators
+must provide encrypted host/volume storage if that protection is required.
+
+The existing `credentials.py` tool revokes a provisioned API key at the API and
+signer; this is different from withdrawing a report or revoking a Fabric
+certificate through a channel MSP CRL. Report `/verify` checks evidence integrity,
+not real-world truth. One Raft orderer remains a single point of ordering failure;
+this is a documented single-host prototype limitation.
+
 
 ## 3. Benchmark 1: full feed workflow
 
@@ -84,7 +161,7 @@ repair/.venv/bin/python benchmarks/pipeline.py --samples 100 --seed 100
 
 This runs the actual ingestion → Kafka → CPU INT8 AI → API/IPFS → Fabric path,
 then applies scripted majority reviews and verifies evidence. It is not a separate
-HTTP-only load test. HTTP remains part of the application's normal integration.
+HTTPS-only load test. HTTPS remains part of the application's normal integration.
 
 - `--samples 6` uses the same balanced six examples as the earlier integration test.
 - Other positive counts select exactly that many unique records with seed 100 by
@@ -102,6 +179,63 @@ shows stages and periodic sample counts. A successful run ends with **`Feed PASS
 Startup, sample timings, verification timings and recovery probes are recorded
 separately. Scripted votes follow synthetic labels; they do not measure human
 review time or real-world truth.
+
+To submit some samples as other provisioned organisations, use:
+
+```bash
+repair/.venv/bin/python benchmarks/pipeline.py --samples 100 --seed 100 --random 30 --rejection-percent 20
+```
+
+`--random 30` assigns exactly 30 of the 100 samples to randomly selected
+organisations other than Org1; the remaining 70 use Org1. Zero (the default)
+uses only Org1; 100 uses only other organisations. Any provisioned organisation
+count is supported. Percentages round to whole samples, with halves rounded up.
+Selection is seeded independently of dataset selection and review-label overturns.
+Random choice does not guarantee every other organisation appears in a small run.
+
+Every sample follows the same ingestion/Kafka/AI path with its original text.
+The submission worker uses the assigned organisation's actual provisioned
+credential from a private run-scoped routing file; Kafka messages cannot select
+an organisation credential. Reports retain organisation attribution, and the
+actual submitting organisation is excluded from the frozen reviewer list.
+These are scripted organisation submissions, not evidence of human participation.
+
+`submission-plan.json` records the chosen organisations without credentials.
+Each trace records `submitted_by`, `proposed_label`, `final_label` and verification;
+`summary.submissions_by_org` records actual committed sample counts per MSP.
+The private routing file is under the runtime worker-log directory and must not
+be published. It is only enabled by the benchmark when other organisations are
+assigned. Ingestion's optional planned message IDs are disabled in normal use.
+Backlog/invalid-message recovery probes continue using Org1 outside sample counts.
+If a routed submission fails, its dead letter records `_submission_org`; retain
+that submitting identity when replaying it.
+
+To demonstrate the majority **overturning the AI proposal**, use:
+
+```bash
+repair/.venv/bin/python benchmarks/pipeline.py --samples 100 --seed 100 --rejection-percent 20
+```
+
+This scripts 20 of the 100 reports to receive majority votes opposite to their
+actual AI labels. The remaining 80 receive votes matching their AI labels. Every
+report and its attributed votes stay committed; both outcomes have status `FINAL`.
+This is a controlled workflow demonstration, not a classifier accuracy result or
+a failed-transaction benchmark. It does not change model predictions or input data.
+
+- `--rejection-percent P` accepts 0 through 100, including decimals. Zero upholds
+  every AI label; 100 overturns every AI label.
+- Counts round to the nearest whole sample, with halves rounded up. For six samples,
+  20% means one overturn (16.67% achieved); 50% means exactly three.
+- The same sample count, seed and percentage reproduce the planned sample positions.
+- **Omitting the argument preserves the existing dataset-label review behaviour.**
+  Its actual AI-overturn percentage depends on the model's predictions.
+- `review-plan.json` saves the plan; `result.json` records the requested/actual
+  percentage and upheld/overturned totals. Each trace keeps the original proposal,
+  final label and verification result. Dataset labels remain in the unchanged input
+  dataset, linked by the saved source fingerprint. All successful verified
+  workflows count as successes, including those overturning an AI label.
+- Keep this setting identical across comparative feed runs. Label controlled
+  simulation results separately from the default dataset-label runs.
 
 The run also checks pre-start backlog delivery, invalid-message dead letters and
 subsequent valid-message delivery outside the sample-performance measurements.
@@ -186,6 +320,45 @@ failed acknowledgement can also change ledger size. Historical results remain in
 
 Caliper mounts only Org1's official client MSP and the gateway peer's TLS CA,
 not Fabric CA/admin keys. No host Node/npm installation is needed for this runner.
+
+The TLS deployment profile follows [Fabric external chaincode TLS](https://hyperledger-fabric.readthedocs.io/en/latest/cc_service.html)
+and the [Kafka 3.9 SSL configuration](https://kafka.apache.org/39/configuration/broker-configs/).
+
+
+### Matched overnight database measurements
+
+First finish the short feed/Caliper checks above. Stop Explorer and other named
+test deployments before timing. The block below creates three independent repeats
+per database, with three organisations, TLS and identical settings. Keep the
+source/configuration fixed, the laptop plugged in, Windows sleep disabled for the
+run, and the terminal open. It is a manual command block, not an automatic startup job.
+Use **new names**: retained reports from an earlier attempt change full-scan cost.
+
+```bash
+repair/.venv/bin/python blockchain/scripts/deployment.py down --name development
+(
+  set -euo pipefail
+  for repeat in 1 2 3; do
+    for database in leveldb couchdb; do
+      name="night-${database}-r${repeat}"
+      ./startup.sh --name "$name" --database "$database" --orgs 3
+      benchmarks/caliper/run-caliper.sh --name "$name" --count 1000 --workers 2 --load 100
+      repair/.venv/bin/python benchmarks/pipeline.py --name "$name" --samples 100 --seed 100
+      repair/.venv/bin/python blockchain/scripts/deployment.py down --name "$name"
+    done
+  done
+)
+```
+
+Caliper runs before the feed so every repeat starts with the same startup-only
+report count. A failed command stops the block and retains its logs/state for
+inspection. Do not silently resume a partially written ledger as a fresh repeat.
+Record the fixed LevelDB-then-CouchDB order, hardware/WSL allocation, initial
+ledger counts and failures. Summarise all repeats with variation; these are
+observed results under chosen settings, not a maximum-capacity search. For an
+optional separate full-dataset demonstration, `--samples 0` currently processes
+1,401 rows sequentially and can take hours. Do not combine plaintext historical
+results with new TLS measurements.
 
 ## 5. Inspect the ledger with Hyperledger Explorer
 
@@ -272,16 +445,54 @@ retained. Do not delete volumes as a first troubleshooting step.
 ```bash
 repair/.venv/bin/python -m pytest -q -p no:cacheprovider benchmarks/tests
 repair/.venv/bin/python -m pytest -q -p no:cacheprovider blockchain/explorer/tests
-repair/.venv/bin/python benchmarks/campaign.py --phase regression
+repair/.venv/bin/python -c 'from benchmarks.regression import main; raise SystemExit(main())'
 ```
 
 Contract/API/worker tests and real Fabric/Kafka checks measure different things.
-`benchmarks/matrix.py` remains the historical custom direct-SDK runner; it is not
-Caliper and it does not run the feed. Historical results must retain their original
-methodology labels. The two normal benchmark paths above replace it in the main
+Historical custom direct-SDK results are not Caliper results and must retain
+their original methodology labels. The retired matrix/campaign scripts are not
+required by startup or either benchmark. The two normal benchmark paths above replace it in the main
 workflow. Older Caliper configuration/scripts are archived under
 `info/ArtyIndo/caliper-legacy/`; the remaining configuration templates are references only; actual network and
 benchmark settings are generated per run.
+
+## Report API and notes
+
+Open `/docs` on the selected API port. Protected calls take the provisioned
+`X-API-Key` header; there is no public signup or role selection.
+
+The report lifecycle is **submit → independent votes → automatic outcome**.
+The deciding majority vote sets `FINAL`; all eligible votes without a majority
+set `DISPUTED`. Unresolved reports expire automatically after 72 hours. Public
+report-finalise and expire routes are removed. The internal expiry task and
+its existing official credential remain unchanged.
+
+Use **POST `/api/reports/{id}/notes`** for a correction, clarification, or a
+reported action/outcome:
+
+```json
+{"note_id":"clarification-001","text":"Description and reported outcome.","support":[]}
+```
+
+Only officials/fact-checkers from the report's submitting organisation can append
+notes, at any report status. **GET `/api/reports/{id}/notes`** is available to all
+authenticated roles and returns attribution, ledger timestamp/transaction ID,
+content and verification results. Notes are append-only; they do not change a
+report, its votes or verdict. Matching retries return the same note; conflicting
+ID reuse returns 409. **GET `/api/reports/{id}/verify`** checks note commitments
+as well as claims, reviews and historical evidence.
+
+New correction/supersession and intervention routes are removed; historical
+records remain readable and verifiable. Report retrieval includes
+`legacy_interventions` with their content and availability/integrity flags.
+A note records what its author says;
+it does not independently validate a clarification or intervention's success.
+Separate submissions with the same text remain allowed. Same-organisation/message
+ID retries remain idempotent. Organisation admission routes are unchanged,
+including their separate manual admission finalisation.
+
+See [full_test.txt](full_test.txt), section 13, for every public route and a
+copyable submission/review/note workflow. No raw note text is stored on-chain.
 
 ## Research boundaries and supporting material
 

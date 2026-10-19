@@ -4,13 +4,15 @@ import argparse
 import hashlib
 import json
 import time
+import uuid
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from blockchain.scripts.deployment import ROOT,RUNTIME,compose,write,runtime_path
+from blockchain.scripts.deployment import ROOT,RUNTIME,compose,write,runtime_path,http
+from blockchain.scripts.transport import configure_client
 
 SCRIPT=r'''
-const http=require('http');const x=JSON.parse(process.argv[1]);
+const http=require('https');const x=JSON.parse(process.argv[1]);
 const req=http.request({host:x.host,port:x.port,path:x.path,method:x.body?'POST':'GET',headers:{'Content-Type':'application/json',[x.header||'X-API-Key']:process.env.PROBE_KEY||''}},res=>{
  let text='';res.on('data',d=>text+=d);res.on('end',()=>{let body;try{body=JSON.parse(text)}catch(_){body=text.slice(0,300)}console.log(JSON.stringify({status:res.statusCode,body}))})});
 req.on('error',()=>process.exit(2));req.end(x.body?JSON.stringify(x.body):undefined);
@@ -25,6 +27,7 @@ def probe(runtime,spec,key=''):
 def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--name',required=True);p.add_argument('--diagnose',action='store_true')
     a=p.parse_args();runtime=runtime_path(a.name);credentials=json.loads((runtime/'credentials.json').read_text())
+    cfg=json.loads((runtime/'experiment.json').read_text());configure_client(runtime,cfg)
     results=[]
     for row in credentials:
         if a.diagnose and row['org']!='org1':continue
@@ -52,6 +55,32 @@ def main():
         for host in ('storage','storage1','storage2'):
             result=probe(runtime,{'host':host,'port':9101,'path':'/cat/invalid','header':'X-Service-Key'})
             results.append({'operation':'storage_read_without_credential','host':host,'expected':401,**result})
+        cfg=json.loads((runtime/'experiment.json').read_text())
+        if cfg.get('workflow_version')=='notes-v1':
+            base=configure_client(runtime,cfg)
+            owner=next(r['api_key'] for r in credentials if r['org']=='org1' and r['role']=='fact_checker')
+            report=http(base+'/api/reports',{'msg_id':'note-security-'+uuid.uuid4().hex,
+                'label':'0','confidence':1,'model_version':'synthetic-security-probe',
+                'content':'Synthetic note-ownership security fixture.','source_platform':'test'},owner)
+            path=base+'/api/reports/'+report['id']
+            note=http(path+'/notes',{'note_id':'ownership','text':'Synthetic ownership check.','support':[]},owner)
+            args=[report['id'],'ownership',note['evidence_cid'],note['evidence_hash']]
+            for org,role,expected in [('org1','observer',403),('org2','fact_checker',400),('org2','official',400),('org1','official',200)]:
+                token=next(r['api_key'] for r in credentials if r['org']==org and r['role']==role)
+                result=probe(runtime,{'host':'signer'+org[3:],'port':9100,'path':'/invoke',
+                    'body':{'function':'RecordReportNote','args':args}},token)
+                results.append({'operation':'direct_note_ownership','org':org,'role':role,'expected':expected,**result})
+            for fn in ('FinalizeReport','RecordIntervention'):
+                result=probe(runtime,{'host':'signer1','port':9100,'path':'/invoke',
+                    'body':{'function':fn,'args':[report['id']]}},official)
+                results.append({'operation':'retired_signer_operation','function':fn,'expected':403,**result})
+            for suffix in ('finalize','expire','corrections','interventions'):
+                result=probe(runtime,{'host':'api','port':8000,'path':'/api/reports/'+report['id']+'/'+suffix,
+                    'body':{}},official)
+                results.append({'operation':'removed_public_route','route':suffix,'expected':404,**result})
+            proof=http(path+'/verify',key=owner)
+            results.append({'operation':'note_integrity_after_permission_probes','expected':200,
+                'status':200 if proof['verified'] else 409,'report_id':report['id']})
     passed=all(r['status']==r['expected'] for r in results)
     output={'result':'passed' if passed else 'failed','probes':results}
     write(ROOT/'results/repair'/a.name/('security-'+str(time.time_ns())+'.json'),output)

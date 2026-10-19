@@ -10,7 +10,7 @@ from pathlib import Path
 import sys
 
 from fastapi import Depends, FastAPI, HTTPException, Query
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'src'))
 from report import canonical_json, content_hash
@@ -36,7 +36,6 @@ class ReportCreate(StrictModel):
     source_platform: str = Field(min_length=1,max_length=256)
     published_at: str = ''
     inference_timestamp: str = ''
-    supersedes: str = ''
 
 
 class FactCheckSubmission(StrictModel):
@@ -45,10 +44,9 @@ class FactCheckSubmission(StrictModel):
     support: list[str] = Field(default_factory=list,max_length=100)
 
 
-class InterventionSubmission(StrictModel):
-    intervention_id: str = Field(min_length=1,max_length=256)
-    action: str = Field(min_length=1,max_length=10000)
-    outcome: str = Field(min_length=1,max_length=10000)
+class NoteSubmission(StrictModel):
+    note_id: str = Field(min_length=1,max_length=256)
+    text: str = Field(min_length=1,max_length=100000)
     support: list[str] = Field(default_factory=list,max_length=100)
 
 
@@ -143,7 +141,7 @@ async def lifespan(app):
         if REFERENCE is not None:REFERENCE.conn.close();REFERENCE=None
 
 
-app=FastAPI(title='Misinformation Monitoring',version='3.0.0',lifespan=lifespan)
+app=FastAPI(title='Misinformation Monitoring',version='3.1.0',lifespan=lifespan)
 
 
 @app.get('/health')
@@ -188,7 +186,9 @@ def create_report(body:ReportCreate,identity:Identity=Depends(require_org)):
     if not body.content.strip():raise HTTPException(422,'content must not be blank')
     # Inference time can change after Kafka replay; it is preserved in the first
     # document, but does not make an otherwise identical request a conflict.
-    fields=body.model_dump()
+    # Retain the empty legacy field in sealed objects/fingerprints so existing
+    # ordinary submissions remain retryable. New supersession is not accepted.
+    fields=body.model_dump() | {'supersedes':''}
     fingerprint=content_hash({k:v for k,v in fields.items() if k!='inference_timestamp'})
     report_id=hashlib.sha256((identity.msp+'\0'+body.msg_id).encode()).hexdigest()
     previous=STORE.existing_submission(identity.org,body.msg_id)
@@ -216,7 +216,7 @@ def create_report(body:ReportCreate,identity:Identity=Depends(require_org)):
         claim={'schema_version':3,'kind':'claim','id':report_id,'msg_id':body.msg_id,
             'source':{'platform':body.source_platform,'content':body.content,'published_at':body.published_at},
             'inference':{'label':body.label,'confidence':body.confidence,'model_version':body.model_version,'inference_timestamp':body.inference_timestamp},
-            'submitter':{'org_mspid':identity.msp},'supersedes':body.supersedes}
+            'submitter':{'org_mspid':identity.msp},'supersedes':''}
         cid,digest=object_put(claim,'claim')
         try:reservation=STORE.reserve_submission(identity.org,body.msg_id,fingerprint,report_id,cid)
         except ValueError as exc:raise HTTPException(409,str(exc)) from exc
@@ -224,7 +224,7 @@ def create_report(body:ReportCreate,identity:Identity=Depends(require_org)):
             cid=reservation['cid'];claim=object_get(cid);digest=content_hash(claim)
     sub={'id':report_id,'content_hash':digest,'claim_cid':cid,'label':body.label,
          'confidence':body.confidence,'model_version':body.model_version,
-         'timestamp':dt.datetime.now(dt.timezone.utc).isoformat(),'supersedes':body.supersedes}
+         'timestamp':dt.datetime.now(dt.timezone.utc).isoformat(),'supersedes':''}
     ledger(identity,'SubmitReport',canonical_json(sub));STORE.mark_committed(cid)
     return {'id':report_id,'content_hash':digest,'claim_cid':cid,'schema_version':3}
 
@@ -237,6 +237,23 @@ def list_reports(status:str='',page_size:int=Query(50,ge=1,le=200),bookmark:str=
 @app.get('/api/reports/{report_id}/chain')
 def get_chain(report_id:str,identity:Identity=Depends(require_org)):
     return ledger(identity,'QueryReport',report_id,query=True)
+
+
+def legacy_interventions(report_id,identity):
+    """Read historical content without restoring its retired write workflow."""
+    result=[]
+    for row in ledger(identity,'QueryInterventions',report_id,query=True):
+        item=row | {'available':False,'verified':False,'content':None}
+        try:
+            doc=object_get(row['evidence_cid'])
+            expected={'kind':'intervention','schema_version':3,'report_id':report_id,
+                      'organisation':row['organisation'],'intervention_id':row['id']}
+            valid=isinstance(doc,dict) and content_hash(doc)==row['evidence_hash'] and all(doc.get(k)==v for k,v in expected.items())
+            item.update(available=True,verified=valid)
+            if valid:item['content']=doc
+        except HTTPException:pass
+        result.append(item)
+    return result
 
 
 @app.get('/api/reports/{report_id}')
@@ -252,7 +269,8 @@ def get_report(report_id:str,identity:Identity=Depends(require_org)):
                 checks.append({'checker_msp':vote['checker_msp'],'outcome':vote['outcome'],'available':True,'verified':False})
             else:checks.append(evidence|{'txid':vote['txid'],'evidence_hash':vote['evidence_hash'],'verified':True})
         except HTTPException:checks.append({'checker_msp':vote['checker_msp'],'outcome':vote['outcome'],'available':False})
-    return claim|{'report_id':report_id,'content_hash':rec['content_hash'],'fact_check_status':rec['status'],'fact_checks':checks}
+    return claim|{'report_id':report_id,'content_hash':rec['content_hash'],'fact_check_status':rec['status'],
+                  'fact_checks':checks,'legacy_interventions':legacy_interventions(report_id,identity)}
 
 
 @app.post('/api/reports/{report_id}/fact-check')
@@ -265,34 +283,50 @@ def submit_fact_check(report_id:str,body:FactCheckSubmission,identity:Identity=D
     return {'ok':True,'evidence_cid':cid,'evidence_hash':digest,'status':get_chain(report_id,identity)['status']}
 
 
-@app.post('/api/reports/{report_id}/finalize')
-def finalize_report(report_id:str,identity:Identity=Depends(require_org)):
-    permit(identity,'official');ledger(identity,'FinalizeReport',report_id);return {'ok':True}
-
-
-@app.post('/api/reports/{report_id}/expire')
-def expire_report(report_id:str,identity:Identity=Depends(require_org)):
-    permit(identity,'official');ledger(identity,'ExpireReport',report_id);return {'ok':True}
-
-
-@app.post('/api/reports/{report_id}/corrections')
-def correction(report_id:str,body:ReportCreate,identity:Identity=Depends(require_org)):
-    if body.supersedes and body.supersedes!=report_id:raise HTTPException(422,'conflicting predecessor')
-    return create_report(body.model_copy(update={'supersedes':report_id}),identity)
-
-
-@app.post('/api/reports/{report_id}/interventions')
-def intervention(report_id:str,body:InterventionSubmission,identity:Identity=Depends(require_org)):
+@app.post('/api/reports/{report_id}/notes')
+def append_note(report_id:str,body:NoteSubmission,identity:Identity=Depends(require_org)):
     permit(identity,'official','fact_checker')
-    doc={'schema_version':3,'kind':'intervention','report_id':report_id,'organisation':identity.msp,**body.model_dump()}
-    cid,digest=object_put(doc,'intervention')
-    ledger(identity,'RecordIntervention',report_id,body.intervention_id,cid,digest);STORE.mark_committed(cid)
-    return {'ok':True,'evidence_cid':cid,'evidence_hash':digest}
+    rec=get_chain(report_id,identity)
+    if rec['submitted_by']!=identity.msp:raise HTTPException(403,'only the submitting organisation may append notes')
+    if not body.note_id.strip() or not body.text.strip():raise HTTPException(422,'note_id and text must not be blank')
+    doc={'schema_version':3,'kind':'report_note','report_id':report_id,'organisation':identity.msp,**body.model_dump()}
+    digest=content_hash(doc)
+    for row in ledger(identity,'QueryReportNotes',report_id,query=True):
+        if row['id']==body.note_id:
+            if row['evidence_hash']!=digest:raise HTTPException(409,'conflicting note id')
+            STORE.mark_committed(row['evidence_cid'])
+            return {'ok':True,'note_id':body.note_id,'evidence_cid':row['evidence_cid'],'evidence_hash':digest}
+    cid,digest=object_put(doc,'report_note')
+    try:ledger(identity,'RecordReportNote',report_id,body.note_id,cid,digest)
+    except HTTPException as exc:
+        if 'conflicting note id' in str(exc.detail):raise HTTPException(409,'conflicting note id') from exc
+        raise
+    STORE.mark_committed(cid)
+    return {'ok':True,'note_id':body.note_id,'evidence_cid':cid,'evidence_hash':digest}
 
 
-@app.get('/api/reports/{report_id}/interventions')
-def interventions(report_id:str,identity:Identity=Depends(require_org)):
-    return ledger(identity,'QueryInterventions',report_id,query=True)
+@app.get('/api/reports/{report_id}/notes')
+def notes(report_id:str,identity:Identity=Depends(require_org)):
+    rec=get_chain(report_id,identity)
+    result=[]
+    for row in ledger(identity,'QueryReportNotes',report_id,query=True):
+        item=row | {'note_id':row['id'],'available':False,'verified':False,'text':None,'support':None}
+        try:
+            doc=object_get(row['evidence_cid'])
+            expected={'kind':'report_note','schema_version':3,'report_id':report_id,
+                      'organisation':row['organisation'],'note_id':row['id']}
+            valid=isinstance(doc,dict) and content_hash(doc)==row['evidence_hash'] and all(doc.get(k)==v for k,v in expected.items())
+            valid=valid and row['organisation']==rec['submitted_by']
+            if valid:
+                try:
+                    parsed=NoteSubmission.model_validate({key:doc.get(key) for key in ('note_id','text','support')})
+                    valid=bool(parsed.note_id.strip() and parsed.text.strip())
+                except ValidationError:valid=False
+            item.update(available=True,verified=valid)
+            if valid:item.update(text=doc['text'],support=doc['support'])
+        except HTTPException:pass
+        result.append(item)
+    return result
 
 
 @app.get('/api/reports/{report_id}/history')
@@ -311,7 +345,7 @@ def verify_report(report_id:str,identity:Identity=Depends(require_org)):
     def check(cid,digest,expected):
         try:
             doc=object_get(cid)
-            valid=content_hash(doc)==digest and all(doc.get(k)==v for k,v in expected.items())
+            valid=isinstance(doc,dict) and content_hash(doc)==digest and all(doc.get(k)==v for k,v in expected.items())
             return {'cid':cid,'available':True,'verified':valid}
         except HTTPException:return {'cid':cid,'available':False,'verified':False}
     claim=check(rec.get('claim_cid'),rec['content_hash'],{'id':report_id,'kind':'claim','schema_version':3,
@@ -322,8 +356,10 @@ def verify_report(report_id:str,identity:Identity=Depends(require_org)):
         claim['verified']=inf.get('label')==rec['inference_label'] and all(inf.get(k)==rec[k] for k in ('confidence','model_version'))
     for vote in rec['fact_checks']:
         checks.append(check(vote['evidence_cid'],vote['evidence_hash'],{'kind':'fact_check','report_id':report_id,'checker_msp':vote['checker_msp'],'outcome':vote['outcome'],'schema_version':3}))
-    for row in interventions(report_id,identity):
+    # Read legacy intervention commitments without permitting new writes.
+    for row in ledger(identity,'QueryInterventions',report_id,query=True):
         checks.append(check(row['evidence_cid'],row['evidence_hash'],{'kind':'intervention','report_id':report_id,'organisation':row['organisation'],'intervention_id':row['id'],'schema_version':3}))
+    note_checks=notes(report_id,identity)
     entries=history(report_id,identity)
     prior=set();history_ok=bool(entries)
     for entry in entries:
@@ -337,6 +373,6 @@ def verify_report(report_id:str,identity:Identity=Depends(require_org)):
     current={(v['checker_msp'],v['outcome'],v['evidence_hash'],v['evidence_cid']) for v in rec['fact_checks']}
     history_ok=history_ok and prior==current
     if entries and entries[-1].get('record')!=rec:history_ok=False
-    return {'report_id':report_id,'schema_version':3,'claim':claim,'evidence':checks,'history_verified':history_ok,
-        'verified':claim['verified'] and history_ok and all(c['verified'] for c in checks),
+    return {'report_id':report_id,'schema_version':3,'claim':claim,'evidence':checks,'notes':note_checks,'history_verified':history_ok,
+        'verified':claim['verified'] and history_ok and all(c['verified'] for c in checks+note_checks),
         'meaning':'Integrity of committed objects and ledger history, not factual truth or legal compliance.'}

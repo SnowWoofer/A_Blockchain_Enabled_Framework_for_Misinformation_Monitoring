@@ -62,8 +62,3 @@ async def submit_fact_check(report_id: str, body: FactCheckSubmit, org: str = De
     )
     logger.info("Fact-check submitted: org=%s id=%s outcome=%s", org, report_id, body.outcome)
     return result
-
-
-@app.post("/claims/{report_id}/finalize")
-async def finalize_claim(report_id: str, org: str = Depends(require_org)):
-    return await _chain_call(CLIENT.finalize(org, report_id))

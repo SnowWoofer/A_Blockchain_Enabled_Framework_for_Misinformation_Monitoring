@@ -27,6 +27,7 @@ import yaml
 
 ROOT=Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
+from blockchain.scripts.transport import PROFILE,prepare_tls,secure_services,configure_client
 BIN=ROOT/'blockchain/fabric-samples/bin'
 GO=ROOT/'blockchain/chaincode/misinformation/go'
 RUNTIME=ROOT/'blockchain/runtime'
@@ -146,12 +147,13 @@ def prepare(a):
     runtime.mkdir(parents=True);runtime.chmod(0o700)
     project='misinfo-v3-'+a.name
     cfg={'name':a.name,'project':project,'orgs':a.orgs,'database':a.database,'port_base':a.port_base,
-         'backend':a.backend,'fabric_version':'2.5.16','schema_version':3,'channel':'mychannel',
+         'backend':a.backend,'fabric_version':'2.5.16','schema_version':3,'workflow_version':'notes-v1','transport_profile':PROFILE,'channel':'mychannel',
          'created_at':dt.datetime.now(dt.timezone.utc).isoformat(),'commit':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),
          'block_timeout':'2s','block_max_messages':10,'endorsement':'2-of-N','review_policy':'strict majority of frozen independent reviewers'}
     cfg['source_sha256']=source_manifest()
     cfg['provisioning_binary_sha256']={p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in (BIN/'cryptogen',BIN/'configtxgen',BIN/'osnadmin') if p.exists()}
     write(runtime/'experiment.json',cfg)
+    prepare_tls(runtime,a.orgs)
     credentials=[{'org':f'org{i}','role':role,'api_key':secrets.token_hex(32)} for i in range(1,a.orgs+1) for role in ('official','fact_checker','observer')]
     write(runtime/'credentials.json',credentials);(runtime/'credentials.json').chmod(0o600)
     write(runtime/'credential-registry.json',[{'org':r['org'],'role':r['role'],'digest':hashlib.sha256(r['api_key'].encode()).hexdigest()} for r in credentials])
@@ -183,7 +185,7 @@ def prepare(a):
         'environment':{'IPFS_API_URL':'http://ipfs0:5001/api/v0','SERVICE_KEY':service_key},
         'volumes':[f'{ROOT}/apps/ipfs_gateway/app:/app/app:ro']}
     # Each managed Kubo node has its own authenticated bridge for retention.
-    for i in (1,2):services[f'storage{i}']={**services['storage'],'environment':{'IPFS_API_URL':f'http://ipfs{i}:5001/api/v0','SERVICE_KEY':service_key}}
+    for i in (1,2):services[f'storage{i}']={**services['storage'],'volumes':list(services['storage']['volumes']),'environment':{'IPFS_API_URL':f'http://ipfs{i}:5001/api/v0','SERVICE_KEY':service_key}}
     if a.backend=='fabric':
         crypto=runtime/'crypto'
         write(runtime/'crypto.yaml',yaml.safe_dump({'OrdererOrgs':[{'Name':'Orderer','Domain':'example.com','EnableNodeOUs':True,'Specs':[{'Hostname':'orderer'}]}],
@@ -253,7 +255,7 @@ def prepare(a):
         command(['go','build','-mod=vendor','-o',runtime/'chaincode'],cwd=GO,env=os.environ|{'CGO_ENABLED':'0','GOCACHE':'/tmp/misinfo-repair-go-cache'})
         code=io.BytesIO()
         with tarfile.open(fileobj=code,mode='w:gz') as tar:
-            data=json.dumps({'address':'chaincode:9999','dial_timeout':'10s','tls_required':False}).encode();info=tarfile.TarInfo('connection.json');info.size=len(data);tar.addfile(info,io.BytesIO(data))
+            data=json.dumps({'address':'chaincode:9999','dial_timeout':'10s','tls_required':True,'client_auth_required':False,'root_cert':(runtime/'transport/ca.crt').read_text()}).encode();info=tarfile.TarInfo('connection.json');info.size=len(data);tar.addfile(info,io.BytesIO(data))
         package=io.BytesIO()
         with tarfile.open(fileobj=package,mode='w:gz') as tar:
             for name,data in [('metadata.json',json.dumps({'type':'ccaas','label':'misinformation-v3','path':''}).encode()),('code.tar.gz',code.getvalue())]:
@@ -265,6 +267,7 @@ def prepare(a):
         write(runtime/'experiment.json',cfg)
         services['chaincode']={'image':'hyperledger/fabric-peer:2.5.16','entrypoint':['/run/chaincode'],
             'environment':{'CHAINCODE_SERVER_ADDRESS':'0.0.0.0:9999','CHAINCODE_ID':ccid},'volumes':[f'{runtime}/chaincode:/run/chaincode:ro']}
+    secure_services(runtime,cfg,services)
     write(runtime/'compose.json',{'services':services,'volumes':volumes})
     (runtime/'compose.json').chmod(0o600)
     print('Prepared',a.name,'in',runtime)
@@ -277,7 +280,7 @@ def peer(runtime,i,*args,capture=False):
 
 def signer_request(runtime,i,key,fn,args=None,query=False):
     spec={'function':fn,'args':args or []};route='/query' if query else '/invoke'
-    script="const http=require('http');const r=http.request({host:'signer"+str(i)+"',port:9100,path:'"+route+"',method:'POST',headers:{'Content-Type':'application/json','X-API-Key':process.env.PROVISION_KEY}},s=>{let b='';s.on('data',d=>b+=d);s.on('end',()=>{console.log(b);process.exit(s.statusCode===200?0:1)})});r.on('error',()=>process.exit(1));r.end(JSON.stringify("+json.dumps(spec)+"));"
+    script="const http=require('https');const r=http.request({host:'signer"+str(i)+"',port:9100,path:'"+route+"',method:'POST',headers:{'Content-Type':'application/json','X-API-Key':process.env.PROVISION_KEY}},s=>{let b='';s.on('data',d=>b+=d);s.on('end',()=>{console.log(b);process.exit(s.statusCode===200?0:1)})});r.on('error',()=>process.exit(1));r.end(JSON.stringify("+json.dumps(spec)+"));"
     for attempt in range(20):
         try:
             response=compose(runtime,'exec','-T','-e','PROVISION_KEY',f'signer{i}','node','-e',script,env={'PROVISION_KEY':key},capture=True)
@@ -289,6 +292,9 @@ def signer_request(runtime,i,key,fn,args=None,query=False):
 
 def provision(runtime):
     cfg=json.loads((runtime/'experiment.json').read_text());n=cfg['orgs']
+    base=configure_client(runtime,cfg)
+    if cfg['backend']=='fabric' and cfg.get('workflow_version')!='notes-v1':
+        raise ValueError('This saved deployment has the older report contract. Its data is retained. Use a fresh --name for the notes workflow; restarting does not upgrade chaincode.')
     if cfg['backend']=='fabric':shutil.copy2(BIN/'osnadmin',runtime/'osnadmin')
     compose(runtime,'up','-d')
     if cfg['backend']=='fabric':
@@ -358,7 +364,7 @@ def provision(runtime):
         for attempt in range(30):
             try:
                 host='storage' if i==0 else f'storage{i}'
-                script="import json,urllib.request;assert json.load(urllib.request.urlopen('http://"+host+":9101/health',timeout=3))['ipfs_available']"
+                script="import json,urllib.request;assert json.load(urllib.request.urlopen('https://"+host+":9101/health',timeout=3))['ipfs_available']"
                 compose(runtime,'exec','-T','api','python','-c',script,capture=True)
                 ids.append(compose(runtime,'exec','-T','--user','ipfs',f'ipfs{i}','ipfs','id','-f','<id>',capture=True).stdout.strip());break
             except subprocess.CalledProcessError:
@@ -370,7 +376,7 @@ def provision(runtime):
     deadline=time.monotonic()+90
     while True:
         try:
-            if http(f'http://127.0.0.1:{cfg["port_base"]}/health')['status']=='ok':break
+            if http(base+'/health')['status']=='ok':break
         except (RuntimeError,OSError):pass
         if time.monotonic()>deadline:raise RuntimeError('API failed to become healthy')
         time.sleep(2)
@@ -382,7 +388,7 @@ def provision(runtime):
     if cfg['backend']=='fabric':
         script="const fs=require('fs');const read=p=>JSON.parse(fs.readFileSync('/app/node_modules/'+p+'/package.json','utf8')).version;console.log(JSON.stringify({node:process.version,fabric_gateway:read('@hyperledger/fabric-gateway'),grpc:read('@grpc/grpc-js'),express:read('express')}))"
         write(out/'signer-versions.json',json.loads(compose(runtime,'exec','-T','signer1','node','-e',script,capture=True).stdout))
-    print('Ready:',f'http://127.0.0.1:{cfg["port_base"]}')
+    print('Ready:',base)
 
 
 def main():
@@ -403,6 +409,8 @@ def main():
     a=p.parse_args();runtime=runtime_path(a.name)
     if runtime.exists() and a.action=='up':
         saved=json.loads((runtime/'experiment.json').read_text())
+        if saved.get('transport_profile')!=PROFILE or saved.get('workflow_version')!='notes-v1':
+            p.error('Saved deployment uses an older contract/transport profile. Its data is retained. See README: Reset an old test deployment, then rerun startup. A restart cannot upgrade the saved chaincode package.')
         for field in ('orgs','database','backend','port_base'):
             value=getattr(a,field)
             if value is not None and value!=saved[field]:
@@ -460,4 +468,4 @@ def execute(a,runtime,p):
 if __name__=='__main__':
     try:main()
     except KeyboardInterrupt:print('Cancelled.',file=sys.stderr);sys.exit(130)
-    except Exception as exc:print(f'{type(exc).__name__}: operation failed; see the run log.',file=sys.stderr);sys.exit(1)
+    except Exception as exc:print(f'{type(exc).__name__}: {exc}; see the run log.',file=sys.stderr);sys.exit(1)

@@ -21,7 +21,9 @@ class StorageError(Exception):
 
 class IpfsStore:
     def __init__(self, api_url=None, api_key=None):
-        self.api_url = (api_url or os.environ.get('IPFS_GATEWAY_URL', 'http://localhost:9101')).rstrip('/')
+        self.api_url = (api_url or os.environ.get('IPFS_GATEWAY_URL', 'https://localhost:9101')).rstrip('/')
+        if not self.api_url.startswith('https://'):
+            raise ValueError('Evidence bridge requires HTTPS')
         self.api_key = api_key or os.environ.get('IPFS_SERVICE_KEY', '')
 
     def request(self, path, data=None, method='GET'):
