@@ -94,3 +94,5 @@ results
 repair
 info
 experiments
+!data/
+apps/ai_service/app/v1-0-0/data
