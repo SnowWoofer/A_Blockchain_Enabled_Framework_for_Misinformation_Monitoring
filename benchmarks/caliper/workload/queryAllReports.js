@@ -4,7 +4,7 @@ const {RecordedWorkload} = require('./common');
 class QueryAllReportsWorkload extends RecordedWorkload {
     async submitTransaction() {
         await this.recorded({contractId:'misinformation',contractFunction:'QueryAllReports',contractArguments:[],
-            readOnly:true,invokerIdentity:'official1',invokerMspId:'Org1MSP'});
+            readOnly:true,invokerIdentity:'factchecker1',invokerMspId:'Org1MSP'});
     }
 }
 module.exports.createWorkloadModule = () => new QueryAllReportsWorkload();

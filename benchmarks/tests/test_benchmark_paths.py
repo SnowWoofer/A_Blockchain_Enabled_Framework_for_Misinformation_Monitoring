@@ -14,9 +14,14 @@ from benchmarks.caliper.run import benchmark_config,network_config,parse_args,su
 from blockchain.scripts.run_support import benchmark_lock
 
 
-def test_older_contract_is_not_silently_restarted_with_new_api(tmp_path):
+@pytest.mark.parametrize('workflow',[None,'notes-v1'])
+def test_older_contract_is_not_silently_restarted_with_new_api(tmp_path,monkeypatch,workflow):
     from blockchain.scripts import deployment
-    (tmp_path/'experiment.json').write_text(json.dumps({'orgs':3,'backend':'fabric'}))
+    monkeypatch.setenv('SSL_CERT_FILE','test-original')
+    (tmp_path/'transport').mkdir()
+    (tmp_path/'transport/ca.crt').touch()
+    (tmp_path/'experiment.json').write_text(json.dumps({'orgs':3,'backend':'fabric','port_base':18000,
+        'transport_profile':deployment.PROFILE,'workflow_version':workflow}))
     with patch.object(deployment,'compose') as compose:
         with pytest.raises(ValueError,match='fresh --name'):
             deployment.provision(tmp_path)
@@ -261,8 +266,8 @@ def test_caliper_saves_results_and_returns_failure_on_bad_counts_or_rejections(t
     folder=tmp_path/'results';folder.mkdir()
     log=SimpleNamespace(folder=folder,path=folder/'logs.txt',step=Mock(),say=Mock())
     runtime=tmp_path/'runtime'
-    for relative in ('role-users-1/official1@org1.example.com/msp/signcerts/cert.pem',
-                     'role-users-1/official1@org1.example.com/msp/keystore/key.pem',
+    for relative in ('role-users-1/factchecker1@org1.example.com/msp/signcerts/cert.pem',
+                     'role-users-1/factchecker1@org1.example.com/msp/keystore/key.pem',
                      'crypto/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt'):
         target=runtime/relative;target.parent.mkdir(parents=True,exist_ok=True);target.touch()
     headers=['Name','Succ','Fail','Send Rate (TPS)','Avg Latency (s)','Min Latency (s)','Max Latency (s)','Throughput (TPS)']

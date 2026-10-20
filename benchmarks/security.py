@@ -18,6 +18,36 @@ const req=http.request({host:x.host,port:x.port,path:x.path,method:x.body?'POST'
 req.on('error',()=>process.exit(2));req.end(x.body?JSON.stringify(x.body):undefined);
 '''
 
+# Bypass the HTTP signer allowlist and exercise the contract with an actual
+# official certificate. Evaluation simulates writes without committing them.
+CONTRACT_ROLE_PROBE=r'''
+const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
+const grpc=require('@grpc/grpc-js');
+const {connect,signers}=require('@hyperledger/fabric-gateway');
+const num=process.env.ORG.slice(3),root=`/crypto/users/official${num}@org${num}.example.com/msp`;
+const one=d=>fs.readFileSync(path.join(d,fs.readdirSync(d).find(n=>!n.startsWith('.'))));
+const client=new grpc.Client(process.env.GATEWAY_TARGET,grpc.credentials.createSsl(fs.readFileSync('/peer-tls-ca.crt')),
+ {'grpc.ssl_target_name_override':process.env.GATEWAY_PEER});
+const gateway=connect({client,identity:{mspId:`Org${num}MSP`,credentials:one(root+'/signcerts')},
+ signer:signers.newPrivateKeySigner(crypto.createPrivateKey(one(root+'/keystore'))),
+ evaluateOptions:()=>({deadline:Date.now()+15000})});
+(async()=>{
+ const contract=gateway.getNetwork('mychannel').getContract('misinformation'),results=[];
+ try {
+  for(const [fn,args] of JSON.parse(process.argv[1])) {
+   let outcome='unexpected_success';
+   try {await contract.evaluateTransaction(fn,...args);}
+   catch(e) {
+    const message=[e.message,...(e.details||[]).map(d=>d.message)].join(' ');
+    outcome=message.includes('required one of [fact_checker]')?'role_rejected':'unexpected_error';
+   }
+   results.push({function:fn,outcome});
+  }
+  console.log(JSON.stringify(results));
+ } finally {gateway.close();client.close();}
+})().catch(()=>{gateway.close();client.close();process.exitCode=1;});
+'''
+
 
 def probe(runtime,spec,key=''):
     result=compose(runtime,'exec','-T','-e','PROBE_KEY','signer1','node','-e',SCRIPT,json.dumps(spec),capture=True,env={'PROBE_KEY':key})
@@ -47,8 +77,9 @@ def main():
             ('observer_write',key,{'function':'RegisterOrg','args':[]},403)]:
             result=probe(runtime,{'host':'signer1','port':9100,'path':'/invoke' if description=='observer_write' else '/query','body':body},token)
             results.append({'operation':description,'expected':expected,**result})
+        writer=next(r['api_key'] for r in credentials if r['org']=='org1' and r['role']=='fact_checker')
         result=probe(runtime,{'host':'signer1','port':9100,'path':'/invoke','body':{'function':'Submit','args':[
-            'non-finite-security-probe','a'*64,'1','NaN','security-probe','2026-01-01T00:00:00Z']}},official)
+            'non-finite-security-probe','a'*64,'1','NaN','security-probe','2026-01-01T00:00:00Z']}},writer)
         results.append({'operation':'non_finite_wire_input','expected':400,**result})
         result=probe(runtime,{'host':'signer1','port':9100,'path':'/query','body':{'function':'ListRegisteredOrgs','args':[]}},official)
         results.append({'operation':'contract_survives_invalid_input','expected':200,**result})
@@ -56,7 +87,7 @@ def main():
             result=probe(runtime,{'host':host,'port':9101,'path':'/cat/invalid','header':'X-Service-Key'})
             results.append({'operation':'storage_read_without_credential','host':host,'expected':401,**result})
         cfg=json.loads((runtime/'experiment.json').read_text())
-        if cfg.get('workflow_version')=='notes-v1':
+        if cfg.get('workflow_version')=='governance-v1':
             base=configure_client(runtime,cfg)
             owner=next(r['api_key'] for r in credentials if r['org']=='org1' and r['role']=='fact_checker')
             report=http(base+'/api/reports',{'msg_id':'note-security-'+uuid.uuid4().hex,
@@ -65,11 +96,25 @@ def main():
             path=base+'/api/reports/'+report['id']
             note=http(path+'/notes',{'note_id':'ownership','text':'Synthetic ownership check.','support':[]},owner)
             args=[report['id'],'ownership',note['evidence_cid'],note['evidence_hash']]
-            for org,role,expected in [('org1','observer',403),('org2','fact_checker',400),('org2','official',400),('org1','official',200)]:
+            for org,role,expected in [('org1','observer',403),('org2','fact_checker',400),('org2','official',403),('org1','official',403)]:
                 token=next(r['api_key'] for r in credentials if r['org']==org and r['role']==role)
                 result=probe(runtime,{'host':'signer'+org[3:],'port':9100,'path':'/invoke',
                     'body':{'function':'RecordReportNote','args':args}},token)
                 results.append({'operation':'direct_note_ownership','org':org,'role':role,'expected':expected,**result})
+            for fn,args in [('Submit',['official-forbidden','a'*64,'1','.9','v','2026-01-01T00:00:00Z']),
+                            ('SubmitReport',['{}']),('SubmitFactCheck',[report['id'],'1',note['evidence_cid'],note['evidence_hash']])]:
+                result=probe(runtime,{'host':'signer1','port':9100,'path':'/invoke',
+                    'body':{'function':fn,'args':args}},official)
+                results.append({'operation':'official_content_write','function':fn,'expected':403,**result})
+            direct=[['Submit',['official-direct','a'*64,'1','.9','v','2026-01-01T00:00:00Z']],
+                    ['SubmitReport',[json.dumps({'id':'official-direct','content_hash':'a'*64,'claim_cid':note['evidence_cid'],
+                        'label':'1','confidence':.9,'model_version':'v','timestamp':'2026-01-01T00:00:00Z'})]],
+                    ['SubmitFactCheck',[report['id'],'1',note['evidence_cid'],note['evidence_hash']]],
+                    ['RecordReportNote',[report['id'],'official-direct',note['evidence_cid'],note['evidence_hash']]]]
+            response=compose(runtime,'exec','-T','signer1','node','-e',CONTRACT_ROLE_PROBE,json.dumps(direct),capture=True,timeout=90)
+            for row in json.loads(response.stdout.strip().splitlines()[-1]):
+                results.append({'operation':'direct_contract_official_write','function':row['function'],
+                    'expected':'role_rejected','status':row['outcome']})
             for fn in ('FinalizeReport','RecordIntervention'):
                 result=probe(runtime,{'host':'signer1','port':9100,'path':'/invoke',
                     'body':{'function':fn,'args':[report['id']]}},official)

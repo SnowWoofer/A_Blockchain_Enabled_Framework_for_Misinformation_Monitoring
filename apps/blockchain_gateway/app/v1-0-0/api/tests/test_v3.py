@@ -98,6 +98,107 @@ def test_role_boundaries(client):
         assert client.post(path,json=body,headers=headers(client,role='observer')).status_code==403
 
 
+def test_official_content_writes_rejected_at_api_and_reference_boundary(client):
+    from auth_v3 import Identity
+    from ledger_v3 import LedgerError
+    id_=create(client)
+    payload=dict(msg_id='official',label='1',confidence=.9,model_version='test',content='Private claim',source_platform='test')
+    for path,body in [('/api/reports',payload),
+                      (f'/api/reports/{id_}/fact-check',{'outcome':'1','reasoning':'Private reasoning'}),
+                      (f'/api/reports/{id_}/notes',{'note_id':'n','text':'Private note'})]:
+        assert client.post(path,json=body,headers=headers(client,role='official')).status_code==403
+    bridge=client.ref.bridge(Identity('org1','official',client.keys['org1','official']))
+    for fn,args in [('Submit',('new','a'*64,'1','.9','v','2026-01-01T00:00:00Z')),
+                    ('SubmitReport',('{}',)),('SubmitFactCheck',(id_,'1','cid','a'*64)),
+                    ('RecordReportNote',(id_,'n','cid','a'*64))]:
+        with pytest.raises(LedgerError,match='fact_checker required'):bridge.call(fn,*args)
+
+
+def test_public_verdicts_only_publish_final_allowlisted_fields(client):
+    final=create(client,'published');pending=create(client,'private')
+    assert client.get(f'/api/public/reports/{final}').status_code==404
+    vote(client,final);vote(client,final,'org3')
+    client.post(f'/api/reports/{final}/notes',json={'note_id':'private','text':'Secret note'},headers=headers(client))
+    response=client.get(f'/api/public/reports/{final}')
+    assert response.status_code==200
+    row=response.json()
+    assert set(row)=={'id','status','final_label','submitted_by','finalized_at','required_votes','content_hash','fact_checks'}
+    assert row['id']==final and row['status']=='FINAL' and row['final_label']=='1'
+    assert {v['checker_msp'] for v in row['fact_checks']}=={'Org2MSP','Org3MSP'}
+    assert all(set(v)=={'checker_msp','outcome','timestamp','txid','evidence_hash'} for v in row['fact_checks'])
+    assert client.get('/api/public/reports').json()['items']==[row]
+    assert client.get(f'/api/public/reports/{pending}').status_code==404
+    assert client.get('/api/public/reports/missing').status_code==404
+    for suffix in ('','/chain','/notes','/history','/verify'):
+        assert client.get(f'/api/reports/{final}{suffix}').status_code==401
+    assert 'Secret note' not in response.text and 'Synthetic example claim' not in response.text
+
+
+def test_public_pagination_never_exposes_other_statuses(client):
+    ids=[create(client,str(i)) for i in range(5)]
+    for rid in ids[:3]:vote(client,rid);vote(client,rid,'org3')
+    vote(client,ids[3],'org2','0');vote(client,ids[3],'org3','1')
+    found=[];bookmark=''
+    while True:
+        response=client.get('/api/public/reports',params={'page_size':2,'bookmark':bookmark}).json()
+        found.extend(row['id'] for row in response['items']);bookmark=response['next_bookmark']
+        if not bookmark:break
+    assert len(found)==3 and set(found)==set(ids[:3])
+    assert client.get(f'/api/public/reports/{ids[3]}').status_code==404
+    assert client.get('/api/public/reports',params={'page_size':201}).status_code==422
+    assert client.get('/api/public/reports',params={'page_size':0}).status_code==422
+    assert client.post('/api/public/reports',json={}).status_code==405
+    assert client.post('/api/reports',json=dict(msg_id='x',label='1',confidence=.9,model_version='v',content='x',source_platform='test')).status_code==401
+
+
+def test_public_query_identity_is_read_only_revocable_and_not_caller_selected(client,monkeypatch):
+    import api_v3
+    from ledger_v3 import LedgerError
+    original=api_v3.bridge_for;identities=[]
+    def capture(identity):
+        identities.append(identity)
+        return original(identity)
+    monkeypatch.setattr(api_v3,'bridge_for',capture)
+    assert client.get('/api/public/reports',headers=headers(client,role='official')).status_code==200
+    assert identities and all(i.org=='org1' and i.role=='observer' for i in identities)
+    client.store.revoke_key(client.keys['org1','observer'])
+    assert client.get('/api/public/reports').status_code==503
+    monkeypatch.setattr(api_v3,'PUBLIC_OBSERVER',None)
+    assert client.get('/api/public/reports').status_code==503
+
+
+@pytest.mark.parametrize('path',['/api/public/reports','/api/public/reports/example'])
+def test_public_backend_errors_do_not_leak_private_details(client,monkeypatch,path):
+    import api_v3
+    from ledger_v3 import LedgerError
+    class Unavailable:
+        def call(self,*args,**kwargs):raise LedgerError('private signer URL and internal detail',503)
+    monkeypatch.setattr(api_v3,'bridge_for',lambda _:Unavailable())
+    response=client.get(path)
+    assert response.status_code==503 and 'private signer' not in response.text
+
+
+def test_official_admission_and_background_expiry_remain_functional(client):
+    from api_v3 import expiry_pass
+    from auth_v3 import Identity
+    org='org4';key=hashlib.sha256(b'candidate-official-test-key').hexdigest()
+    client.store.provision_key(key,org,'official')
+    request=client.post('/api/orgs/Org4MSP/admission',json={'org_name':'Fourth','org_type':'media'},headers={'X-API-Key':key})
+    assert request.status_code==200
+    for member in ('org1','org2'):
+        assert client.post('/api/orgs/Org4MSP/admission/vote',json={'verdict':'1'},headers=headers(client,member,'official')).status_code==200
+    assert client.post('/api/orgs/Org4MSP/admission/finalize',headers=headers(client,role='official')).status_code==200
+    assert len(client.get('/api/orgs',headers=headers(client)).json())==4
+    rid=create(client);official=Identity('org1','official',client.keys['org1','official'])
+    expiry_pass(official)
+    assert client.ref.get('report:'+rid)['status']=='PENDING'
+    old=client.ref.get('report:'+rid);old['fact_check_deadline']=(dt.datetime.now(dt.timezone.utc)-dt.timedelta(seconds=1)).isoformat()
+    with client.ref.conn:client.ref.put('report:'+rid,old,'deadline-fixture',old['timestamp'])
+    expiry_pass(official)
+    assert client.ref.get('report:'+rid)['status']=='EXPIRED'
+    assert client.get(f'/api/public/reports/{rid}').status_code==404
+
+
 @pytest.mark.parametrize('mutation',['claim','reasoning','support','outcome','checker_msp'])
 def test_tampering_is_detected(client,mutation):
     id_=create(client);response=vote(client,id_).json()
@@ -143,7 +244,7 @@ def test_pagination_and_status_filter(client):
 
 
 @pytest.mark.parametrize('status',['PENDING','UNDER_REVIEW','FINAL','DISPUTED','EXPIRED','SUPERSEDED'])
-@pytest.mark.parametrize('role',['official','fact_checker'])
+@pytest.mark.parametrize('role',['fact_checker'])
 def test_notes_preserve_report_in_every_status(client,status,role):
     id_=create(client)
     if status=='UNDER_REVIEW':vote(client,id_)
@@ -220,7 +321,7 @@ def test_malformed_directly_committed_note_is_unverified_not_a_server_error(clie
     id_=create(client)
     if isinstance(doc,dict):doc.update(report_id=id_,organisation='Org1MSP')
     cid,digest=client.store.put_object(doc,'report_note')
-    client.ref.bridge(Identity('org1','official',client.keys['org1','official'])).call('RecordReportNote',id_,'n',cid,digest)
+    client.ref.bridge(Identity('org1','fact_checker',client.keys['org1','fact_checker'])).call('RecordReportNote',id_,'n',cid,digest)
     response=client.get(f'/api/reports/{id_}/notes',headers=headers(client))
     assert response.status_code==200 and not response.json()[0]['verified']
     assert not client.get(f'/api/reports/{id_}/verify',headers=headers(client)).json()['verified']

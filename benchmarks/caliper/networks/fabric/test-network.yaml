@@ -15,7 +15,7 @@ organizations:
 - mspid: Org1MSP
   identities:
     certificates:
-    - name: official1
+    - name: factchecker1
       clientPrivateKey:
         path: /identity/keystore/key.pem
       clientSignedCert:

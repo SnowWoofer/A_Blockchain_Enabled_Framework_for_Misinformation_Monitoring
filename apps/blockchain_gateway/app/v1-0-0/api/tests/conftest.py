@@ -17,6 +17,9 @@ def client(tmp_path,monkeypatch):
     credentials=tmp_path/'credentials.json'
     credentials.write_text(json.dumps([{'org':o,'role':r,'api_key':k} for (o,r),k in keys.items()]))
     monkeypatch.setenv('CREDENTIALS_FILE',str(credentials))
+    public_credential=tmp_path/'public-observer.json'
+    public_credential.write_text(json.dumps({'org':'org1','role':'observer','api_key':keys['org1','observer']}))
+    monkeypatch.setenv('PUBLIC_OBSERVER_CREDENTIAL_FILE',str(public_credential))
     monkeypatch.setenv('OFFCHAIN_DB',str(tmp_path/'objects.db'))
     monkeypatch.setenv('REFERENCE_DB',str(tmp_path/'ledger.db'))
     monkeypatch.setenv('STORAGE_MODE','sqlite-development')

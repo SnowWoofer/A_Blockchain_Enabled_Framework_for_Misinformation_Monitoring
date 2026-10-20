@@ -21,6 +21,7 @@ from objects import OffChainStore, StorageError
 
 STORE = None
 REFERENCE = None
+PUBLIC_OBSERVER = None
 
 
 class StrictModel(BaseModel):
@@ -110,7 +111,7 @@ def expiry_pass(identity):
 
 @contextlib.asynccontextmanager
 async def lifespan(app):
-    global STORE,REFERENCE
+    global STORE,REFERENCE,PUBLIC_OBSERVER
     STORE=OffChainStore(os.environ.get('OFFCHAIN_DB','/tmp/misinfo-offchain-v3.db'))
     set_server_store(STORE)
     credentials_path=os.environ.get('CREDENTIALS_FILE')
@@ -122,6 +123,14 @@ async def lifespan(app):
             if row.get('revoked'):STORE.revoke_digest(row['digest'])
         elif os.environ.get('LEDGER_BACKEND')=='sqlite-reference':STORE.provision_key(row['api_key'],row['org'],row['role'])
         else:raise RuntimeError('API registry must contain credential digests, not raw keys')
+    public_path=os.environ.get('PUBLIC_OBSERVER_CREDENTIAL_FILE')
+    if public_path:
+        row=json.loads(Path(public_path).read_text())
+        if row.get('role')!='observer':raise RuntimeError('public queries require an observer credential')
+        principal=STORE.identity_for_key(row['api_key'])
+        if not principal or principal['role']!='observer' or principal['org']!=row['org']:
+            raise RuntimeError('public observer credential must be active and provisioned')
+        PUBLIC_OBSERVER=Identity(row['org'],row['role'],row['api_key'])
     if os.environ.get('LEDGER_BACKEND','fabric')=='sqlite-reference':
         REFERENCE=ReferenceLedger(os.environ.get('REFERENCE_DB','/tmp/misinfo-reference-v3.db'),
             os.environ.get('ORGS','org1,org2,org3').split(','))
@@ -138,10 +147,48 @@ async def lifespan(app):
             task.cancel()
             with contextlib.suppress(asyncio.CancelledError):await task
         STORE.close();set_server_store(None)
+        PUBLIC_OBSERVER=None
         if REFERENCE is not None:REFERENCE.conn.close();REFERENCE=None
 
 
-app=FastAPI(title='Misinformation Monitoring',version='3.1.0',lifespan=lifespan)
+app=FastAPI(title='Misinformation Monitoring',version='3.2.0',lifespan=lifespan)
+
+
+def public_observer():
+    if PUBLIC_OBSERVER is None:raise HTTPException(503,'public verdict access is not configured')
+    principal=STORE.identity_for_key(PUBLIC_OBSERVER.api_key)
+    if not principal or principal['role']!='observer' or principal['org']!=PUBLIC_OBSERVER.org:
+        raise HTTPException(503,'public verdict access is unavailable')
+    return PUBLIC_OBSERVER
+
+
+def public_verdict(record):
+    # Never return a raw ledger record: new/private fields must stay private.
+    fields=('id','status','final_label','submitted_by','finalized_at','required_votes','content_hash')
+    vote_fields=('checker_msp','outcome','timestamp','txid','evidence_hash')
+    return {name:record[name] for name in fields if name in record} | {
+        'fact_checks':[{name:vote[name] for name in vote_fields if name in vote}
+                       for vote in record.get('fact_checks',[])]}
+
+
+@app.get('/api/public/reports')
+def public_reports(page_size:int=Query(50,ge=1,le=200),bookmark:str='',identity:Identity=Depends(public_observer)):
+    try:page=bridge_for(identity).call('QueryReportsPage','FINAL',page_size,bookmark,query=True)
+    except LedgerError as exc:raise HTTPException(503,'public verdict access is unavailable') from exc
+    return {'items':[public_verdict(row) for row in page['items'] if row.get('status')=='FINAL'],
+            'next_bookmark':page['next_bookmark']}
+
+
+@app.get('/api/public/reports/{report_id}')
+def public_report(report_id:str,identity:Identity=Depends(public_observer)):
+    try:record=bridge_for(identity).call('QueryReport',report_id,query=True)
+    except LedgerError as exc:
+        if exc.status_code==404 or any(s in str(exc).lower() for s in ('not found','does not exist','no report found')):
+            raise HTTPException(404,'published report not found') from exc
+        # Signer/backend errors may include private request details.
+        raise HTTPException(503,'public verdict access is unavailable') from exc
+    if record.get('status')!='FINAL':raise HTTPException(404,'published report not found')
+    return public_verdict(record)
 
 
 @app.get('/health')
@@ -182,7 +229,7 @@ def get_admission(msp:str,identity:Identity=Depends(require_org)):
 
 @app.post('/api/reports')
 def create_report(body:ReportCreate,identity:Identity=Depends(require_org)):
-    permit(identity,'official','fact_checker')
+    permit(identity,'fact_checker')
     if not body.content.strip():raise HTTPException(422,'content must not be blank')
     # Inference time can change after Kafka replay; it is preserved in the first
     # document, but does not make an otherwise identical request a conflict.
@@ -275,7 +322,7 @@ def get_report(report_id:str,identity:Identity=Depends(require_org)):
 
 @app.post('/api/reports/{report_id}/fact-check')
 def submit_fact_check(report_id:str,body:FactCheckSubmission,identity:Identity=Depends(require_org)):
-    permit(identity,'official','fact_checker')
+    permit(identity,'fact_checker')
     doc={'schema_version':3,'kind':'fact_check','report_id':report_id,'checker_msp':identity.msp,
          'outcome':body.outcome,'reasoning':body.reasoning,'support':body.support}
     cid,digest=object_put(doc,'fact_check')
@@ -285,7 +332,7 @@ def submit_fact_check(report_id:str,body:FactCheckSubmission,identity:Identity=D
 
 @app.post('/api/reports/{report_id}/notes')
 def append_note(report_id:str,body:NoteSubmission,identity:Identity=Depends(require_org)):
-    permit(identity,'official','fact_checker')
+    permit(identity,'fact_checker')
     rec=get_chain(report_id,identity)
     if rec['submitted_by']!=identity.msp:raise HTTPException(403,'only the submitting organisation may append notes')
     if not body.note_id.strip() or not body.text.strip():raise HTTPException(422,'note_id and text must not be blank')

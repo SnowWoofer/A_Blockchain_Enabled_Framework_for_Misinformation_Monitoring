@@ -7,7 +7,7 @@ class SubmitReportWorkload extends RecordedWorkload {
         const digest = crypto.createHash('sha256').update(id).digest('hex');
         await this.recorded({contractId:'misinformation', contractFunction:'Submit',
             contractArguments:[id,digest,'1','.99','caliper-v3',new Date().toISOString()],
-            readOnly:false, invokerIdentity:'official1', invokerMspId:'Org1MSP'});
+            readOnly:false, invokerIdentity:'factchecker1', invokerMspId:'Org1MSP'});
     }
 }
 module.exports.createWorkloadModule = () => new SubmitReportWorkload();

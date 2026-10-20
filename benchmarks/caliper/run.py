@@ -25,7 +25,7 @@ def network_config(cfg):
     return {'name':cfg['name'],'version':'2.0.0','caliper':{'blockchain':'fabric'},
         'info':{'StateDB':cfg['database'],'Organisations':cfg['orgs'],'Endorsement':cfg['endorsement']},
         'channels':[{'channelName':cfg['channel'],'contracts':[{'id':'misinformation'}]}],
-        'organizations':[{'mspid':'Org1MSP','identities':{'certificates':[{'name':'official1',
+        'organizations':[{'mspid':'Org1MSP','identities':{'certificates':[{'name':'factchecker1',
             'clientPrivateKey':{'path':'/identity/keystore/key.pem'},'clientSignedCert':{'path':'/identity/signcerts/cert.pem'}}]},
             'peers':[{'endpoint':'peer1:7051','tlsCACerts':{'path':'/peer-tls.pem'},
                 'grpcOptions':{'ssl-target-name-override':'peer0.org1.example.com'}}]}]}
@@ -127,7 +127,7 @@ def run(a,runtime,cfg,log):
     initial=ledger_count(runtime)
     config=benchmark_config(a,run_id);write(log.folder/'benchmark.json',config);write(log.folder/'network.json',network_config(cfg))
     shutil.copytree(ROOT/'benchmarks/caliper/workload',log.folder/'workload')
-    msp=runtime/'role-users-1/official1@org1.example.com/msp'
+    msp=runtime/'role-users-1/factchecker1@org1.example.com/msp'
     tls=runtime/'crypto/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt'
     for p in (msp/'signcerts/cert.pem',msp/'keystore/key.pem',tls):
         if not p.is_file():raise RuntimeError('deployment client identity or TLS certificate missing')

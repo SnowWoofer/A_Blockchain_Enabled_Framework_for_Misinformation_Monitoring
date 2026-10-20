@@ -32,6 +32,7 @@ BIN=ROOT/'blockchain/fabric-samples/bin'
 GO=ROOT/'blockchain/chaincode/misinformation/go'
 RUNTIME=ROOT/'blockchain/runtime'
 LEGACY_RUNTIME=ROOT/'experiments/runtime'
+WORKFLOW_VERSION='governance-v1'
 
 
 def runtime_path(name):
@@ -147,7 +148,7 @@ def prepare(a):
     runtime.mkdir(parents=True);runtime.chmod(0o700)
     project='misinfo-v3-'+a.name
     cfg={'name':a.name,'project':project,'orgs':a.orgs,'database':a.database,'port_base':a.port_base,
-         'backend':a.backend,'fabric_version':'2.5.16','schema_version':3,'workflow_version':'notes-v1','transport_profile':PROFILE,'channel':'mychannel',
+         'backend':a.backend,'fabric_version':'2.5.16','schema_version':3,'workflow_version':WORKFLOW_VERSION,'transport_profile':PROFILE,'channel':'mychannel',
          'created_at':dt.datetime.now(dt.timezone.utc).isoformat(),'commit':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),
          'block_timeout':'2s','block_max_messages':10,'endorsement':'2-of-N','review_policy':'strict majority of frozen independent reviewers'}
     cfg['source_sha256']=source_manifest()
@@ -159,6 +160,8 @@ def prepare(a):
     write(runtime/'credential-registry.json',[{'org':r['org'],'role':r['role'],'digest':hashlib.sha256(r['api_key'].encode()).hexdigest()} for r in credentials])
     write(runtime/'expiry-credential.json',next(r for r in credentials if r['org']=='org1' and r['role']=='official'))
     (runtime/'expiry-credential.json').chmod(0o600)
+    write(runtime/'public-observer-credential.json',next(r for r in credentials if r['org']=='org1' and r['role']=='observer'))
+    (runtime/'public-observer-credential.json').chmod(0o600)
     service_key=secrets.token_hex(32);write(runtime/'storage-key',service_key);(runtime/'storage-key').chmod(0o600)
     services={};volumes={}
     # Bind only the public workflow API to loopback. All signers, Kubo APIs and
@@ -167,8 +170,9 @@ def prepare(a):
         'environment':{'CREDENTIALS_FILE':'/run/credentials.json','OFFCHAIN_DB':'/data/objects.db',
             'STORAGE_MODE':'ipfs-required','IPFS_GATEWAY_URL':'http://storage:9101','IPFS_SERVICE_KEY':service_key,
             'LEDGER_BACKEND':a.backend,'REFERENCE_DB':'/data/reference.db','ORGS':','.join(f'org{i}' for i in range(1,a.orgs+1)),
-            'SIGNER_URLS':json.dumps({f'org{i}':f'http://signer{i}:9100' for i in range(1,a.orgs+1)}),'ENABLE_EXPIRY':'true','EXPIRY_CREDENTIAL_FILE':'/run/expiry.json'},
-        'volumes':[f'{ROOT}/apps/blockchain_gateway/app/v1-0-0/api:/app/api:ro',f'{ROOT}/apps/blockchain_gateway/app/v1-0-0/src:/app/src:ro',f'{runtime}/credential-registry.json:/run/credentials.json:ro',f'{runtime}/expiry-credential.json:/run/expiry.json:ro','api-data:/data'],
+            'SIGNER_URLS':json.dumps({f'org{i}':f'http://signer{i}:9100' for i in range(1,a.orgs+1)}),'ENABLE_EXPIRY':'true','EXPIRY_CREDENTIAL_FILE':'/run/expiry.json',
+            'PUBLIC_OBSERVER_CREDENTIAL_FILE':'/run/public-observer.json'},
+        'volumes':[f'{ROOT}/apps/blockchain_gateway/app/v1-0-0/api:/app/api:ro',f'{ROOT}/apps/blockchain_gateway/app/v1-0-0/src:/app/src:ro',f'{runtime}/credential-registry.json:/run/credentials.json:ro',f'{runtime}/expiry-credential.json:/run/expiry.json:ro',f'{runtime}/public-observer-credential.json:/run/public-observer.json:ro','api-data:/data'],
         'ports':[f'127.0.0.1:{a.port_base}:8000']}
     volumes['api-data']={}
     # Private network key is present before any Kubo process starts.
@@ -293,8 +297,8 @@ def signer_request(runtime,i,key,fn,args=None,query=False):
 def provision(runtime):
     cfg=json.loads((runtime/'experiment.json').read_text());n=cfg['orgs']
     base=configure_client(runtime,cfg)
-    if cfg['backend']=='fabric' and cfg.get('workflow_version')!='notes-v1':
-        raise ValueError('This saved deployment has the older report contract. Its data is retained. Use a fresh --name for the notes workflow; restarting does not upgrade chaincode.')
+    if cfg.get('workflow_version')!=WORKFLOW_VERSION:
+        raise ValueError('This saved deployment has older role permissions. Its data is retained. Use a fresh --name for Checkpoint 2; restarting does not upgrade chaincode.')
     if cfg['backend']=='fabric':shutil.copy2(BIN/'osnadmin',runtime/'osnadmin')
     compose(runtime,'up','-d')
     if cfg['backend']=='fabric':
@@ -409,8 +413,8 @@ def main():
     a=p.parse_args();runtime=runtime_path(a.name)
     if runtime.exists() and a.action=='up':
         saved=json.loads((runtime/'experiment.json').read_text())
-        if saved.get('transport_profile')!=PROFILE or saved.get('workflow_version')!='notes-v1':
-            p.error('Saved deployment uses an older contract/transport profile. Its data is retained. See README: Reset an old test deployment, then rerun startup. A restart cannot upgrade the saved chaincode package.')
+        if saved.get('transport_profile')!=PROFILE or saved.get('workflow_version')!=WORKFLOW_VERSION:
+            p.error('Saved deployment uses an older contract/transport profile. Its data is retained. Use a fresh --name for Checkpoint 2. A restart cannot upgrade the saved chaincode package.')
         for field in ('orgs','database','backend','port_base'):
             value=getattr(a,field)
             if value is not None and value!=saved[field]:

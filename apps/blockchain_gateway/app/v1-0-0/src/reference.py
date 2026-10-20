@@ -71,6 +71,8 @@ class ReferenceBridge:
         l=self.ledger; msp=self.identity.msp;role=self.identity.role;now=l.clock();ts=now.isoformat();tx=uuid.uuid4().hex
         reads={'QueryReport','QueryAllReports','QueryReportsPage','QueryReportHistory','QueryInterventions','QueryReportNotes','ListRegisteredOrgs','QueryOrgAdmission'}
         if query != (fn in reads):raise LedgerError('incorrect operation type')
+        if fn in ('Submit','SubmitReport','SubmitFactCheck','RecordReportNote') and role!='fact_checker':
+            raise LedgerError('fact_checker required',403)
         if fn=='ListRegisteredOrgs':return l.rows('org:')
         if fn=='QueryReport':return l.get('report:'+a[0])
         if fn=='QueryAllReports':return l.rows('report:')

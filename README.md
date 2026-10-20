@@ -39,6 +39,21 @@ Docker image on first use, including official Caliper 0.7.1 and Fabric Gateway.
 Docker needs network access for that first build. Image IDs and source checksums
 are saved with runs; mutable image tags alone do not identify an exact environment.
 
+## Full functional test on fresh deployments
+
+```bash
+./test_all.sh
+```
+
+Every invocation generates a unique name and selects free local ports. It runs
+regression, real Fabric/API/role checks, AI/Kafka feed and repeated delivery,
+TLS, small Caliper rounds, Explorer, restart persistence, and retention/revocation
+on a separate disposable network. It stops only its own containers and retains
+runtime data and evidence. No previous deployment or checkpoint is reused.
+Use `./test_all.sh --plan` to preview coverage; [test_all.txt](test_all.txt)
+documents options, results and limits. Optional `--matrix --evaluate-model`
+adds database/org configurations and FP32/INT8 subset evaluation.
+
 ## 2. Initialise the deployment
 
 From the repository root:
@@ -318,7 +333,7 @@ provides a post-run indication of the read-stage size, rather than a snapshot at
 its start. Avoid external writes while the benchmark runs; late commits after a
 failed acknowledgement can also change ledger size. Historical results remain intact.
 
-Caliper mounts only Org1's official client MSP and the gateway peer's TLS CA,
+Caliper mounts only Org1's fact-checker client MSP and the gateway peer's TLS CA,
 not Fabric CA/admin keys. No host Node/npm installation is needed for this runner.
 
 The TLS deployment profile follows [Fabric external chaincode TLS](https://hyperledger-fabric.readthedocs.io/en/latest/cc_service.html)
@@ -461,6 +476,51 @@ benchmark settings are generated per run.
 Open `/docs` on the selected API port. Protected calls take the provisioned
 `X-API-Key` header; there is no public signup or role selection.
 
+### Checkpoint 2 roles and public verdicts
+
+The `governance-v1` workflow retains the three certificate roles:
+
+| Role | Permissions |
+| --- | --- |
+| Official | Founding setup, organisation admission requests/voting/finalisation, background expiry, authenticated reads |
+| Fact-checker | Claim submission, eligible independent reviews, notes on its organisation's reports, authenticated reads |
+| Observer | Authenticated internal reads; no writes |
+
+Officials cannot submit claims, cast report-review votes, or append report notes.
+An admission vote is distinct from a report-review vote. Report majority rules,
+one vote per eligible organisation, and frozen reviewer sets are unchanged.
+
+Anonymous visitors need no credential for `GET /api/public/reports` or
+`GET /api/public/reports/{id}`. The list supports `page_size` (1–200, default 50)
+and `bookmark`. Only `FINAL` reports are published; absent and non-final detail
+requests return 404. Responses contain report ID/status/final label, submitting
+organisation, finalisation time, required votes, content hash, and reviewers'
+organisation/outcome/timestamp/transaction ID/evidence hash. These are ledger
+verdict metadata, not a claim text search or independent integrity verification.
+Raw claim content, reasoning, notes, CIDs, histories and internal configuration
+remain behind the existing authenticated endpoints. Hashes are commitments,
+not encryption or a guarantee that metadata is anonymous.
+
+The API queries Fabric using a provisioned, server-held observer identity from
+`PUBLIC_OBSERVER_CREDENTIAL_FILE`; it never supplies that credential to visitors.
+Missing or revoked credentials make public queries unavailable (503).
+Anonymous reads do not open signer, storage or peer access.
+
+Use a fresh deployment name for Checkpoint 2:
+
+```bash
+./startup.sh --name checkpoint2 --orgs 3 --database leveldb
+curl --cacert blockchain/runtime/checkpoint2/transport/ca.crt https://127.0.0.1:18000/api/public/reports
+```
+
+Earlier saved deployments are refused by the new startup path because their
+chaincode grants different permissions. Their runtime state and volumes are
+retained. A restart does not upgrade their chaincode. Keep the Checkpoint 1
+commit with its original deployment; use a separate checkout if both versions
+must operate concurrently, since generated deployments mount application source.
+The API remains bound to loopback by default: anonymous means no application
+credential, not automatic publication to the internet.
+
 The report lifecycle is **submit → independent votes → automatic outcome**.
 The deciding majority vote sets `FINAL`; all eligible votes without a majority
 set `DISPUTED`. Unresolved reports expire automatically after 72 hours. Public
@@ -474,7 +534,7 @@ reported action/outcome:
 {"note_id":"clarification-001","text":"Description and reported outcome.","support":[]}
 ```
 
-Only officials/fact-checkers from the report's submitting organisation can append
+Only fact-checkers from the report's submitting organisation can append
 notes, at any report status. **GET `/api/reports/{id}/notes`** is available to all
 authenticated roles and returns attribution, ledger timestamp/transaction ID,
 content and verification results. Notes are append-only; they do not change a
@@ -491,8 +551,11 @@ Separate submissions with the same text remain allowed. Same-organisation/messag
 ID retries remain idempotent. Organisation admission routes are unchanged,
 including their separate manual admission finalisation.
 
-See [full_test.txt](full_test.txt), section 13, for every public route and a
-copyable submission/review/note workflow. No raw note text is stored on-chain.
+See [test_all.txt](test_all.txt) for the fresh-run test guide. For a submission,
+review, note and public-access walkthrough on a running deployment, run
+`repair/.venv/bin/python -m benchmarks.api_check --name YOUR_NAME` or open its
+`/docs` schemas. The walkthrough creates synthetic records. No raw note text is
+stored on-chain.
 
 ## Research boundaries and supporting material
 

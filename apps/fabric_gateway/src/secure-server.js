@@ -18,7 +18,7 @@ JSON.parse(fs.readFileSync(registryPath, 'utf8')); // fail closed at startup
 const roleUsers = { official: `official${NUM}`, fact_checker: `factchecker${NUM}`, observer: `observer${NUM}` };
 const reads = new Set(['QueryReport', 'QueryAllReports', 'QueryReportsPage', 'QueryReportHistory', 'QueryInterventions', 'QueryReportNotes', 'ListRegisteredOrgs', 'QueryOrgAdmission']);
 const writes = {
-  official: new Set(['RegisterOrg', 'SetFoundingOrgLimit', 'RequestOrgAdmission', 'VoteOnOrgAdmission', 'FinalizeOrgAdmission', 'Submit', 'SubmitReport', 'SubmitFactCheck', 'ExpireReport', 'RecordReportNote']),
+  official: new Set(['RegisterOrg', 'SetFoundingOrgLimit', 'RequestOrgAdmission', 'VoteOnOrgAdmission', 'FinalizeOrgAdmission', 'ExpireReport']),
   fact_checker: new Set(['Submit', 'SubmitReport', 'SubmitFactCheck', 'RecordReportNote']),
   observer: new Set(),
 };

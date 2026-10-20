@@ -10,7 +10,7 @@ const { connect, signers } = require('/app/node_modules/@hyperledger/fabric-gate
 
 const cfg = JSON.parse(process.argv[2]);
 const num = process.env.ORG.slice(3);
-const msp = `/crypto/users/official${num}@org${num}.example.com/msp`;
+const msp = `/crypto/users/factchecker${num}@org${num}.example.com/msp`;
 const one = (dir) => fs.readFileSync(path.join(dir, fs.readdirSync(dir).find((f) => !f.startsWith('.'))));
 const client = new grpc.Client(process.env.GATEWAY_TARGET, grpc.credentials.createSsl(fs.readFileSync('/peer-tls-ca.crt')),
   { 'grpc.ssl_target_name_override': process.env.GATEWAY_PEER });

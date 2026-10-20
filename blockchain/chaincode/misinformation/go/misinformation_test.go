@@ -64,6 +64,7 @@ func setup(t *testing.T, n int) *MockStub {
 	for i := 1; i <= n; i++ {
 		registerOrgs(t, s, fmt.Sprintf("Org%dMSP", i))
 	}
+	s.Attrs = map[string]string{"role": "fact_checker"}
 	return s
 }
 func good(t *testing.T, r *peer.Response) {
@@ -148,10 +149,13 @@ func TestLateVotesAndExpiryUseProposalTime(t *testing.T) {
 	s.TxTimestamp = timestamppb.New(time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC))
 	good(t, submitReport(s, "s", "Org1MSP", "r"))
 	good(t, vote(s, "Org2MSP", "r", "1"))
+	s.Attrs = map[string]string{"role": "official"}
 	bad(t, invokeAs(s, "e", "Org1MSP", "ExpireReport", "r"))
 	s.TxTimestamp = timestamppb.New(time.Date(2026, 1, 4, 0, 0, 0, 0, time.UTC))
+	s.Attrs = map[string]string{"role": "fact_checker"}
 	bad(t, vote(s, "Org3MSP", "r", "1"))
 	bad(t, invokeAs(s, "f", "Org1MSP", "FinalizeReport", "r"))
+	s.Attrs = map[string]string{"role": "official"}
 	good(t, invokeAs(s, "e", "Org1MSP", "ExpireReport", "r"))
 	if record(t, s, "r").Status != statusExpired {
 		t.Fatal("not expired")
@@ -159,10 +163,12 @@ func TestLateVotesAndExpiryUseProposalTime(t *testing.T) {
 }
 func TestBootstrapAndRoleBoundaries(t *testing.T) {
 	s := setup(t, 3)
+	s.Attrs = map[string]string{"role": "official"}
 	bad(t, invokeAs(s, "cfg2", "Org1MSP", "SetFoundingOrgLimit", "4"))
 	bad(t, invokeAs(s, "reg", "Org4MSP", "RegisterOrg"))
+	s.Attrs = map[string]string{"role": "fact_checker"}
 	good(t, submitReport(s, "s", "Org1MSP", "r"))
-	for _, role := range []string{"observer", ""} {
+	for _, role := range []string{"official", "observer", ""} {
 		s.Attrs = map[string]string{"role": role}
 		bad(t, submitReport(s, "s2", "Org2MSP", "new"))
 		bad(t, vote(s, "Org2MSP", "r", "1"))
@@ -180,20 +186,48 @@ func TestFactCheckerCanSubmitAndVoteButNotGovern(t *testing.T) {
 	good(t, vote(s, "Org2MSP", "r", "1"))
 	bad(t, invokeAs(s, "f", "Org2MSP", "FinalizeReport", "r"))
 	good(t, vote(s, "Org3MSP", "r", "1"))
+	bad(t, invokeAs(s, "govern", "Org1MSP", "RequestOrgAdmission", "Fourth", "media"))
+	bad(t, invokeAs(s, "expire", "Org1MSP", "ExpireReport", "r"))
+}
+
+func TestOfficialCannotWriteContentOrOverrideFinalVerdict(t *testing.T) {
+	s := setup(t, 3)
+	good(t, submitReport(s, "s", "Org1MSP", "r"))
+	s.Attrs = map[string]string{"role": "official"}
+	bad(t, submitReport(s, "s2", "Org1MSP", "new"))
+	payload, _ := json.Marshal(Submission{ReportID: "new", ContentHash: validHash, ClaimCID: "cid", Label: "1", Confidence: .9, ModelVersion: "v", Timestamp: validTs})
+	bad(t, invokeAs(s, "s3", "Org1MSP", "SubmitReport", string(payload)))
+	bad(t, vote(s, "Org2MSP", "r", "1"))
+	bad(t, invokeAs(s, "note", "Org1MSP", "RecordReportNote", "r", "note", "cid", validHash))
+	if len(record(t, s, "r").FactChecks) != 0 {
+		t.Fatal("official changed reviews")
+	}
+	s.Attrs = map[string]string{"role": "fact_checker"}
+	good(t, vote(s, "Org2MSP", "r", "1"))
+	good(t, vote(s, "Org3MSP", "r", "1"))
+	s.Attrs = map[string]string{"role": "official"}
+	s.TxTimestamp = timestamppb.New(time.Now().Add(96 * time.Hour))
+	bad(t, invokeAs(s, "expire-final", "Org1MSP", "ExpireReport", "r"))
+	if record(t, s, "r").Status != statusFinal {
+		t.Fatal("expiry replaced final verdict")
+	}
 }
 func TestAdmissionDoesNotChangeExistingReviewerSet(t *testing.T) {
 	s := setup(t, 3)
 	good(t, submitReport(s, "s", "Org1MSP", "r"))
+	s.Attrs = map[string]string{"role": "official"}
 	good(t, invokeAs(s, "a", "Org4MSP", "RequestOrgAdmission", "Fourth", "media"))
 	bad(t, invokeAs(s, "self", "Org4MSP", "VoteOnOrgAdmission", "Org4MSP", "1"))
 	for _, org := range []string{"Org1MSP", "Org2MSP"} {
 		good(t, invokeAs(s, "ad-"+org, org, "VoteOnOrgAdmission", "Org4MSP", "1"))
 	}
 	good(t, invokeAs(s, "fa", "Org1MSP", "FinalizeOrgAdmission", "Org4MSP"))
+	s.Attrs = map[string]string{"role": "fact_checker"}
 	bad(t, vote(s, "Org4MSP", "r", "1"))
 	if record(t, s, "r").RequiredVotes != 2 {
 		t.Fatal("quorum changed")
 	}
+	s.Attrs = map[string]string{"role": "official"}
 	bad(t, invokeAs(s, "ad", "Org1MSP", "VoteOnOrgAdmission", "Org4MSP", "admit"))
 }
 func TestSubmissionRetryAndConflict(t *testing.T) {
@@ -252,7 +286,7 @@ func TestNotesEnforceSubmitterOwnershipAndPreserveEveryStatus(t *testing.T) {
 			key, _ := s.CreateCompositeKey("pred", []string{"r"})
 			before, _ := json.Marshal(original)
 			s.State[key] = before
-			for _, role := range []string{"official", "fact_checker"} {
+			for _, role := range []string{"fact_checker"} {
 				s.Attrs = map[string]string{"role": role}
 				good(t, invokeAs(s, "n-"+role, "Org1MSP", "RecordReportNote", "r", role, "cid-"+role, validHash))
 				good(t, invokeAs(s, "retry", "Org1MSP", "RecordReportNote", "r", role, "cid-"+role, validHash))
@@ -267,7 +301,7 @@ func TestNotesEnforceSubmitterOwnershipAndPreserveEveryStatus(t *testing.T) {
 			if err := json.Unmarshal(r.Payload, &notes); err != nil {
 				t.Fatal(err)
 			}
-			if len(notes) != 2 || notes[0].Organisation != "Org1MSP" || notes[0].TxID == "" {
+			if len(notes) != 1 || notes[0].Organisation != "Org1MSP" || notes[0].TxID == "" {
 				t.Fatal(notes)
 			}
 			if string(s.State[key]) != string(before) {

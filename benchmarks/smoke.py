@@ -26,6 +26,9 @@ def smoke(name):
     timeline={};start=time.perf_counter()
     report=http(base+'/api/reports',payload,key());timeline['submission_ms']=(time.perf_counter()-start)*1000
     report_id=report['id'];path=base+'/api/reports/'+report_id
+    try:http(base+'/api/public/reports/'+report_id)
+    except RuntimeError as exc:assert 'HTTP 404' in str(exc)
+    else:raise AssertionError('non-final report was publicly visible')
     before=time.perf_counter()
     reviewers={org:value for (org,role),value in keys.items() if role=='fact_checker'}
     review_to_majority(path,http(path+'/chain',key=key()),reviewers,'1','Synthetic independent assessment')
@@ -43,7 +46,14 @@ def smoke(name):
     original=http(path+'/chain',key=key())
     note={'note_id':'notice','text':'Synthetic clarification/action outcome recorded for demonstration only.','support':[]}
     first=http(path+'/notes',note,key())
-    assert http(path+'/notes',note,key('org1','official'))==first
+    assert http(path+'/notes',note,key())==first
+    for target,body in [(base+'/api/reports',payload|{'msg_id':'official-'+id_}),
+                        (path+'/fact-check',{'outcome':'1','reasoning':'forbidden'}),
+                        (path+'/notes',note)]:
+        try:http(target,body,key('org1','official'))
+        except RuntimeError as exc:
+            assert 'HTTP 403' in str(exc);rejected.append('official:'+target.rsplit('/',1)[-1])
+        else:raise AssertionError('official content write succeeded')
     listed=http(path+'/notes',key=key('org2','observer'))
     assert len(listed)==1 and listed[0]['verified'] and listed[0]['organisation']=='Org1MSP'
     try:http(path+'/notes',note|{'note_id':'forbidden'},key('org2'))
@@ -52,9 +62,18 @@ def smoke(name):
     else:raise AssertionError('other organisation appended a note')
     assert http(path+'/chain',key=key())==original
     assert http(path+'/verify',key=key())['verified']
+    public=http(base+'/api/public/reports/'+report_id)
+    assert public['status']=='FINAL' and public['final_label']=='1'
+    assert set(public)=={'id','status','final_label','submitted_by','finalized_at','required_votes','content_hash','fact_checks'}
+    assert all(set(v)=={'checker_msp','outcome','timestamp','txid','evidence_hash'} for v in public['fact_checks'])
+    published=http(base+'/api/public/reports')
+    assert any(row['id']==report_id for row in published['items'])
+    try:http(path)
+    except RuntimeError as exc:assert 'HTTP 401' in str(exc)
+    else:raise AssertionError('protected report exposed without authentication')
     result={'configuration':cfg,'report_id':report_id,'note':first,
         'timeline':timeline,'rejected_operations':rejected,'verification':verification,
-        'history':http(path+'/history',key=key()),'result':'passed',
+        'history':http(path+'/history',key=key()),'public_verdict':public,'result':'passed',
         'note':'Scripted reviewer operations; not human review time, AI accuracy or perceived trust.'}
     out=ROOT/'results/repair'/name
     write(out/('smoke-'+id_+'.json'),result)

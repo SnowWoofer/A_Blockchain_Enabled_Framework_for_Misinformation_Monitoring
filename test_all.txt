@@ -1,0 +1,138 @@
+FULL SYSTEM TEST — FRESH RUN EVERY TIME
+=======================================
+Run from the project root in Linux/WSL:
+
+    ./test_all.sh
+
+This .txt file is the guide, not an executable script. test_all.sh runs the
+current source on the current branch. There are no checkpoint names or saved
+deployments to select. Every invocation creates new identities, an empty ledger,
+new IPFS/Kafka state, and a unique deployment name and results directory.
+
+The runner selects an available localhost port block and prints the deployment
+name and logs/results location. It never resets or reuses an older deployment.
+Previous deployments, per-run evidence, private runtime files and Docker volumes
+remain untouched. results/repair/validation.json is a latest-regression summary;
+the runner also saves a separate regression.json copy belonging to each run.
+
+PREREQUISITES
+---------------
+Docker and Docker Compose must work without a permission error. Install the
+Python environment, Go, Node, Fabric tools and Docker images using README.md.
+Supply the existing model weights/tokenizer files and test dataset. The tests
+use repair/.venv/bin/python. MISINFO_PYTHON can override the launcher, but the
+existing worker tools still require the project's repair/.venv environment.
+Do not run feed/Caliper benchmarks concurrently with this suite. The runner
+starts only one of its Fabric deployments at a time to limit memory use.
+
+DEFAULT COVERAGE
+-----------------
+1. Automated regression: Go contract, API, workers, benchmark configuration,
+   Explorer configuration, and syntax checks. These use temporary test state.
+2. Fresh three-organisation LevelDB Fabric deployment and smoke workflow.
+3. Main API workflow and expected rejection statuses: submissions, independent
+   reviews, majority finalisation, retries, notes, history, and verification.
+4. Current role boundaries at API, signer and contract: officials manage
+   admission/expiry; fact-checkers write content; internal observers cannot write.
+5. Anonymous final-verdict metadata: no key required, unfinished/missing reports
+   return 404, and raw claims/evidence/notes/history remain authenticated.
+6. Live signer/storage security probes, including direct contract evaluations
+   with an official identity, bypassing the signer HTTP allowlist.
+7. Full Kafka/CPU-AI/IPFS/Fabric feed: six balanced multilingual examples,
+   followed by two ten-example runs to check repeated-run delivery.
+8. Six mixed-submitter examples with 50% scripted AI-label overturns. This checks
+   different organisation credentials and exclusion of the submitting org.
+9. Feed backlog delivery, durable malformed-message dead letters and delivery
+   after malformed messages. These probes are outside sample counts.
+10. Live TLS certificate trust/hostname checks, Kafka client-certificate
+    enforcement, and confinement of internal Kubo HTTP RPC.
+11. Official Caliper: one write/read with one worker, then five writes/reads
+    split across two workers (3 + 2). Counts must match; failures must be zero.
+12. Explorer authentication, channel/peer/chaincode indexing and restart.
+13. Stop/reopen the same new deployment and verify an earlier final verdict,
+    evidence and history survive without deleting data.
+14. A SEPARATE fresh network for managed content retention and persistent
+    credential revocation. Removing its explicitly created synthetic evidence
+    intentionally makes that object's verification fail; the test expects this.
+
+Admission and report-expiry rules are exercised in contract/API tests, including
+their controlled-clock boundaries. The suite does not wait 72 hours or claim
+to provision a live fourth organisation dynamically.
+
+OPTIONS
+---------
+    ./test_all.sh --plan
+      Show coverage without creating state or needing Docker access.
+
+    ./test_all.sh --verbose
+      Stream detailed logs while running the same suite.
+
+    ./test_all.sh --matrix
+      Also run fresh 3-org CouchDB and 5-org LevelDB networks sequentially,
+      each with workflow, six-example feed and five-write/read Caliper checks.
+
+    ./test_all.sh --evaluate-model
+      Also evaluate the supplied checkpoint on 90 selected examples with FP32
+      and INT8. Separate inference checks; not a new training experiment.
+
+    ./test_all.sh --matrix --evaluate-model
+      Include both optional extensions. This takes longer than the default.
+
+    ./test_all.sh --orgs 5 --database couchdb
+      Select a different MAIN fresh configuration; it still runs the same suite.
+
+    ./test_all.sh --keep-running
+      After success, leave the MAIN new deployment running for inspection.
+      Without this option, the runner stops its own containers after testing.
+      Runtime files, volumes and evidence are retained in either case.
+
+    ./test_all.sh --name my-new-fulltest --port-base 22000
+      Supply an optional NEW name and port block. Existing names or unavailable
+      ports are rejected; they are never overwritten or stopped to make room.
+      Use a different name on the next invocation, or omit --name entirely.
+
+    ./test_all.sh --skip-explorer
+      Explicitly omit only Explorer integration. The result is labelled
+      passed_with_skips rather than passed. All other default stages still run.
+
+RESULTS AND FAILURE HANDLING
+-----------------------------
+The runner prints a path like:
+
+    results/repair/fulltest-<timestamp>-<random>/test-all-<timestamp>-<random>/result.json
+
+That summary records stage outcomes, source hashes, created deployment names,
+requested options, skips, cleanup failures and whether the main network remains
+running. Its logs.txt contains the full diagnostics. The normal component
+commands also retain their feed/security/API/Caliper/Explorer result files under
+their own printed locations. A regression.json copy belongs to this run.
+
+Only a completed successful suite returns exit code 0. Inspect result.json:
+    passed             all requested/default stages passed, no default skips
+    passed_with_skips  requested checks passed but Explorer was explicitly skipped
+    failed             a stage or cleanup failed; later stages may be unattempted
+
+At the first unexpected failure, testing stops and cleanup stops only deployments
+created by this invocation. Nothing is deleted. Retain the failing logs and
+repair the issue before rerunning. Rerun ./test_all.sh for a NEW clean attempt;
+do not edit failed evidence to make it appear passed.
+
+Inspect a retained deployment using the NAME printed by your run:
+
+    repair/.venv/bin/python blockchain/scripts/deployment.py status --name NAME
+    repair/.venv/bin/python blockchain/scripts/deployment.py logs --name NAME --services api signer1 peer1 orderer
+
+If --keep-running succeeded, the printed port_base identifies its public API:
+    https://127.0.0.1:PORT/api/public/reports
+Use that run's transport/ca.crt to verify TLS. Detailed reads still require its
+provisioned credentials; keep private runtime files out of published evidence.
+
+BOUNDARIES
+------------
+This is a functional suite, not an exhaustive proof of security or factual truth.
+It uses one physical host, one orderer, single-node Kafka, synthetic inputs and
+scripted reviews. It does not demonstrate multi-host resilience, orderer failover,
+human review, individual-person accounts, or encryption at rest. Small Caliper
+runs check functionality/counts; they do not replace research performance runs.
+The full 1,000/2,000-transaction matrix or every dataset row can be run separately
+using the normal benchmark tools when those measurements are needed.

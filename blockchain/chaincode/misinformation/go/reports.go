@@ -109,7 +109,7 @@ func (c *MisinformationContract) SubmitReport(ctx contractapi.TransactionContext
 }
 
 func (c *MisinformationContract) submit(ctx contractapi.TransactionContextInterface, sub Submission) error {
-	msp, err := c.writer(ctx, "official", "fact_checker")
+	msp, err := c.writer(ctx, "fact_checker")
 	if err != nil {
 		return err
 	}
@@ -192,7 +192,7 @@ func validateOpen(ctx contractapi.TransactionContextInterface, rec *ReportRecord
 // SubmitFactCheck only accepts evidence committed together with the verdict.
 func (c *MisinformationContract) SubmitFactCheck(ctx contractapi.TransactionContextInterface,
 	reportID, outcome, evidenceCID, evidenceHash string) error {
-	msp, err := c.writer(ctx, "official", "fact_checker")
+	msp, err := c.writer(ctx, "fact_checker")
 	if err != nil {
 		return err
 	}
@@ -308,7 +308,7 @@ type ReportNote = Intervention
 
 func (c *MisinformationContract) RecordReportNote(ctx contractapi.TransactionContextInterface,
 	reportID, id, cid, hash string) error {
-	msp, err := c.writer(ctx, "official", "fact_checker")
+	msp, err := c.writer(ctx, "fact_checker")
 	if err != nil {
 		return err
 	}

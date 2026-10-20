@@ -19,6 +19,8 @@ def main():
         ('submission-recovery',[cpu,'-m','pytest','-q','-p','no:cacheprovider','apps/submission-worker/tests'],ROOT),
         ('ingest-contract',[cpu,'-m','pytest','-q','-p','no:cacheprovider','apps/claim-ingest-worker/tests'],ROOT),
         ('flagging-delivery',[cpu,'-m','pytest','-q','-p','no:cacheprovider','apps/flagging-engine/tests'],ROOT),
+        ('benchmark-paths',[cpu,'-m','pytest','-q','-p','no:cacheprovider','benchmarks/tests'],ROOT),
+        ('explorer',[cpu,'-m','pytest','-q','-p','no:cacheprovider','blockchain/explorer/tests'],ROOT),
         ('signer-syntax',['node','--check','apps/fabric_gateway/src/secure-server.js'],ROOT),
         ('load-generator-syntax',['node','--check','benchmarks/load.js'],ROOT),
         ('shell-syntax',['bash','-n','startup.sh','blockchain/scripts/deploy.sh','blockchain/scripts/add-orgs.sh'],ROOT)]
