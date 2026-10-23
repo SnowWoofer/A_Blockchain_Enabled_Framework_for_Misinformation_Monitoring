@@ -22,10 +22,10 @@ html,body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 @media print{body{width:841mm;height:594mm;overflow:hidden}}
 </style>
 </helmet>
-<!-- Type scale used throughout: headings 46 px, subheadings 28 px (navy), body 25 px,
-     secondary text and tables 22 px, captions 20 px, references 18 px. Colours: navy
+<!-- Type scale used throughout: headings 40 px, subheadings 28 px (navy), body 25 px,
+     secondary text and tables 22 px, captions 20 px, references 18 px, gutters 24 px. Colours: navy
      {{navy}}, gold #D99A2B, text #1A1A1A, captions #4D4D4D, panels #E9EEF4. -->
-<div style="width: 3179px; height: 2245px; box-sizing: border-box; padding: 62px 66px; background: linear-gradient(to bottom, #FFFFFF 0%, #FFFFFF 35%, #EFEFEF 45%, #DBDADA 65%, #D0CECE 82%, #93A1B0 88%, #5B7793 92.5%, #2D557D 96%, #003366 100%); color: #1A1A1A; font-family: Arimo, Arial, Helvetica, sans-serif; font-size: 25px; line-height: 1.4; display: flex; flex-direction: column; gap: 62px; overflow: hidden">
+<div style="width: 3179px; height: 2245px; box-sizing: border-box; padding: 62px 66px; background: linear-gradient(to bottom, #FFFFFF 0%, #FFFFFF 35%, #EFEFEF 45%, #DBDADA 65%, #D0CECE 82%, #93A1B0 88%, #5B7793 92.5%, #2D557D 96%, #003366 100%); color: #1A1A1A; font-family: Arimo, Arial, Helvetica, sans-serif; font-size: 25px; line-height: 1.4; display: flex; flex-direction: column; gap: 24px; overflow: hidden">
 
 <!-- TITLE BAND -->
 <header style="height: 312px; flex-shrink: 0; box-sizing: border-box; background: {{navy}}; color: #FFFFFF; padding: 28px 36px; display: flex; align-items: center; gap: 48px">
@@ -40,6 +40,7 @@ html,body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 <div><b>Josh Cloete</b> <span style="color: #B9C8D9">u26854563</span></div>
 <div><b>Tshiamo Monametsi</b> <span style="color: #B9C8D9">u25753178</span></div>
 <div style="color: #DCE5EF">COS700 Research Report · Department of Computer Science · DSFSI Research Group</div>
+<div style="flex-basis: 100%; color: #DCE5EF">Supervisors: <b style="color: #FFFFFF">Dr. S Rananga</b> and <b style="color: #FFFFFF">Mr. N Rananga</b></div>
 </div>
 </div>
 <div style="flex-shrink: 0; height: 256px; box-sizing: border-box; background: #FFFFFF; padding: 10px; display: flex; align-items: center; justify-content: center">
@@ -51,12 +52,12 @@ html,body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 </header>
 
 <!-- FOUR COLUMNS, read left to right: 1-2 | 3 | 4 | 5-7 -->
-<main style="flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); column-gap: 66px; align-items: stretch">
+<main style="flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); column-gap: 24px; align-items: stretch">
 
 <!-- COLUMN 1: 1 Introduction + 2 Methodology -->
-<div style="display: flex; flex-direction: column; gap: 62px; min-height: 0">
+<div style="display: flex; flex-direction: column; gap: 24px; min-height: 0">
 <section style="background: #FFFFFF; display: flex; flex-direction: column">
-<h2 style="margin: 0; background: {{navy}}; color: #FFFFFF; font-size: 46px; font-weight: 700; line-height: 1; padding: 25px 32px">1. Introduction</h2>
+<h2 style="margin: 0; background: {{navy}}; color: #FFFFFF; font-size: 40px; font-weight: 700; line-height: 1; padding: 28px 32px">1. Introduction</h2>
 <div style="padding: 30px 32px 34px; display: flex; flex-direction: column; gap: 20px">
 <p style="margin: 0; text-wrap: pretty">In South Africa's 2024 election, AI deepfakes spread through WhatsApp groups and fact-checks were dismissed as propaganda [1]. Fact-checkers keep separate records, and detection tools rarely cover African languages:</p>
 <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px">
@@ -71,17 +72,45 @@ html,body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 </section>
 
 <section style="flex: 1; min-height: 0; background: #FFFFFF; display: flex; flex-direction: column">
-<h2 style="margin: 0; background: {{navy}}; color: #FFFFFF; font-size: 46px; font-weight: 700; line-height: 1; padding: 25px 32px">2. Methodology</h2>
+<h2 style="margin: 0; background: {{navy}}; color: #FFFFFF; font-size: 40px; font-weight: 700; line-height: 1; padding: 28px 32px">2. Methodology</h2>
 <div style="padding: 30px 32px 34px; display: flex; flex-direction: column; gap: 20px">
 <div style="font-weight: 700; font-size: 28px; color: {{navy}}">2.1 A four-stage pipeline</div>
-<div style="display: flex; flex-direction: column; gap: 14px">
-<div style="display: flex; gap: 20px; align-items: flex-start"><div style="width: 46px; height: 46px; flex-shrink: 0; border-radius: 50%; background: {{navy}}; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 25px">1</div><div><b>Ingest:</b> an Apache Kafka stream absorbs election-day surges.</div></div>
-<div style="display: flex; gap: 20px; align-items: flex-start"><div style="width: 46px; height: 46px; flex-shrink: 0; border-radius: 50%; background: #D99A2B; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 25px">2</div><div><b>Triage:</b> AfroXLMR-large-76L [3] with LoRA [4] scores each claim.</div></div>
-<div style="display: flex; gap: 20px; align-items: flex-start"><div style="width: 46px; height: 46px; flex-shrink: 0; border-radius: 50%; background: {{navy}}; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 25px">3</div><div><b>Verify:</b> every other organisation votes; ⌊E/2⌋ + 1 matching votes finalise, otherwise DISPUTED.</div></div>
-<div style="display: flex; gap: 20px; align-items: flex-start"><div style="width: 46px; height: 46px; flex-shrink: 0; border-radius: 50%; background: {{navy}}; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 25px">4</div><div><b>Record:</b> Hyperledger Fabric [5] stores a SHA-256 hash; claim text stays in IPFS.</div></div>
+<div style="display: grid; grid-template-columns: minmax(0, 1fr) 24px minmax(0, 1fr) 24px minmax(0, 1fr) 24px minmax(0, 1fr); align-items: stretch">
+<div style="background: #E9EEF4; padding: 16px 8px; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center">
+<svg width="68" height="68" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="32" fill="{{navy}}"/><path d="M15 22h22M15 32h26M15 42h22" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round"/><path d="M43 18l7 4-7 4M46 38l7 4-7 4" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+<div style="font-weight: 700; font-size: 25px; line-height: 1.1; color: {{navy}}">1. Ingest</div>
+<div style="font-size: 20px; line-height: 1.25; text-wrap: balance">Kafka stream absorbs surges</div>
+</div>
+<svg width="24" height="24" viewBox="0 0 24 24" style="align-self: center" aria-hidden="true"><path d="M3 12h15M13 6l6 6-6 6" fill="none" stroke="#33475B" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+<div style="background: #FBF1DE; outline: 2px solid #D99A2B; outline-offset: -2px; padding: 16px 8px; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center">
+<svg width="68" height="68" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="32" fill="#D99A2B"/><rect x="21" y="21" width="22" height="22" rx="3" fill="#FFFFFF"/><path d="M27 21v-6M37 21v-6M27 43v6M37 43v6M21 27h-6M21 37h-6M43 27h6M43 37h6" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"/><text x="32" y="37" font-family="Arimo, Arial, sans-serif" font-size="13" font-weight="700" fill="#D99A2B" text-anchor="middle">AI</text></svg>
+<div style="font-weight: 700; font-size: 25px; line-height: 1.1; color: {{navy}}">2. Triage</div>
+<div style="font-size: 20px; line-height: 1.25; text-wrap: balance">AfroXLMR [3] + LoRA [4] labels claims</div>
+</div>
+<svg width="24" height="24" viewBox="0 0 24 24" style="align-self: center" aria-hidden="true"><path d="M3 12h15M13 6l6 6-6 6" fill="none" stroke="#33475B" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+<div style="background: #E9EEF4; padding: 16px 8px; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center">
+<svg width="68" height="68" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="32" fill="{{navy}}"/><circle cx="20" cy="22" r="5" fill="#FFFFFF"/><circle cx="32" cy="19" r="5" fill="#FFFFFF"/><circle cx="44" cy="22" r="5" fill="#FFFFFF"/><path d="M20 39l8 8 16-17" fill="none" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+<div style="font-weight: 700; font-size: 25px; line-height: 1.1; color: {{navy}}">3. Verify</div>
+<div style="font-size: 20px; line-height: 1.25; text-wrap: balance">other orgs vote; majority finalises</div>
+</div>
+<svg width="24" height="24" viewBox="0 0 24 24" style="align-self: center" aria-hidden="true"><path d="M3 12h15M13 6l6 6-6 6" fill="none" stroke="#33475B" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+<div style="background: #E9EEF4; padding: 16px 8px; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center">
+<svg width="68" height="68" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="32" fill="{{navy}}"/><rect x="11" y="25" width="12" height="14" rx="2" fill="#FFFFFF"/><rect x="26" y="25" width="12" height="14" rx="2" fill="#FFFFFF"/><rect x="41" y="25" width="12" height="14" rx="2" fill="#FFFFFF"/><path d="M23 32h3M38 32h3" stroke="#FFFFFF" stroke-width="3"/></svg>
+<div style="font-weight: 700; font-size: 25px; line-height: 1.1; color: {{navy}}">4. Record</div>
+<div style="font-size: 20px; line-height: 1.25; text-wrap: balance">hash on Fabric [5], text in IPFS</div>
+</div>
 </div>
 <div style="font-weight: 700; font-size: 28px; color: {{navy}}; margin-top: 4px">2.2 A synthetic multilingual corpus</div>
-<p style="margin: 0; text-wrap: pretty">No Sepedi or isiZulu election corpus existed, so Gemini 3.6 Flash wrote paired true and false statements, machine-translated from English.</p>
+<p style="margin: 0; text-wrap: pretty">No Sepedi or isiZulu election corpus existed, so we generated one:</p>
+<div style="display: grid; grid-template-columns: minmax(0, 1fr) 24px minmax(0, 1fr) 24px minmax(0, 1fr) 24px minmax(0, 1fr); align-items: stretch; text-align: center">
+<div style="outline: 2px solid #C3CEDB; outline-offset: -2px; padding: 12px 8px"><div style="font-weight: 700; font-size: 22px; color: {{navy}}">Prompts</div><div style="font-size: 20px; line-height: 1.25; text-wrap: balance">5,000, fixed seed</div></div>
+<svg width="24" height="24" viewBox="0 0 24 24" style="align-self: center" aria-hidden="true"><path d="M3 12h15M13 6l6 6-6 6" fill="none" stroke="#33475B" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+<div style="outline: 2px solid #C3CEDB; outline-offset: -2px; padding: 12px 8px"><div style="font-weight: 700; font-size: 22px; color: {{navy}}">Generate</div><div style="font-size: 20px; line-height: 1.25; text-wrap: balance">Gemini 3.6 Flash, English</div></div>
+<svg width="24" height="24" viewBox="0 0 24 24" style="align-self: center" aria-hidden="true"><path d="M3 12h15M13 6l6 6-6 6" fill="none" stroke="#33475B" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+<div style="outline: 2px solid #C3CEDB; outline-offset: -2px; padding: 12px 8px"><div style="font-weight: 700; font-size: 22px; color: {{navy}}">Translate</div><div style="font-size: 20px; line-height: 1.25; text-wrap: balance">to Sepedi and isiZulu</div></div>
+<svg width="24" height="24" viewBox="0 0 24 24" style="align-self: center" aria-hidden="true"><path d="M3 12h15M13 6l6 6-6 6" fill="none" stroke="#33475B" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+<div style="outline: 2px solid #C3CEDB; outline-offset: -2px; padding: 12px 8px"><div style="font-weight: 700; font-size: 22px; color: {{navy}}">Clean, split</div><div style="font-size: 20px; line-height: 1.25; text-wrap: balance">13,877 kept, 80/10/10</div></div>
+</div>
 <figure style="margin: 0; display: flex; flex-direction: column; gap: 10px">
 <div style="display: flex; flex-wrap: wrap; column-gap: 28px; font-size: 22px">
 <div style="display: flex; align-items: center; gap: 10px"><span style="width: 28px; height: 18px; background: {{navy}}; display: inline-block"></span>Misinformation</div>
@@ -97,7 +126,7 @@ html,body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 <div style="width: 76px; font-size: 22px; text-align: right; font-variant-numeric: tabular-nums">{{c.t}}</div>
 </div>
 </sc-for>
-<figcaption style="font-size: 20px; color: #4D4D4D; line-height: 1.35">13,997 generated, 13,877 kept after cleaning; split 80/10/10.</figcaption>
+<figcaption style="font-size: 20px; color: #4D4D4D; line-height: 1.35">All 13,997 generated statements, by language and label, before cleaning.</figcaption>
 </figure>
 </div>
 </section>
@@ -105,7 +134,7 @@ html,body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 
 <!-- COLUMN 2: 3 System architecture -->
 <section style="background: #FFFFFF; display: flex; flex-direction: column; min-height: 0">
-<h2 style="margin: 0; background: {{navy}}; color: #FFFFFF; font-size: 46px; font-weight: 700; line-height: 1; padding: 25px 32px">3. System architecture</h2>
+<h2 style="margin: 0; background: {{navy}}; color: #FFFFFF; font-size: 40px; font-weight: 700; line-height: 1; padding: 28px 32px">3. System architecture</h2>
 <div style="padding: 30px 32px 34px; display: flex; flex-direction: column; gap: 22px">
 <p style="margin: 0; text-wrap: pretty">A permissioned <b>Hyperledger Fabric</b> consortium [5] with Raft ordering: no fees, deterministic finality, and roles enforced inside chaincode from X.509 certificate attributes.</p>
 <figure style="margin: 0; display: flex; flex-direction: column; gap: 10px">
@@ -119,104 +148,141 @@ html,body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 <div style="background: #E9EEF4; padding: 14px 16px"><div style="font-weight: 700; font-size: 25px; color: {{navy}}">Observer</div><div style="font-size: 22px; line-height: 1.3">read-only audit</div></div>
 </div>
 <div style="font-weight: 700; font-size: 28px; color: {{navy}}">3.2 POPIA by design</div>
-<div style="display: grid; grid-template-columns: 70px minmax(0, 1fr); row-gap: 8px; column-gap: 14px; font-size: 22px; line-height: 1.35">
-<div style="font-weight: 700; color: {{navy}}">s 10</div><div>Only hash, CID, AI metadata and org ID on-chain.</div>
-<div style="font-weight: 700; color: {{navy}}">s 13</div><div>Fixed schema; no free-form personal fields.</div>
-<div style="font-weight: 700; color: {{navy}}">s 14</div><div>Claim text off-chain in IPFS, so deletable.</div>
-<div style="font-weight: 700; color: {{navy}}">s 19</div><div>SHA-256, TLS channels and chaincode RBAC.</div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+<div style="background: #E9EEF4; padding: 16px 18px; display: flex; gap: 16px; align-items: flex-start">
+<div style="flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 6px"><svg width="56" height="56" viewBox="0 0 56 56" aria-hidden="true"><circle cx="28" cy="28" r="28" fill="{{navy}}"/><path d="M16 17h24l-9 11v10l-6 3V28z" fill="#FFFFFF"/></svg><div style="font-weight: 700; font-size: 20px; color: #D99A2B; white-space: nowrap">s 10</div></div>
+<div><div style="font-weight: 700; font-size: 25px; color: {{navy}}">Minimality</div><div style="font-size: 22px; line-height: 1.3">Only hash, CID, AI metadata and org ID on-chain.</div></div>
+</div>
+<div style="background: #E9EEF4; padding: 16px 18px; display: flex; gap: 16px; align-items: flex-start">
+<div style="flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 6px"><svg width="56" height="56" viewBox="0 0 56 56" aria-hidden="true"><circle cx="28" cy="28" r="28" fill="{{navy}}"/><rect x="18" y="14" width="20" height="27" rx="2" fill="none" stroke="#FFFFFF" stroke-width="3"/><path d="M23 22h10M23 28h10M23 34h6" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"/></svg><div style="font-weight: 700; font-size: 20px; color: #D99A2B; white-space: nowrap">s 13</div></div>
+<div><div style="font-weight: 700; font-size: 25px; color: {{navy}}">Purpose</div><div style="font-size: 22px; line-height: 1.3">Fixed schema; no free-form personal fields.</div></div>
+</div>
+<div style="background: #E9EEF4; padding: 16px 18px; display: flex; gap: 16px; align-items: flex-start">
+<div style="flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 6px"><svg width="56" height="56" viewBox="0 0 56 56" aria-hidden="true"><circle cx="28" cy="28" r="28" fill="{{navy}}"/><path d="M16 19h24M24 19v-3h8v3" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M19 23h18l-2 18H21z" fill="#FFFFFF"/></svg><div style="font-weight: 700; font-size: 20px; color: #D99A2B; white-space: nowrap">s 14</div></div>
+<div><div style="font-weight: 700; font-size: 25px; color: {{navy}}">Retention</div><div style="font-size: 22px; line-height: 1.3">Claim text off-chain in IPFS, so deletable.</div></div>
+</div>
+<div style="background: #E9EEF4; padding: 16px 18px; display: flex; gap: 16px; align-items: flex-start">
+<div style="flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 6px"><svg width="56" height="56" viewBox="0 0 56 56" aria-hidden="true"><circle cx="28" cy="28" r="28" fill="{{navy}}"/><path d="M21 26v-5a7 7 0 0 1 14 0v5" fill="none" stroke="#FFFFFF" stroke-width="3"/><rect x="17" y="26" width="22" height="16" rx="2" fill="#FFFFFF"/></svg><div style="font-weight: 700; font-size: 20px; color: #D99A2B; white-space: nowrap">s 19</div></div>
+<div><div style="font-weight: 700; font-size: 25px; color: {{navy}}">Security</div><div style="font-size: 22px; line-height: 1.3">SHA-256, TLS channels and chaincode RBAC.</div></div>
+</div>
 </div>
 </div>
 </section>
 
-<!-- COLUMN 3: 4 Results -->
+<!-- COLUMN 3: 4 Performance of deployed model -->
 <section style="background: #FFFFFF; display: flex; flex-direction: column; min-height: 0">
-<h2 style="margin: 0; background: {{navy}}; color: #FFFFFF; font-size: 46px; font-weight: 700; line-height: 1; padding: 25px 32px">4. Results</h2>
+<h2 style="margin: 0; background: {{navy}}; color: #FFFFFF; font-size: 40px; font-weight: 700; line-height: 1; padding: 28px 32px">4. Performance of deployed model</h2>
 <div style="padding: 30px 32px 34px; display: flex; flex-direction: column; gap: 24px">
-<div style="display: flex; flex-wrap: wrap; column-gap: 28px; row-gap: 6px; font-size: 22px">
-<div style="display: flex; align-items: center; gap: 10px"><span style="width: 28px; height: 18px; background: {{navy}}; display: inline-block"></span>Full fine-tuning</div>
-<div style="display: flex; align-items: center; gap: 10px"><span style="width: 28px; height: 18px; background: #D99A2B; display: inline-block"></span>LoRA</div>
-<div style="display: flex; align-items: center; gap: 10px"><span style="width: 28px; height: 18px; background: #9AA3AF; display: inline-block"></span>TF-IDF baseline</div>
+<p style="margin: 0; text-wrap: pretty">Deployed detector: <b>AfroXLMR-large-76L</b> [3] with <b>LoRA</b> [4]. Means of three seeds, 1,393 test statements.</p>
+
+<div style="background: #FBF1DE; border-top: 6px solid #D99A2B; padding: 22px 26px; display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; align-items: center; gap: 24px">
+<div style="font-weight: 700; font-size: 96px; line-height: 0.9; color: {{navy}}; font-variant-numeric: tabular-nums">0.882</div>
+<div style="font-size: 22px; line-height: 1.3"><b>F1</b> on the misinformation class, ±&nbsp;0.015 across seeds; AUC&nbsp;0.940</div>
+</div>
+<div style="display: flex; justify-content: space-between">
+<sc-for list="{{flagged}}" as="f" hint-placeholder-count="10">
+<svg width="52" height="48" viewBox="0 0 52 48" aria-hidden="true"><path d="M8 3h36a6 6 0 0 1 6 6v20a6 6 0 0 1-6 6H23l-11 9v-9H8a6 6 0 0 1-6-6V9a6 6 0 0 1 6-6z" fill="{{f.fill}}" stroke="{{f.stroke}}" stroke-width="2.5" stroke-linejoin="round"/></svg>
+</sc-for>
+</div>
+<div style="font-size: 22px; line-height: 1.3; text-wrap: pretty"><b>9 in 10</b> false claims are flagged for fact-checkers (recall 0.902), and <b>86%</b> of flagged claims really are false (precision 0.862).</div>
 </div>
 
 <figure style="margin: 0; display: flex; flex-direction: column; gap: 12px">
-<div style="font-weight: 700; font-size: 28px; color: {{navy}}">4.1 Misinformation detection, test F1</div>
-<sc-for list="{{models}}" as="m" hint-placeholder-count="4">
-<div style="display: flex; flex-direction: column; gap: 5px">
-<div style="font-size: 22px; font-weight: 700">{{m.name}}</div>
+<div style="font-weight: 700; font-size: 28px; color: {{navy}}">4.1 Ahead of the strongest baseline</div>
+<div style="display: flex; flex-wrap: wrap; column-gap: 28px; row-gap: 6px; font-size: 22px">
+<div style="display: flex; align-items: center; gap: 10px"><span style="width: 28px; height: 18px; background: #D99A2B; display: inline-block"></span>Deployed model</div>
+<div style="display: flex; align-items: center; gap: 10px"><span style="width: 28px; height: 18px; background: #9AA3AF; display: inline-block"></span>TF-IDF + Naive Bayes</div>
+</div>
+<sc-for list="{{metrics}}" as="m" hint-placeholder-count="4">
+<div style="display: flex; align-items: center; gap: 12px">
+<div style="width: 118px; font-size: 22px; font-weight: 700">{{m.name}}</div>
+<div style="flex: 1; display: flex; flex-direction: column; gap: 4px">
 <sc-for list="{{m.bars}}" as="b" hint-placeholder-count="2">
 <div style="display: flex; align-items: center; gap: 12px">
-<div style="flex: 1; height: 28px; background: #EDEDED">
-<div style="height: 100%; width: {{b.width}}; background: {{b.color}}"></div>
-</div>
-<div style="width: 78px; font-size: 22px; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums">{{b.value}}</div>
+<div style="flex: 1; height: 22px; background: #EDEDED"><div style="height: 100%; width: {{b.width}}; background: {{b.color}}"></div></div>
+<div style="width: 70px; font-size: 22px; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums">{{b.value}}</div>
 </div>
 </sc-for>
 </div>
+<div style="width: 82px; font-size: 22px; font-weight: 700; color: {{navy}}; text-align: right; font-variant-numeric: tabular-nums">{{m.delta}}</div>
+</div>
 </sc-for>
-<figcaption style="font-size: 20px; color: #4D4D4D; line-height: 1.35">Mean F1 (misinformation class) over three seeds on 1,393 held-out statements. Bars start at F1 = 0.70. Best single run: F1 0.906, AUC 0.963.</figcaption>
+<figcaption style="font-size: 20px; color: #4D4D4D; line-height: 1.35">Bars start at 0.70; right column is the gain. The largest gain is precision, which means fewer false alarms for reviewers.</figcaption>
 </figure>
 
+<div style="display: flex; flex-direction: column; gap: 12px">
+<div style="font-weight: 700; font-size: 28px; color: {{navy}}">4.2 Why LoRA, not full fine-tuning</div>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px">
+<div style="background: #E9EEF4; padding: 16px 16px"><div style="font-weight: 700; font-size: 46px; line-height: 1; color: {{navy}}">98%</div><div style="font-size: 20px; line-height: 1.3; margin-top: 8px">of full fine-tuning's F1 (0.882 vs 0.899)</div></div>
+<div style="background: #E9EEF4; padding: 16px 16px"><div style="font-weight: 700; font-size: 46px; line-height: 1; color: {{navy}}">1.29%</div><div style="font-size: 20px; line-height: 1.3; margin-top: 8px">of weights trained: a 7.3 M adapter on a shared base</div></div>
+<div style="background: #E9EEF4; padding: 16px 16px"><div style="font-weight: 700; font-size: 46px; line-height: 1; color: {{navy}}">≤ 0.04</div><div style="font-size: 20px; line-height: 1.3; margin-top: 8px">loss gap at stop; 2 of 3 full runs overfit (0.40–0.49)</div></div>
+</div>
+<div style="font-size: 20px; color: #4D4D4D; line-height: 1.35">Full fine-tuning overfits synthetic data; LoRA should generalise better.</div>
+</div>
+
 <figure style="margin: 0; display: flex; flex-direction: column; gap: 12px">
-<div style="font-weight: 700; font-size: 28px; color: {{navy}}">4.2 F1 by language, AfroXLMR-large-76L</div>
+<div style="font-weight: 700; font-size: 28px; color: {{navy}}">4.3 Holds up in Sepedi and isiZulu</div>
 <sc-for list="{{langs}}" as="l" hint-placeholder-count="3">
 <div style="display: flex; align-items: center; gap: 12px">
-<div style="width: 100px; font-size: 22px; font-weight: 700">{{l.name}}</div>
-<div style="flex: 1; display: flex; flex-direction: column; gap: 4px">
-<sc-for list="{{l.bars}}" as="b" hint-placeholder-count="2">
-<div style="display: flex; align-items: center; gap: 12px">
-<div style="flex: 1; height: 24px; background: #EDEDED"><div style="height: 100%; width: {{b.width}}; background: {{b.color}}"></div></div>
-<div style="width: 78px; font-size: 22px; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums">{{b.value}}</div>
+<div style="width: 118px; font-size: 22px; font-weight: 700">{{l.name}}</div>
+<div style="flex: 1; height: 30px; background: #EDEDED"><div style="height: 100%; width: {{l.width}}; background: #D99A2B"></div></div>
+<div style="width: 70px; font-size: 22px; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums">{{l.value}}</div>
+<div style="width: 82px"></div>
 </div>
 </sc-for>
-</div>
-</div>
-</sc-for>
-<figcaption style="font-size: 20px; color: #4D4D4D; line-height: 1.35">Same axis as 4.1. Sepedi and isiZulu trail English by only about 0.04.</figcaption>
-</figure>
-
-<figure style="margin: 0; display: flex; flex-direction: column; gap: 12px">
-<div style="font-weight: 700; font-size: 28px; color: {{navy}}">4.3 LoRA's gap to full fine-tuning</div>
-<sc-for list="{{gaps}}" as="g" hint-placeholder-count="3">
-<div style="display: flex; align-items: center; gap: 12px">
-<div style="width: 210px; font-size: 22px">{{g.name}}</div>
-<div style="flex: 1; height: 28px; background: #EDEDED"><div style="height: 100%; width: {{g.width}}; background: #D99A2B"></div></div>
-<div style="width: 78px; font-size: 22px; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums">{{g.value}}</div>
-</div>
-</sc-for>
-<figcaption style="font-size: 20px; color: #4D4D4D; line-height: 1.35">F1 lost by LoRA versus full fine-tuning (axis 0–0.07): the gap shrinks as models grow.</figcaption>
+<figcaption style="font-size: 20px; color: #4D4D4D; line-height: 1.35">Deployed model, F1 by language on the same axis as 4.1. The two African languages trail English by only about 0.04.</figcaption>
 </figure>
 
 <div style="background: #E9EEF4; border-top: 6px solid {{navy}}; padding: 20px 24px; display: flex; flex-direction: column; gap: 6px">
-<div style="font-size: 21px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: {{navy}}">Why deploy LoRA?</div>
-<div style="font-size: 22px; text-wrap: pretty">Two of three full fine-tuning runs overfitted (validation loss 0.40–0.49 above training loss); every LoRA run stayed within 0.04 while training only 1.29% of parameters.</div>
+<div style="font-size: 21px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: {{navy}}">What this means for the framework</div>
+<div style="font-size: 22px; text-wrap: pretty">The model triages; it does not decide. Its label and confidence are stored on-chain beside every vote, and the consortium (section 5) makes the final call, so model errors stay visible and can be outvoted.</div>
 </div>
 </div>
 </section>
 
-<!-- COLUMN 4: 5 Report lifecycle + 6 Conclusion + 7 References -->
-<div style="display: flex; flex-direction: column; gap: 62px; min-height: 0">
+<!-- COLUMN 4: 4.4 Confusion matrix (section 4 continued) + 5 Report lifecycle + 6 Key takeaways + 7 References -->
+<div style="display: flex; flex-direction: column; gap: 24px; min-height: 0">
 <section style="background: #FFFFFF; display: flex; flex-direction: column">
-<h2 style="margin: 0; background: {{navy}}; color: #FFFFFF; font-size: 46px; font-weight: 700; line-height: 1; padding: 25px 32px">5. Report lifecycle</h2>
+<div style="padding: 24px 32px 26px; display: flex; flex-direction: column; gap: 12px">
+<div style="font-weight: 700; font-size: 28px; color: {{navy}}">4.4 Confusion matrix, mean of 3 seeds</div>
+<div style="display: grid; grid-template-columns: 150px minmax(0, 1fr) minmax(0, 1fr); gap: 8px">
+<div></div>
+<div style="font-size: 20px; font-weight: 700; color: #4D4D4D; text-align: center">Flagged as false</div>
+<div style="font-size: 20px; font-weight: 700; color: #4D4D4D; text-align: center">Passed as accurate</div>
+<div style="display: flex; flex-direction: column; justify-content: center; line-height: 1.2"><span style="font-size: 22px; font-weight: 700">False claim</span><span style="font-size: 20px; color: #4D4D4D">704 in test set</span></div>
+<div style="background: {{navy}}; color: #FFFFFF; padding: 8px; display: flex; align-items: baseline; justify-content: center; gap: 10px"><span style="font-size: 40px; font-weight: 700; line-height: 1">635</span><span style="font-size: 20px">caught</span></div>
+<div style="background: #FBF1DE; outline: 2px solid #D99A2B; outline-offset: -2px; padding: 8px; display: flex; align-items: baseline; justify-content: center; gap: 10px"><span style="font-size: 40px; font-weight: 700; line-height: 1; color: {{navy}}">69</span><span style="font-size: 20px">missed</span></div>
+<div style="display: flex; flex-direction: column; justify-content: center; line-height: 1.2"><span style="font-size: 22px; font-weight: 700">Accurate</span><span style="font-size: 20px; color: #4D4D4D">689 in test set</span></div>
+<div style="background: #FBF1DE; outline: 2px solid #D99A2B; outline-offset: -2px; padding: 8px; display: flex; align-items: baseline; justify-content: center; gap: 10px"><span style="font-size: 40px; font-weight: 700; line-height: 1; color: {{navy}}">102</span><span style="font-size: 20px">false alarms</span></div>
+<div style="background: {{navy}}; color: #FFFFFF; padding: 8px; display: flex; align-items: baseline; justify-content: center; gap: 10px"><span style="font-size: 40px; font-weight: 700; line-height: 1">587</span><span style="font-size: 20px">cleared</span></div>
+</div>
+</div>
+</section>
+
+<section style="background: #FFFFFF; display: flex; flex-direction: column">
+<h2 style="margin: 0; background: {{navy}}; color: #FFFFFF; font-size: 40px; font-weight: 700; line-height: 1; padding: 28px 32px">5. Report lifecycle</h2>
 <div style="padding: 26px 32px 28px">
 <figure style="margin: 0; display: flex; flex-direction: column; gap: 10px">
-<img src="./assets/report-lifecycle.svg" alt="Report lifecycle: a submitted report is PENDING, becomes UNDER REVIEW with its first fact-check, and ends FINAL with label 0 or 1 when floor(E/2) + 1 organisations agree, DISPUTED when all E have voted without a majority, or EXPIRED when an official closes it after the 72-hour window." style="width: 100%; height: auto; display: block">
-<figcaption style="font-size: 20px; color: #4D4D4D; line-height: 1.35">E = organisations other than the submitter. The chaincode applies every transition; reports in the bottom row accept no further votes.</figcaption>
+<img src="./assets/report-lifecycle.svg" alt="Report lifecycle: a submitted report is PENDING, becomes UNDER REVIEW with its first fact-check, and ends FINAL with label 0 or 1 when floor(E/2) + 1 organisations agree, DISPUTED when all E have voted without a majority, or EXPIRED when an official closes it after the 72-hour window." style="width: 100%; max-width: 648px; height: auto; display: block; margin: 0 auto">
+<figcaption style="font-size: 20px; color: #4D4D4D; line-height: 1.35">E = organisations other than the submitter. Bottom row: final states.</figcaption>
 </figure>
 </div>
 </section>
 
 <section style="background: #FFFFFF; display: flex; flex-direction: column">
-<h2 style="margin: 0; background: {{navy}}; color: #FFFFFF; font-size: 46px; font-weight: 700; line-height: 1; padding: 25px 32px">6. Conclusion</h2>
-<div style="padding: 24px 32px 28px; display: flex; flex-direction: column; gap: 12px; font-size: 22px">
-<p style="margin: 0; text-wrap: pretty">An Afrocentric encoder trained on translated synthetic data detects misinformation in Sepedi and isiZulu close to English; a Fabric consortium records joint verdicts tamper-evidently.</p>
-<p style="margin: 0; text-wrap: pretty"><b style="color: {{navy}}">Next steps:</b> real election posts, a multi-host deployment, a stakeholder web interface and per-user identities.</p>
-<p style="margin: 0; border-top: 2px solid #BFBFBF; padding-top: 12px; font-size: 20px; text-wrap: pretty"><b style="color: {{navy}}">Acknowledgements:</b> we thank our supervisors, <b>Dr. S Rananga</b> and <b>Mr. N Rananga</b>, and the DSFSI Research Group, University of Pretoria.</p>
+<h2 style="margin: 0; background: {{navy}}; color: #FFFFFF; font-size: 40px; font-weight: 700; line-height: 1; padding: 28px 32px">6. Key takeaways</h2>
+<div style="padding: 24px 32px 28px; display: flex; flex-direction: column; gap: 10px; font-size: 22px; line-height: 1.3">
+<sc-for list="{{takeaways}}" as="k" hint-placeholder-count="5">
+<div style="display: flex; gap: 12px; align-items: flex-start"><svg width="28" height="28" viewBox="0 0 28 28" style="flex-shrink: 0" aria-hidden="true"><circle cx="14" cy="14" r="14" fill="{{navy}}"/><path d="M8 14.5l4 4 8-9" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><div><b style="color: {{navy}}">{{k.lead}}</b> {{k.text}}</div></div>
+</sc-for>
+<div style="margin-top: 4px; font-size: 20px; color: #4D4D4D">Trained and tested on synthetic data; next: real election posts.</div>
 </div>
 </section>
 
 <section style="flex: 1; min-height: 0; background: #FFFFFF; display: flex; flex-direction: column">
-<h2 style="margin: 0; background: {{navy}}; color: #FFFFFF; font-size: 46px; font-weight: 700; line-height: 1; padding: 25px 32px">7. References</h2>
-<div style="flex: 1; padding: 22px 32px 24px; display: flex; flex-direction: column; gap: 8px; font-size: 20px; line-height: 1.3">
+<h2 style="margin: 0; background: {{navy}}; color: #FFFFFF; font-size: 40px; font-weight: 700; line-height: 1; padding: 28px 32px">7. References</h2>
+<div style="flex: 1; padding: 22px 32px 24px; display: flex; flex-direction: column; gap: 8px; font-size: 18px; line-height: 1.3">
 <div style="display: grid; grid-template-columns: 40px minmax(0, 1fr)"><b style="color: {{navy}}">[1]</b><div>G. Gondwe, “AI-driven disinformation and political influence on WhatsApp in South Africa's 2024 elections,” <i>Int. J. Press/Politics</i>, 2025.</div></div>
 <div style="display: grid; grid-template-columns: 40px minmax(0, 1fr)"><b style="color: {{navy}}">[2]</b><div>S. Rananga, B. Isong, A. Modupe and V. Marivate, “Misinformation detection: a review for high and low-resource languages,” <i>J. Inf. Syst. Informatics</i>, vol. 6, no. 4, 2024.</div></div>
 <div style="display: grid; grid-template-columns: 40px minmax(0, 1fr)"><b style="color: {{navy}}">[3]</b><div>J. O. Alabi, D. I. Adelani, M. Mosbach and D. Klakow, “Adapting pre-trained language models to African languages via multilingual adaptive fine-tuning,” <i>COLING</i>, 2022.</div></div>
@@ -235,27 +301,30 @@ class Component extends DCLogic {
   renderVals() {
     const navy = this.props.navy ?? '#003366';
     const gold = '#D99A2B', grey = '#9AA3AF';
-    // F1 bars share one axis, 0.70 to 0.95.
+    // Results bars share one axis, 0.70 to 0.95.
     const lo = 0.70, hi = 0.95;
     const w = (v) => (Math.max(0, (v - lo) / (hi - lo)) * 100).toFixed(1) + '%';
     const bar = (v, color) => ({ value: v.toFixed(3), width: w(v), color });
-    const models = [
-      { name: 'TF-IDF baselines (LR · SVM · NB)', bars: [bar(0.807, grey), bar(0.822, grey), bar(0.827, grey)] },
-      { name: 'MzansiLM-125M', bars: [bar(0.851, navy), bar(0.788, gold)] },
-      { name: 'AfroXLMR-base-76L', bars: [bar(0.859, navy), bar(0.826, gold)] },
-      { name: 'AfroXLMR-large-76L', bars: [bar(0.899, navy), bar(0.882, gold)] }
-    ];
-    const langs = [
-      { name: 'English', bars: [bar(0.926, navy), bar(0.910, gold)] },
-      { name: 'Sepedi', bars: [bar(0.885, navy), bar(0.865, gold)] },
-      { name: 'isiZulu', bars: [bar(0.889, navy), bar(0.870, gold)] }
-    ];
-    const gaps = [['MzansiLM-125M', 0.063], ['AfroXLMR-base-76L', 0.033], ['AfroXLMR-large-76L', 0.018]]
-      .map(([name, v]) => ({ name, value: v.toFixed(3), width: (v / 0.07 * 100).toFixed(1) + '%' }));
+    // Deployed AfroXLMR-large-76L + LoRA vs TF-IDF + Multinomial NB, test split, mean of 3 seeds.
+    const metrics = [['F1', 0.882, 0.827], ['Precision', 0.862, 0.785], ['Recall', 0.902, 0.874], ['AUC', 0.940, 0.898]]
+      .map(([name, lora, nb]) => ({ name, bars: [bar(lora, gold), bar(nb, grey)], delta: '+' + (lora - nb).toFixed(3) }));
+    const langs = [['English', 0.910], ['Sepedi', 0.865], ['isiZulu', 0.870]]
+      .map(([name, v]) => ({ name, ...bar(v, gold) }));
+    // Recall 0.902: 9 of every 10 false claims flagged.
+    const flagged = Array.from({ length: 10 }, (_, i) => i < 9 ? { fill: gold, stroke: gold } : { fill: '#FFFFFF', stroke: grey });
+    // Key takeaways: the contributions, one per research gap in report section 5.4
+    // (the integration, gaps i-iv); single-host benchmark figures are left out.
+    const takeaways = [
+      ['Novel design:', 'local-language AI, joint verdicts, shared ledger.'],
+      ['First Sepedi, isiZulu election detector:', 'near-English F1.'],
+      ['AI flags, people decide:', 'a majority of peer orgs sets verdicts.'],
+      ['Ledger-enforced roles:', 'certificate roles checked in chaincode.'],
+      ['POPIA by design:', 'only hashes on-chain; claim text erasable.']
+    ].map(([lead, text]) => ({ lead, text }));
     const corpus = [['English', 2360, 2310], ['Sepedi', 2360, 2307], ['isiZulu', 2341, 2319]]
       .map(([lang, m, a]) => ({ lang, m: m.toLocaleString('en-US'), a: a.toLocaleString('en-US'),
         t: (m + a).toLocaleString('en-US'), mw: (m / (m + a) * 100).toFixed(1) + '%' }));
-    return { navy, models, langs, gaps, corpus };
+    return { navy, metrics, langs, flagged, takeaways, corpus };
   }
 }
 </script>
