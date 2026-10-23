@@ -67,6 +67,7 @@ html,body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 <div style="background: #E9EEF4; border-top: 6px solid {{navy}}; padding: 22px 26px; display: flex; flex-direction: column; gap: 8px">
 <div style="font-size: 21px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: {{navy}}">Research question</div>
 <div style="font-size: 25px; font-style: italic; line-height: 1.38">How can an integrated AI and blockchain framework enable tamper-resistant, transparent, multilingual monitoring and verification of election misinformation in South Africa?</div>
+<div style="margin-top: 4px; border-top: 2px solid #C3CEDB; padding-top: 10px; font-size: 22px; line-height: 1.35; text-wrap: pretty"><b style="color: {{navy}}">Aim:</b> AI triage in three languages plus joint verdicts from independent fact-checkers on a shared, tamper-evident ledger.</div>
 </div>
 </div>
 </section>
@@ -74,6 +75,7 @@ html,body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 <section style="flex: 1; min-height: 0; background: #FFFFFF; display: flex; flex-direction: column">
 <h2 style="margin: 0; background: {{navy}}; color: #FFFFFF; font-size: 40px; font-weight: 700; line-height: 1; padding: 28px 32px">2. Methodology</h2>
 <div style="padding: 30px 32px 34px; display: flex; flex-direction: column; gap: 20px">
+<p style="margin: 0; font-size: 22px; line-height: 1.35; text-wrap: pretty"><b style="color: {{navy}}">Design-science research:</b> build the framework, then evaluate it against TF-IDF baselines over three seeds.</p>
 <div style="font-weight: 700; font-size: 28px; color: {{navy}}">2.1 A four-stage pipeline</div>
 <div style="display: grid; grid-template-columns: minmax(0, 1fr) 24px minmax(0, 1fr) 24px minmax(0, 1fr) 24px minmax(0, 1fr); align-items: stretch">
 <div style="background: #E9EEF4; padding: 16px 8px; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center">
@@ -101,7 +103,7 @@ html,body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 </div>
 </div>
 <div style="font-weight: 700; font-size: 28px; color: {{navy}}; margin-top: 4px">2.2 A synthetic multilingual corpus</div>
-<p style="margin: 0; text-wrap: pretty">No Sepedi or isiZulu election corpus existed, so we generated one:</p>
+<p style="margin: 0; text-wrap: pretty">No Sepedi or isiZulu election corpus existed:</p>
 <div style="display: grid; grid-template-columns: minmax(0, 1fr) 24px minmax(0, 1fr) 24px minmax(0, 1fr) 24px minmax(0, 1fr); align-items: stretch; text-align: center">
 <div style="outline: 2px solid #C3CEDB; outline-offset: -2px; padding: 12px 8px"><div style="font-weight: 700; font-size: 22px; color: {{navy}}">Prompts</div><div style="font-size: 20px; line-height: 1.25; text-wrap: balance">5,000, fixed seed</div></div>
 <svg width="24" height="24" viewBox="0 0 24 24" style="align-self: center" aria-hidden="true"><path d="M3 12h15M13 6l6 6-6 6" fill="none" stroke="#33475B" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -119,7 +121,7 @@ html,body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 <sc-for list="{{corpus}}" as="c" hint-placeholder-count="3">
 <div style="display: flex; align-items: center; gap: 12px">
 <div style="width: 100px; font-size: 22px; font-weight: 700">{{c.lang}}</div>
-<div style="flex: 1; height: 34px; display: flex">
+<div style="flex: 1; height: 30px; display: flex">
 <div style="height: 100%; width: {{c.mw}}; background: {{navy}}; color: #FFFFFF; font-size: 20px; font-weight: 700; display: flex; align-items: center; padding-left: 10px; box-sizing: border-box; font-variant-numeric: tabular-nums">{{c.m}}</div>
 <div style="height: 100%; flex: 1; background: #D99A2B; color: #FFFFFF; font-size: 20px; font-weight: 700; display: flex; align-items: center; justify-content: flex-end; padding-right: 10px; box-sizing: border-box; font-variant-numeric: tabular-nums">{{c.a}}</div>
 </div>
@@ -208,7 +210,7 @@ html,body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 <div style="width: 82px; font-size: 22px; font-weight: 700; color: {{navy}}; text-align: right; font-variant-numeric: tabular-nums">{{m.delta}}</div>
 </div>
 </sc-for>
-<figcaption style="font-size: 20px; color: #4D4D4D; line-height: 1.35">Bars start at 0.70; right column is the gain. The largest gain is precision, which means fewer false alarms for reviewers.</figcaption>
+<figcaption style="font-size: 20px; color: #4D4D4D; line-height: 1.35">Bars start at 0.50; right column is the gain. The largest gain is precision, which means fewer false alarms for reviewers.</figcaption>
 </figure>
 
 <div style="display: flex; flex-direction: column; gap: 12px">
@@ -301,8 +303,8 @@ class Component extends DCLogic {
   renderVals() {
     const navy = this.props.navy ?? '#003366';
     const gold = '#D99A2B', grey = '#9AA3AF';
-    // Results bars share one axis, 0.70 to 0.95.
-    const lo = 0.70, hi = 0.95;
+    // Results bars share one axis, 0.50 to 0.95.
+    const lo = 0.50, hi = 0.95;
     const w = (v) => (Math.max(0, (v - lo) / (hi - lo)) * 100).toFixed(1) + '%';
     const bar = (v, color) => ({ value: v.toFixed(3), width: w(v), color });
     // Deployed AfroXLMR-large-76L + LoRA vs TF-IDF + Multinomial NB, test split, mean of 3 seeds.
@@ -312,13 +314,13 @@ class Component extends DCLogic {
       .map(([name, v]) => ({ name, ...bar(v, gold) }));
     // Recall 0.902: 9 of every 10 false claims flagged.
     const flagged = Array.from({ length: 10 }, (_, i) => i < 9 ? { fill: gold, stroke: gold } : { fill: '#FFFFFF', stroke: grey });
-    // Key takeaways: the contributions, one per research gap in report section 5.4
-    // (the integration, gaps i-iv); single-host benchmark figures are left out.
+    // Key takeaways: the contributions (report section 5.4) plus end-to-end correctness;
+    // single-host performance figures are left out.
     const takeaways = [
       ['Novel design:', 'local-language AI, joint verdicts, shared ledger.'],
       ['First Sepedi, isiZulu election detector:', 'near-English F1.'],
       ['AI flags, people decide:', 'a majority of peer orgs sets verdicts.'],
-      ['Ledger-enforced roles:', 'certificate roles checked in chaincode.'],
+      ['Verified end to end:', 'all test workflows passed hash checks.'],
       ['POPIA by design:', 'only hashes on-chain; claim text erasable.']
     ].map(([lead, text]) => ({ lead, text }));
     const corpus = [['English', 2360, 2310], ['Sepedi', 2360, 2307], ['isiZulu', 2341, 2319]]
