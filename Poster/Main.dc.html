@@ -22,138 +22,104 @@ html,body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 @media print{body{width:841mm;height:594mm;overflow:hidden}}
 </style>
 </helmet>
+<!-- Type scale used throughout: headings 46 px, subheadings 28 px (navy), body 25 px,
+     secondary text and tables 22 px, captions 20 px, references 18 px. Colours: navy
+     {{navy}}, gold #D99A2B, text #1A1A1A, captions #4D4D4D, panels #E9EEF4. -->
 <div style="width: 3179px; height: 2245px; box-sizing: border-box; padding: 62px 66px; background: linear-gradient(to bottom, #FFFFFF 0%, #FFFFFF 35%, #EFEFEF 45%, #DBDADA 65%, #D0CECE 82%, #93A1B0 88%, #5B7793 92.5%, #2D557D 96%, #003366 100%); color: #1A1A1A; font-family: Arimo, Arial, Helvetica, sans-serif; font-size: 25px; line-height: 1.4; display: flex; flex-direction: column; gap: 62px; overflow: hidden">
 
 <!-- TITLE BAND -->
 <header style="height: 312px; flex-shrink: 0; box-sizing: border-box; background: {{navy}}; color: #FFFFFF; padding: 28px 36px; display: flex; align-items: center; gap: 48px">
-<div style="flex-shrink: 0; background: #FFFFFF; padding: 14px 18px; display: flex; align-items: center">
+<div style="flex-shrink: 0; width: 546px; height: 256px; box-sizing: border-box; background: #FFFFFF; padding: 14px 18px; display: flex; align-items: center; justify-content: center">
 <img src="./assets/3bdecc20549eb902f358cff322865c4c.jpg" alt="University of Pretoria" style="width: 510px; height: 170px; object-fit: contain; display: block">
 </div>
 <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px">
-<h1 style="margin: 0; font-weight: 700; font-size: 60px; line-height: 1.08; letter-spacing: -0.01em; text-wrap: balance">A Blockchain-Enabled Framework for Misinformation Monitoring</h1>
+<h1 style="margin: 0; font-weight: 700; font-size: 55px; line-height: 1.08; letter-spacing: -0.01em; text-wrap: balance">A Blockchain-Enabled Framework for Misinformation Monitoring</h1>
 <div style="font-size: 28px; font-style: italic; color: #DCE5EF">Multilingual AI triage and a shared, tamper-evident ledger for South Africa's election fact-checkers</div>
 <div style="display: flex; flex-wrap: wrap; column-gap: 40px; row-gap: 2px; font-size: 26px">
 <div><b>Tumiso Mokautu</b> <span style="color: #B9C8D9">u20790776</span></div>
 <div><b>Josh Cloete</b> <span style="color: #B9C8D9">u26854563</span></div>
 <div><b>Tshiamo Monametsi</b> <span style="color: #B9C8D9">u25753178</span></div>
-<div style="color: #DCE5EF">COS700 Research Report · Department of Computer Science</div>
+<div style="color: #DCE5EF">COS700 Research Report · Department of Computer Science · DSFSI Research Group</div>
 </div>
 </div>
-<div style="flex-shrink: 0; background: #000000; padding: 18px 22px; display: flex; align-items: center">
-<img src="./assets/6977b46e30d4bfc4ac03834df8cc41ce.png" alt="Data Science for Social Impact" style="width: 380px; height: 170px; object-fit: contain; display: block">
+<div style="flex-shrink: 0; height: 256px; box-sizing: border-box; background: #FFFFFF; padding: 10px; display: flex; align-items: center; justify-content: center">
+<img src="./assets/qr-repository.png" alt="QR code: project code and data on GitHub" style="height: 236px; width: auto; display: block">
+</div>
+<div style="flex-shrink: 0; width: 420px; height: 256px; box-sizing: border-box; background: #FFFFFF; padding: 14px 18px; display: flex; align-items: center; justify-content: center">
+<img src="./assets/dsfsi-logo.png" alt="Data Science for Social Impact (DSFSI)" style="width: 384px; height: 170px; object-fit: contain; display: block">
 </div>
 </header>
 
-<!-- FOUR COLUMNS -->
+<!-- FOUR COLUMNS, read left to right: 1-2 | 3 | 4 | 5-7 -->
 <main style="flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); column-gap: 66px; align-items: stretch">
 
-<!-- COLUMN 1: Introduction + Methodology -->
+<!-- COLUMN 1: 1 Introduction + 2 Methodology -->
 <div style="display: flex; flex-direction: column; gap: 62px; min-height: 0">
 <section style="background: #FFFFFF; display: flex; flex-direction: column">
-<h2 style="margin: 0; background: {{navy}}; color: #FFFFFF; font-size: 46px; font-weight: 700; line-height: 1; padding: 25px 32px">Introduction</h2>
+<h2 style="margin: 0; background: {{navy}}; color: #FFFFFF; font-size: 46px; font-weight: 700; line-height: 1; padding: 25px 32px">1. Introduction</h2>
 <div style="padding: 30px 32px 34px; display: flex; flex-direction: column; gap: 20px">
-<p style="margin: 0; text-wrap: pretty">In South Africa's 2024 election, AI deepfakes spread through politically active WhatsApp groups, and the fact-checks posted in reply were often dismissed as propaganda.</p>
-<p style="margin: 0; text-wrap: pretty">Fact-checking works, but each organisation keeps its own record on its own rating scale. Detection tools rarely cover African languages: <b>67%</b> of studies use English data and <b>under 10%</b> target low-resource languages.</p>
+<p style="margin: 0; text-wrap: pretty">In South Africa's 2024 election, AI deepfakes spread through WhatsApp groups and fact-checks were dismissed as propaganda [1]. Fact-checkers keep separate records, and detection tools rarely cover African languages:</p>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px">
+<div style="background: #E9EEF4; padding: 16px 20px"><div style="font-weight: 700; font-size: 52px; line-height: 1; color: {{navy}}">67%</div><div style="font-size: 22px; line-height: 1.3; margin-top: 6px">of detection studies use English data [2]</div></div>
+<div style="background: #E9EEF4; padding: 16px 20px"><div style="font-weight: 700; font-size: 52px; line-height: 1; color: {{navy}}">&lt;10%</div><div style="font-size: 22px; line-height: 1.3; margin-top: 6px">target low-resource languages [2]</div></div>
+</div>
 <div style="background: #E9EEF4; border-top: 6px solid {{navy}}; padding: 22px 26px; display: flex; flex-direction: column; gap: 8px">
 <div style="font-size: 21px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: {{navy}}">Research question</div>
-<div style="font-size: 26px; font-style: italic; line-height: 1.38">How can an integrated AI and blockchain framework enable tamper-resistant, transparent, multilingual monitoring and verification of election misinformation in South Africa?</div>
+<div style="font-size: 25px; font-style: italic; line-height: 1.38">How can an integrated AI and blockchain framework enable tamper-resistant, transparent, multilingual monitoring and verification of election misinformation in South Africa?</div>
 </div>
 </div>
 </section>
 
 <section style="flex: 1; min-height: 0; background: #FFFFFF; display: flex; flex-direction: column">
-<h2 style="margin: 0; background: {{navy}}; color: #FFFFFF; font-size: 46px; font-weight: 700; line-height: 1; padding: 25px 32px">Methodology</h2>
+<h2 style="margin: 0; background: {{navy}}; color: #FFFFFF; font-size: 46px; font-weight: 700; line-height: 1; padding: 25px 32px">2. Methodology</h2>
 <div style="padding: 30px 32px 34px; display: flex; flex-direction: column; gap: 20px">
-<div style="font-weight: 700; font-size: 28px; color: {{navy}}">A four-stage pipeline</div>
-<div style="display: flex; flex-direction: column; gap: 16px">
-<div style="display: flex; gap: 20px; align-items: flex-start"><div style="width: 46px; height: 46px; flex-shrink: 0; border-radius: 50%; background: {{navy}}; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 25px">1</div><div><b>Ingest:</b> claims enter an Apache Kafka stream that absorbs election-day surges.</div></div>
-<div style="display: flex; gap: 20px; align-items: flex-start"><div style="width: 46px; height: 46px; flex-shrink: 0; border-radius: 50%; background: {{navy}}; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 25px">2</div><div><b>Triage:</b> AfroXLMR-large-76L (LoRA) flags likely misinformation with a confidence score.</div></div>
-<div style="display: flex; gap: 20px; align-items: flex-start"><div style="width: 46px; height: 46px; flex-shrink: 0; border-radius: 50%; background: {{navy}}; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 25px">3</div><div><b>Verify:</b> every organisation except the submitter reviews; ⌊E/2⌋ + 1 matching votes finalise automatically, a split is DISPUTED.</div></div>
-<div style="display: flex; gap: 20px; align-items: flex-start"><div style="width: 46px; height: 46px; flex-shrink: 0; border-radius: 50%; background: {{navy}}; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 25px">4</div><div><b>Record:</b> Hyperledger Fabric stores a SHA-256 hash and metadata; claim text stays off-chain in IPFS.</div></div>
+<div style="font-weight: 700; font-size: 28px; color: {{navy}}">2.1 A four-stage pipeline</div>
+<div style="display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; gap: 20px; align-items: flex-start"><div style="width: 46px; height: 46px; flex-shrink: 0; border-radius: 50%; background: {{navy}}; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 25px">1</div><div><b>Ingest:</b> an Apache Kafka stream absorbs election-day surges.</div></div>
+<div style="display: flex; gap: 20px; align-items: flex-start"><div style="width: 46px; height: 46px; flex-shrink: 0; border-radius: 50%; background: #D99A2B; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 25px">2</div><div><b>Triage:</b> AfroXLMR-large-76L [3] with LoRA [4] scores each claim.</div></div>
+<div style="display: flex; gap: 20px; align-items: flex-start"><div style="width: 46px; height: 46px; flex-shrink: 0; border-radius: 50%; background: {{navy}}; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 25px">3</div><div><b>Verify:</b> every other organisation votes; ⌊E/2⌋ + 1 matching votes finalise, otherwise DISPUTED.</div></div>
+<div style="display: flex; gap: 20px; align-items: flex-start"><div style="width: 46px; height: 46px; flex-shrink: 0; border-radius: 50%; background: {{navy}}; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 25px">4</div><div><b>Record:</b> Hyperledger Fabric [5] stores a SHA-256 hash; claim text stays in IPFS.</div></div>
 </div>
-<div style="font-weight: 700; font-size: 28px; color: {{navy}}; margin-top: 6px">A synthetic multilingual corpus</div>
-<p style="margin: 0; text-wrap: pretty">No labelled election corpus existed in Sepedi or isiZulu. 5,000 scripted prompts asked Gemini 3.6 Flash for paired true and false statements, which were then machine-translated.</p>
-<table style="width: 100%; border-collapse: collapse; font-size: 24px">
-<thead><tr style="border-bottom: 3px solid #1A1A1A"><th style="text-align: left; padding: 7px 0">Language</th><th style="text-align: right; padding: 7px 0">Misinfo.</th><th style="text-align: right; padding: 7px 0">Accurate</th><th style="text-align: right; padding: 7px 0">Total</th></tr></thead>
-<tbody style="font-variant-numeric: tabular-nums">
-<tr style="border-bottom: 1px solid #BFBFBF"><td style="padding: 7px 0">English</td><td style="text-align: right">2,360</td><td style="text-align: right">2,310</td><td style="text-align: right">4,670</td></tr>
-<tr style="border-bottom: 1px solid #BFBFBF"><td style="padding: 7px 0">Sepedi</td><td style="text-align: right">2,360</td><td style="text-align: right">2,307</td><td style="text-align: right">4,667</td></tr>
-<tr style="border-bottom: 1px solid #BFBFBF"><td style="padding: 7px 0">isiZulu</td><td style="text-align: right">2,341</td><td style="text-align: right">2,319</td><td style="text-align: right">4,660</td></tr>
-<tr style="font-weight: 700"><td style="padding: 7px 0">Total</td><td style="text-align: right">7,061</td><td style="text-align: right">6,936</td><td style="text-align: right">13,997</td></tr>
-</tbody>
-</table>
-</div>
-</section>
-</div>
-
-<!-- COLUMN 2: Main results (detection) -->
-<section style="background: #FFFFFF; display: flex; flex-direction: column; min-height: 0">
-<h2 style="margin: 0; background: {{navy}}; color: #FFFFFF; font-size: 46px; font-weight: 700; line-height: 1; padding: 25px 32px">Main results</h2>
-<div style="padding: 30px 32px 34px; display: flex; flex-direction: column; gap: 24px">
-<div style="font-weight: 700; font-size: 28px; color: {{navy}}">Misinformation detection, test F1</div>
-<figure style="margin: 0; display: flex; flex-direction: column; gap: 14px">
-<div style="display: flex; flex-wrap: wrap; column-gap: 28px; row-gap: 6px; font-size: 22px">
-<div style="display: flex; align-items: center; gap: 10px"><span style="width: 28px; height: 18px; background: {{navy}}; display: inline-block"></span>Full fine-tuning</div>
-<div style="display: flex; align-items: center; gap: 10px"><span style="width: 28px; height: 18px; background: #D99A2B; display: inline-block"></span>LoRA</div>
-<div style="display: flex; align-items: center; gap: 10px"><span style="width: 28px; height: 18px; background: #9AA3AF; display: inline-block"></span>TF-IDF baseline</div>
-</div>
-<sc-for list="{{models}}" as="m" hint-placeholder-count="4">
-<div style="display: flex; flex-direction: column; gap: 5px">
-<div style="font-size: 23px; font-weight: 700">{{m.name}}</div>
-<sc-for list="{{m.bars}}" as="b" hint-placeholder-count="2">
-<div style="display: flex; align-items: center; gap: 12px">
-<div style="flex: 1; height: 28px; background: #EDEDED">
-<div style="height: 100%; width: {{b.width}}; background: {{b.color}}"></div>
-</div>
-<div style="width: 78px; font-size: 24px; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums">{{b.value}}</div>
-</div>
-</sc-for>
-</div>
-</sc-for>
-<figcaption style="font-size: 20px; color: #4D4D4D; line-height: 1.35">Mean F1 (misinformation class) over three seeds on 1,393 held-out statements. Bars start at F1 = 0.70.</figcaption>
-</figure>
-
-<div style="display: flex; flex-direction: column; gap: 6px">
-<div style="font-weight: 700; font-size: 25px">F1 by language, AfroXLMR-large-76L</div>
-<table style="width: 100%; border-collapse: collapse; font-size: 24px">
-<thead><tr style="border-bottom: 3px solid #1A1A1A"><th style="text-align: left; padding: 7px 0">Method</th><th style="text-align: right; padding: 7px 0">English</th><th style="text-align: right; padding: 7px 0">Sepedi</th><th style="text-align: right; padding: 7px 0">isiZulu</th></tr></thead>
-<tbody style="font-variant-numeric: tabular-nums">
-<tr style="border-bottom: 1px solid #BFBFBF"><td style="padding: 7px 0">Full</td><td style="text-align: right">0.926</td><td style="text-align: right">0.885</td><td style="text-align: right">0.889</td></tr>
-<tr><td style="padding: 7px 0">LoRA</td><td style="text-align: right">0.910</td><td style="text-align: right">0.865</td><td style="text-align: right">0.870</td></tr>
-</tbody>
-</table>
-</div>
-
-<ul style="margin: 0; padding-left: 30px; display: flex; flex-direction: column; gap: 10px; text-wrap: pretty">
-<li>Every AfroXLMR model beat the baselines; best single run reached <b>F1 0.906, AUC 0.963</b>.</li>
-<li>LoRA's gap to full fine-tuning shrinks with model size: <b>0.063 → 0.033 → 0.018</b>.</li>
-<li>Sepedi and isiZulu trail English by only about <b>0.04</b>.</li>
-</ul>
-
-<div style="background: #E9EEF4; border-top: 6px solid {{navy}}; padding: 20px 24px; display: flex; flex-direction: column; gap: 6px">
-<div style="font-size: 21px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: {{navy}}">Why deploy LoRA?</div>
-<div style="font-size: 24px; text-wrap: pretty">Two of three full fine-tuning runs ended with validation loss 0.40–0.49 above training loss; every LoRA run stayed within 0.04, while training only 1.29% of parameters.</div>
-</div>
-</div>
-</section>
-
-<!-- COLUMN 3: System architecture -->
-<section style="background: #FFFFFF; display: flex; flex-direction: column; min-height: 0">
-<h2 style="margin: 0; background: {{navy}}; color: #FFFFFF; font-size: 46px; font-weight: 700; line-height: 1; padding: 25px 32px">System architecture</h2>
-<div style="padding: 30px 32px 34px; display: flex; flex-direction: column; gap: 22px">
-<p style="margin: 0; text-wrap: pretty">A permissioned <b>Hyperledger Fabric</b> consortium with Raft ordering: no fees, deterministic finality, and roles enforced inside chaincode from X.509 certificate attributes.</p>
+<div style="font-weight: 700; font-size: 28px; color: {{navy}}; margin-top: 4px">2.2 A synthetic multilingual corpus</div>
+<p style="margin: 0; text-wrap: pretty">No Sepedi or isiZulu election corpus existed, so Gemini 3.6 Flash wrote paired true and false statements, machine-translated from English.</p>
 <figure style="margin: 0; display: flex; flex-direction: column; gap: 10px">
-<img src="./assets/system-architecture.svg" alt="System architecture: browsers reach only the HTTPS edge; the gateway, fact-checking service and claim intake sit behind it; signed AI-pipeline messages flow through Kafka; the gateway signs ledger transactions per role and stores claim documents in a private IPFS swarm." style="width: 100%; height: auto; display: block">
-<figcaption style="font-size: 20px; color: #4D4D4D; line-height: 1.35">One HTTPS edge is the only public entry point. The gateway signs each ledger transaction with the caller's role identity; claim text stays off-chain in a private IPFS swarm.</figcaption>
+<div style="display: flex; flex-wrap: wrap; column-gap: 28px; font-size: 22px">
+<div style="display: flex; align-items: center; gap: 10px"><span style="width: 28px; height: 18px; background: {{navy}}; display: inline-block"></span>Misinformation</div>
+<div style="display: flex; align-items: center; gap: 10px"><span style="width: 28px; height: 18px; background: #D99A2B; display: inline-block"></span>Accurate</div>
+</div>
+<sc-for list="{{corpus}}" as="c" hint-placeholder-count="3">
+<div style="display: flex; align-items: center; gap: 12px">
+<div style="width: 100px; font-size: 22px; font-weight: 700">{{c.lang}}</div>
+<div style="flex: 1; height: 34px; display: flex">
+<div style="height: 100%; width: {{c.mw}}; background: {{navy}}; color: #FFFFFF; font-size: 20px; font-weight: 700; display: flex; align-items: center; padding-left: 10px; box-sizing: border-box; font-variant-numeric: tabular-nums">{{c.m}}</div>
+<div style="height: 100%; flex: 1; background: #D99A2B; color: #FFFFFF; font-size: 20px; font-weight: 700; display: flex; align-items: center; justify-content: flex-end; padding-right: 10px; box-sizing: border-box; font-variant-numeric: tabular-nums">{{c.a}}</div>
+</div>
+<div style="width: 76px; font-size: 22px; text-align: right; font-variant-numeric: tabular-nums">{{c.t}}</div>
+</div>
+</sc-for>
+<figcaption style="font-size: 20px; color: #4D4D4D; line-height: 1.35">13,997 generated, 13,877 kept after cleaning; split 80/10/10.</figcaption>
 </figure>
-<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px">
-<div style="background: #E9EEF4; padding: 14px 16px"><div style="font-weight: 700; font-size: 23px; color: {{navy}}">Official</div><div style="font-size: 20px; line-height: 1.3">submits, expires, admits members</div></div>
-<div style="background: #E9EEF4; padding: 14px 16px"><div style="font-weight: 700; font-size: 23px; color: {{navy}}">Fact-checker</div><div style="font-size: 20px; line-height: 1.3">submits reports and fact-checks</div></div>
-<div style="background: #E9EEF4; padding: 14px 16px"><div style="font-weight: 700; font-size: 23px; color: {{navy}}">Observer</div><div style="font-size: 20px; line-height: 1.3">read-only audit</div></div>
+</div>
+</section>
 </div>
 
-<div style="font-weight: 700; font-size: 28px; color: {{navy}}; margin-top: 4px">POPIA by design</div>
-<div style="display: grid; grid-template-columns: 70px minmax(0, 1fr); row-gap: 8px; column-gap: 14px; font-size: 23px; line-height: 1.35">
+<!-- COLUMN 2: 3 System architecture -->
+<section style="background: #FFFFFF; display: flex; flex-direction: column; min-height: 0">
+<h2 style="margin: 0; background: {{navy}}; color: #FFFFFF; font-size: 46px; font-weight: 700; line-height: 1; padding: 25px 32px">3. System architecture</h2>
+<div style="padding: 30px 32px 34px; display: flex; flex-direction: column; gap: 22px">
+<p style="margin: 0; text-wrap: pretty">A permissioned <b>Hyperledger Fabric</b> consortium [5] with Raft ordering: no fees, deterministic finality, and roles enforced inside chaincode from X.509 certificate attributes.</p>
+<figure style="margin: 0; display: flex; flex-direction: column; gap: 10px">
+<img src="./assets/system-architecture.svg" alt="System architecture: claims pass through ingestion, Kafka and the AfroXLM-R detection service to the REST gateway, which organisations use through the fact-checking service. The gateway commits reports and votes to Hyperledger Fabric through the SDK sidecar and stores claim documents in an IPFS swarm." style="width: 100%; height: auto; display: block">
+<figcaption style="font-size: 20px; color: #4D4D4D; line-height: 1.35">Claims flow through Kafka and the AfroXLM-R detection service to the REST gateway, the organisations' only point of contact. Votes go on-chain; claim text stays in IPFS.</figcaption>
+</figure>
+<div style="font-weight: 700; font-size: 28px; color: {{navy}}">3.1 Roles enforced in chaincode</div>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px">
+<div style="background: #E9EEF4; padding: 14px 16px"><div style="font-weight: 700; font-size: 25px; color: {{navy}}">Official</div><div style="font-size: 22px; line-height: 1.3">submits, expires, admits members</div></div>
+<div style="background: #E9EEF4; padding: 14px 16px"><div style="font-weight: 700; font-size: 25px; color: {{navy}}">Fact-checker</div><div style="font-size: 22px; line-height: 1.3">submits reports and fact-checks</div></div>
+<div style="background: #E9EEF4; padding: 14px 16px"><div style="font-weight: 700; font-size: 25px; color: {{navy}}">Observer</div><div style="font-size: 22px; line-height: 1.3">read-only audit</div></div>
+</div>
+<div style="font-weight: 700; font-size: 28px; color: {{navy}}">3.2 POPIA by design</div>
+<div style="display: grid; grid-template-columns: 70px minmax(0, 1fr); row-gap: 8px; column-gap: 14px; font-size: 22px; line-height: 1.35">
 <div style="font-weight: 700; color: {{navy}}">s 10</div><div>Only hash, CID, AI metadata and org ID on-chain.</div>
 <div style="font-weight: 700; color: {{navy}}">s 13</div><div>Fixed schema; no free-form personal fields.</div>
 <div style="font-weight: 700; color: {{navy}}">s 14</div><div>Claim text off-chain in IPFS, so deletable.</div>
@@ -162,38 +128,102 @@ html,body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 </div>
 </section>
 
-<!-- COLUMN 4: Key Highlights + Acknowledgements + contact box -->
+<!-- COLUMN 3: 4 Results -->
+<section style="background: #FFFFFF; display: flex; flex-direction: column; min-height: 0">
+<h2 style="margin: 0; background: {{navy}}; color: #FFFFFF; font-size: 46px; font-weight: 700; line-height: 1; padding: 25px 32px">4. Results</h2>
+<div style="padding: 30px 32px 34px; display: flex; flex-direction: column; gap: 24px">
+<div style="display: flex; flex-wrap: wrap; column-gap: 28px; row-gap: 6px; font-size: 22px">
+<div style="display: flex; align-items: center; gap: 10px"><span style="width: 28px; height: 18px; background: {{navy}}; display: inline-block"></span>Full fine-tuning</div>
+<div style="display: flex; align-items: center; gap: 10px"><span style="width: 28px; height: 18px; background: #D99A2B; display: inline-block"></span>LoRA</div>
+<div style="display: flex; align-items: center; gap: 10px"><span style="width: 28px; height: 18px; background: #9AA3AF; display: inline-block"></span>TF-IDF baseline</div>
+</div>
+
+<figure style="margin: 0; display: flex; flex-direction: column; gap: 12px">
+<div style="font-weight: 700; font-size: 28px; color: {{navy}}">4.1 Misinformation detection, test F1</div>
+<sc-for list="{{models}}" as="m" hint-placeholder-count="4">
+<div style="display: flex; flex-direction: column; gap: 5px">
+<div style="font-size: 22px; font-weight: 700">{{m.name}}</div>
+<sc-for list="{{m.bars}}" as="b" hint-placeholder-count="2">
+<div style="display: flex; align-items: center; gap: 12px">
+<div style="flex: 1; height: 28px; background: #EDEDED">
+<div style="height: 100%; width: {{b.width}}; background: {{b.color}}"></div>
+</div>
+<div style="width: 78px; font-size: 22px; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums">{{b.value}}</div>
+</div>
+</sc-for>
+</div>
+</sc-for>
+<figcaption style="font-size: 20px; color: #4D4D4D; line-height: 1.35">Mean F1 (misinformation class) over three seeds on 1,393 held-out statements. Bars start at F1 = 0.70. Best single run: F1 0.906, AUC 0.963.</figcaption>
+</figure>
+
+<figure style="margin: 0; display: flex; flex-direction: column; gap: 12px">
+<div style="font-weight: 700; font-size: 28px; color: {{navy}}">4.2 F1 by language, AfroXLMR-large-76L</div>
+<sc-for list="{{langs}}" as="l" hint-placeholder-count="3">
+<div style="display: flex; align-items: center; gap: 12px">
+<div style="width: 100px; font-size: 22px; font-weight: 700">{{l.name}}</div>
+<div style="flex: 1; display: flex; flex-direction: column; gap: 4px">
+<sc-for list="{{l.bars}}" as="b" hint-placeholder-count="2">
+<div style="display: flex; align-items: center; gap: 12px">
+<div style="flex: 1; height: 24px; background: #EDEDED"><div style="height: 100%; width: {{b.width}}; background: {{b.color}}"></div></div>
+<div style="width: 78px; font-size: 22px; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums">{{b.value}}</div>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-for>
+<figcaption style="font-size: 20px; color: #4D4D4D; line-height: 1.35">Same axis as 4.1. Sepedi and isiZulu trail English by only about 0.04.</figcaption>
+</figure>
+
+<figure style="margin: 0; display: flex; flex-direction: column; gap: 12px">
+<div style="font-weight: 700; font-size: 28px; color: {{navy}}">4.3 LoRA's gap to full fine-tuning</div>
+<sc-for list="{{gaps}}" as="g" hint-placeholder-count="3">
+<div style="display: flex; align-items: center; gap: 12px">
+<div style="width: 210px; font-size: 22px">{{g.name}}</div>
+<div style="flex: 1; height: 28px; background: #EDEDED"><div style="height: 100%; width: {{g.width}}; background: #D99A2B"></div></div>
+<div style="width: 78px; font-size: 22px; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums">{{g.value}}</div>
+</div>
+</sc-for>
+<figcaption style="font-size: 20px; color: #4D4D4D; line-height: 1.35">F1 lost by LoRA versus full fine-tuning (axis 0–0.07): the gap shrinks as models grow.</figcaption>
+</figure>
+
+<div style="background: #E9EEF4; border-top: 6px solid {{navy}}; padding: 20px 24px; display: flex; flex-direction: column; gap: 6px">
+<div style="font-size: 21px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: {{navy}}">Why deploy LoRA?</div>
+<div style="font-size: 22px; text-wrap: pretty">Two of three full fine-tuning runs overfitted (validation loss 0.40–0.49 above training loss); every LoRA run stayed within 0.04 while training only 1.29% of parameters.</div>
+</div>
+</div>
+</section>
+
+<!-- COLUMN 4: 5 Report lifecycle + 6 Conclusion + 7 References -->
 <div style="display: flex; flex-direction: column; gap: 62px; min-height: 0">
 <section style="background: #FFFFFF; display: flex; flex-direction: column">
-<h2 style="margin: 0; background: {{navy}}; color: #FFFFFF; font-size: 46px; font-weight: 700; line-height: 1; padding: 25px 32px">Key Highlights</h2>
-<div style="padding: 28px 32px 32px; display: flex; flex-direction: column; gap: 22px">
-<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 24px; row-gap: 20px">
-<div><div style="font-weight: 700; font-size: 60px; line-height: 1; color: {{navy}}">13,997</div><div style="font-size: 21px; line-height: 1.3; margin-top: 6px">statements in English, Sepedi and isiZulu</div></div>
-<div><div style="font-weight: 700; font-size: 60px; line-height: 1; color: {{navy}}">0.899</div><div style="font-size: 21px; line-height: 1.3; margin-top: 6px">mean F1, AfroXLMR-large, full fine-tuning</div></div>
-<div><div style="font-weight: 700; font-size: 60px; line-height: 1; color: {{navy}}">0.882</div><div style="font-size: 21px; line-height: 1.3; margin-top: 6px">mean F1 of the deployed LoRA model</div></div>
-<div><div style="font-weight: 700; font-size: 60px; line-height: 1; color: {{navy}}">750 / 750</div><div style="font-size: 21px; line-height: 1.3; margin-top: 6px">feed workflows finalised and integrity-verified</div></div>
-<div><div style="font-weight: 700; font-size: 60px; line-height: 1; color: {{navy}}">~2.4 s</div><div style="font-size: 21px; line-height: 1.3; margin-top: 6px">claim commitment at every size, 3 to 20 orgs</div></div>
-<div><div style="font-weight: 700; font-size: 60px; line-height: 1; color: {{navy}}">0 / 50</div><div style="font-size: 21px; line-height: 1.3; margin-top: 6px">Caliper rounds with any failure, up to 2,000 tx</div></div>
-</div>
-<div style="border-top: 2px solid #BFBFBF; padding-top: 18px; display: flex; flex-direction: column; gap: 8px">
-<div style="font-weight: 700; font-size: 26px; color: {{navy}}">Conclusion</div>
-<p style="margin: 0; font-size: 23px; text-wrap: pretty">An Afrocentric encoder trained on translated synthetic data detects misinformation in Sepedi and isiZulu close to English. A Fabric consortium records joint verdicts tamper-evidently with no personal data on-chain; commitment stays stable while final verdicts slow as the required majority grows.</p>
-</div>
-<div style="display: flex; flex-direction: column; gap: 8px">
-<div style="font-weight: 700; font-size: 26px; color: {{navy}}">Limitations and next steps</div>
-<p style="margin: 0; font-size: 23px; text-wrap: pretty">Synthetic inputs, scripted reviews and one host. Next: real election posts, a multi-host deployment, a fact-checker web interface and per-user identities.</p>
-</div>
+<h2 style="margin: 0; background: {{navy}}; color: #FFFFFF; font-size: 46px; font-weight: 700; line-height: 1; padding: 25px 32px">5. Report lifecycle</h2>
+<div style="padding: 26px 32px 28px">
+<figure style="margin: 0; display: flex; flex-direction: column; gap: 10px">
+<img src="./assets/report-lifecycle.svg" alt="Report lifecycle: a submitted report is PENDING, becomes UNDER REVIEW with its first fact-check, and ends FINAL with label 0 or 1 when floor(E/2) + 1 organisations agree, DISPUTED when all E have voted without a majority, or EXPIRED when an official closes it after the 72-hour window." style="width: 100%; height: auto; display: block">
+<figcaption style="font-size: 20px; color: #4D4D4D; line-height: 1.35">E = organisations other than the submitter. The chaincode applies every transition; reports in the bottom row accept no further votes.</figcaption>
+</figure>
 </div>
 </section>
 
 <section style="background: #FFFFFF; display: flex; flex-direction: column">
-<h2 style="margin: 0; background: {{navy}}; color: #FFFFFF; font-size: 46px; font-weight: 700; line-height: 1; padding: 25px 32px">Acknowledgements</h2>
-<div style="padding: 26px 32px 30px; font-size: 23px; text-wrap: pretty">We thank our supervisors, <b>Dr. S Rananga</b> and <b>Mr. N Rananga</b>, for their guidance throughout this project, and the Department of Computer Science, University of Pretoria.</div>
+<h2 style="margin: 0; background: {{navy}}; color: #FFFFFF; font-size: 46px; font-weight: 700; line-height: 1; padding: 25px 32px">6. Conclusion</h2>
+<div style="padding: 24px 32px 28px; display: flex; flex-direction: column; gap: 12px; font-size: 22px">
+<p style="margin: 0; text-wrap: pretty">An Afrocentric encoder trained on translated synthetic data detects misinformation in Sepedi and isiZulu close to English; a Fabric consortium records joint verdicts tamper-evidently.</p>
+<p style="margin: 0; text-wrap: pretty"><b style="color: {{navy}}">Next steps:</b> real election posts, a multi-host deployment, a stakeholder web interface and per-user identities.</p>
+<p style="margin: 0; border-top: 2px solid #BFBFBF; padding-top: 12px; font-size: 20px; text-wrap: pretty"><b style="color: {{navy}}">Acknowledgements:</b> we thank our supervisors, <b>Dr. S Rananga</b> and <b>Mr. N Rananga</b>, and the DSFSI Research Group, University of Pretoria.</p>
+</div>
 </section>
 
-<section style="flex: 1; min-height: 0; background: #FFFFFF; padding: 24px 32px; display: flex; flex-direction: column; justify-content: center; gap: 10px">
-<div style="font-size: 18px; line-height: 1.35; color: #333333">Key references: Gondwe, Int. J. Press/Politics 2025 · Rananga et al., JISI 2024 · Alabi et al., COLING 2022 · Hu et al., ICLR 2022 · Androulaki et al., EuroSys 2018.</div>
-<div style="font-size: 22px; font-weight: 700; color: {{navy}}">[CONTACT EMAIL / QR CODE]</div>
+<section style="flex: 1; min-height: 0; background: #FFFFFF; display: flex; flex-direction: column">
+<h2 style="margin: 0; background: {{navy}}; color: #FFFFFF; font-size: 46px; font-weight: 700; line-height: 1; padding: 25px 32px">7. References</h2>
+<div style="flex: 1; padding: 22px 32px 24px; display: flex; flex-direction: column; gap: 8px; font-size: 20px; line-height: 1.3">
+<div style="display: grid; grid-template-columns: 40px minmax(0, 1fr)"><b style="color: {{navy}}">[1]</b><div>G. Gondwe, “AI-driven disinformation and political influence on WhatsApp in South Africa's 2024 elections,” <i>Int. J. Press/Politics</i>, 2025.</div></div>
+<div style="display: grid; grid-template-columns: 40px minmax(0, 1fr)"><b style="color: {{navy}}">[2]</b><div>S. Rananga, B. Isong, A. Modupe and V. Marivate, “Misinformation detection: a review for high and low-resource languages,” <i>J. Inf. Syst. Informatics</i>, vol. 6, no. 4, 2024.</div></div>
+<div style="display: grid; grid-template-columns: 40px minmax(0, 1fr)"><b style="color: {{navy}}">[3]</b><div>J. O. Alabi, D. I. Adelani, M. Mosbach and D. Klakow, “Adapting pre-trained language models to African languages via multilingual adaptive fine-tuning,” <i>COLING</i>, 2022.</div></div>
+<div style="display: grid; grid-template-columns: 40px minmax(0, 1fr)"><b style="color: {{navy}}">[4]</b><div>E. Hu et al., “LoRA: Low-rank adaptation of large language models,” <i>ICLR</i>, 2022.</div></div>
+<div style="display: grid; grid-template-columns: 40px minmax(0, 1fr)"><b style="color: {{navy}}">[5]</b><div>E. Androulaki et al., “Hyperledger Fabric: a distributed operating system for permissioned blockchains,” <i>EuroSys</i>, 2018.</div></div>
+<div style="margin-top: auto; padding-top: 10px; border-top: 2px solid #BFBFBF; font-size: 20px; line-height: 1.3"><b style="color: {{navy}}">Code and data (QR code, top right):</b> github.com/SnowWoofer/<wbr>A_Blockchain_Enabled_Framework_for_<wbr>Misinformation_Monitoring</div>
+</div>
 </section>
 </div>
 
@@ -204,17 +234,28 @@ html,body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 class Component extends DCLogic {
   renderVals() {
     const navy = this.props.navy ?? '#003366';
+    const gold = '#D99A2B', grey = '#9AA3AF';
+    // F1 bars share one axis, 0.70 to 0.95.
     const lo = 0.70, hi = 0.95;
     const w = (v) => (Math.max(0, (v - lo) / (hi - lo)) * 100).toFixed(1) + '%';
     const bar = (v, color) => ({ value: v.toFixed(3), width: w(v), color });
-    const gold = '#D99A2B', grey = '#9AA3AF';
     const models = [
       { name: 'TF-IDF baselines (LR · SVM · NB)', bars: [bar(0.807, grey), bar(0.822, grey), bar(0.827, grey)] },
       { name: 'MzansiLM-125M', bars: [bar(0.851, navy), bar(0.788, gold)] },
       { name: 'AfroXLMR-base-76L', bars: [bar(0.859, navy), bar(0.826, gold)] },
       { name: 'AfroXLMR-large-76L', bars: [bar(0.899, navy), bar(0.882, gold)] }
     ];
-    return { navy, models };
+    const langs = [
+      { name: 'English', bars: [bar(0.926, navy), bar(0.910, gold)] },
+      { name: 'Sepedi', bars: [bar(0.885, navy), bar(0.865, gold)] },
+      { name: 'isiZulu', bars: [bar(0.889, navy), bar(0.870, gold)] }
+    ];
+    const gaps = [['MzansiLM-125M', 0.063], ['AfroXLMR-base-76L', 0.033], ['AfroXLMR-large-76L', 0.018]]
+      .map(([name, v]) => ({ name, value: v.toFixed(3), width: (v / 0.07 * 100).toFixed(1) + '%' }));
+    const corpus = [['English', 2360, 2310], ['Sepedi', 2360, 2307], ['isiZulu', 2341, 2319]]
+      .map(([lang, m, a]) => ({ lang, m: m.toLocaleString('en-US'), a: a.toLocaleString('en-US'),
+        t: (m + a).toLocaleString('en-US'), mw: (m / (m + a) * 100).toFixed(1) + '%' }));
+    return { navy, models, langs, gaps, corpus };
   }
 }
 </script>
