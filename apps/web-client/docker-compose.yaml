@@ -1,0 +1,37 @@
+services:
+  web:
+    build: .
+    image: misinfo-web:latest
+    container_name: web-client
+    # The host user (gen-secrets.sh records it), so nginx can read the 0600 key.
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+    environment:
+      PUBLIC_HTTPS_PORT: ${WEB_HTTPS_PORT:-8443}
+      # 63072000 (2 years) once this serves a real domain with a trusted certificate
+      HSTS_MAX_AGE: ${HSTS_MAX_AGE:-0}
+    ports:
+      # The one public entry point: HTTPS, plus HTTP that only redirects.
+      - "${WEB_HTTPS_PORT:-8443}:8443"
+      - "${WEB_HTTP_PORT:-8088}:8080"
+    volumes:
+      # Certificate + key from blockchain/scripts/gen-secrets.sh (self-signed
+      # for localhost by default; drop a real one in secrets/tls/ to replace it).
+      - ../../secrets/tls:/etc/nginx/tls:ro
+    networks:
+      - misinfo_net
+    read_only: true
+    # tmpfs mounts take the image directory's owner (nginx, uid 101) unless a
+    # mode is given; this container runs as the host user, so make them writable.
+    tmpfs:
+      - /var/cache/nginx:mode=1777
+      - /var/run:mode=1777
+      - /etc/nginx/conf.d:mode=1777
+      - /tmp:mode=1777
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
+networks:
+  misinfo_net:
+    external: true

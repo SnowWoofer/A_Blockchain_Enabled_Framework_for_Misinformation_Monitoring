@@ -3,18 +3,45 @@ services:
     build: .
     image: misinfo-blockchain-gateway:latest
     container_name: blockchain-gateway
+    # Run as the host user that owns the bind-mounted data dir, not root
+    # (gen-secrets.sh records it in the repo-root .env).
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
     environment:
-      # Force the official Gateway SDK sidecar
-      - FABRIC_BACKEND=gateway
-      - FABRIC_GATEWAY_URL=http://host.docker.internal:9100
-      - IPFS_GATEWAY_URL=http://host.docker.internal:9101
+      # Force the official Gateway SDK sidecar (FABRIC_BACKEND=mock: UI demo without Fabric)
+      - FABRIC_BACKEND=${FABRIC_BACKEND:-gateway}
+      - FABRIC_GATEWAY_URL=http://fabric-gateway:9100
+      - IPFS_GATEWAY_URL=http://ipfs-gateway:9101
       - OFFCHAIN_DB=/app/data/offchain.db
+      - USER_DB=/app/data/users.db
+      - AUDIT_DB=/app/data/audit.db
+      - MOCK_LEDGER_STATE=/app/data/mock-ledger.json
       - ORGS=${ORGS_LIST}
+      - AUTH_MODE=${AUTH_MODE:-jwt}
+      # Secrets come from the repo-root .env written by blockchain/scripts/gen-secrets.sh.
+      - JWT_SECRET=${JWT_SECRET:?run blockchain/scripts/gen-secrets.sh}
+      - INTERNAL_API_TOKEN=${INTERNAL_API_TOKEN:?run blockchain/scripts/gen-secrets.sh}
+      - PSEUDONYM_KEY=${PSEUDONYM_KEY:?run blockchain/scripts/gen-secrets.sh}
+      # Browser traffic arrives through the web-client edge proxy (TLS), which
+      # sets X-Real-IP; refresh cookies are therefore Secure.
+      - TRUST_PROXY_HEADERS=1
+      - COOKIE_SECURE=1
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
       # Bind mount
       - ./app/v1-0-0/api:/app/data
     ports:
-      - "8000:8000"
+      # Loopback by default: browsers come in via the TLS edge proxy and
+      # benchmarks run on this host. GATEWAY_BIND=0.0.0.0 exposes it to
+      # remote benchmark clients.
+      - "${GATEWAY_BIND:-127.0.0.1}:8000:8000"
+    networks:
+      - misinfo_net
+      - default
     restart: unless-stopped
+
+networks:
+  # Shared by the gateways, the app-layer services and the web edge so they
+  # reach each other by name; created by blockchain/scripts/ensure-networks.sh.
+  misinfo_net:
+    external: true

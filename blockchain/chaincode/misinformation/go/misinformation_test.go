@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"math"
+	"strings"
 	"testing"
 	"time"
 
@@ -201,8 +202,8 @@ func TestFactCheckAndFinalize(t *testing.T) {
 	}
 
 	// first fact-check -> UNDER_REVIEW
-	if res := invokeAs(stub, "tx2", "Org1MSP", "SubmitFactCheck", "rep-42", "1"); res.Status != 200 {
-		t.Fatalf("org1 fact-check failed: %s", res.Message)
+	if res := invokeAs(stub, "tx2", "Org2MSP", "SubmitFactCheck", "rep-42", "1"); res.Status != 200 {
+		t.Fatalf("org2 fact-check failed: %s", res.Message)
 	}
 	res := invokeAs(stub, "tx-check1", "Org1MSP", "QueryReport", "rep-42")
 	var rec ReportRecord
@@ -211,8 +212,8 @@ func TestFactCheckAndFinalize(t *testing.T) {
 		t.Fatalf("expected UNDER_REVIEW after first fact-check, got %s", rec.Status)
 	}
 
-	// org1 cannot fact-check twice
-	if res := invokeAs(stub, "tx3", "Org1MSP", "SubmitFactCheck", "rep-42", "0"); res.Status == 200 {
+	// org2 cannot fact-check twice
+	if res := invokeAs(stub, "tx3", "Org2MSP", "SubmitFactCheck", "rep-42", "0"); res.Status == 200 {
 		t.Fatalf("double fact-check should have been rejected")
 	}
 
@@ -222,8 +223,8 @@ func TestFactCheckAndFinalize(t *testing.T) {
 	}
 
 	// second fact-check -> early acceptance triggers (2 "1" votes >= ceil(2/3*3)=2)
-	if res := invokeAs(stub, "tx5", "Org2MSP", "SubmitFactCheck", "rep-42", "1"); res.Status != 200 {
-		t.Fatalf("org2 fact-check failed: %s", res.Message)
+	if res := invokeAs(stub, "tx5", "Org3MSP", "SubmitFactCheck", "rep-42", "1"); res.Status != 200 {
+		t.Fatalf("org3 fact-check failed: %s", res.Message)
 	}
 
 	// report should now be FINAL via early acceptance
@@ -240,44 +241,78 @@ func TestFactCheckAndFinalize(t *testing.T) {
 	if len(rec.FactChecks) != 2 {
 		t.Fatalf("expected 2 fact-checks, got %d", len(rec.FactChecks))
 	}
+}
 
-	// no more fact-checks accepted after FINAL
-	if res := invokeAs(stub, "tx7", "Org3MSP", "SubmitFactCheck", "rep-42", "1"); res.Status == 200 {
-		t.Fatalf("fact-check after finalize should be rejected")
+// ---------- Conflict of interest ----------
+
+func TestSubmitterCannotFactCheckOwnReport(t *testing.T) {
+	stub := newTestStub(t)
+	registerOrgs(t, stub, "Org1MSP", "Org2MSP", "Org3MSP")
+	if res := submitReport(stub, "tx1", "Org1MSP", "rep-coi"); res.Status != 200 {
+		t.Fatalf("submit failed: %s", res.Message)
+	}
+	res := invokeAs(stub, "tx2", "Org1MSP", "SubmitFactCheck", "rep-coi", "1")
+	if res.Status == 200 {
+		t.Fatalf("submitter must not be able to fact-check its own report")
+	}
+	if !strings.Contains(res.Message, "conflict of interest") {
+		t.Fatalf("expected conflict-of-interest error, got %q", res.Message)
+	}
+}
+
+// ---------- Manual finalize (only after the fact-check window) ----------
+
+func TestFinalizeBlockedDuringWindow(t *testing.T) {
+	stub := newTestStub(t)
+	// 6 orgs: required = 4, eligible voters = 5
+	invokeAs(stub, "tx-cfg", "Org1MSP", "SetFoundingOrgLimit", "6")
+	registerOrgs(t, stub, "Org1MSP", "Org2MSP", "Org3MSP", "Org4MSP", "Org5MSP", "Org6MSP")
+	if res := submitReport(stub, "tx1", "Org1MSP", "rep-win"); res.Status != 200 {
+		t.Fatalf("submit failed: %s", res.Message)
+	}
+	invokeAs(stub, "tx2", "Org2MSP", "SubmitFactCheck", "rep-win", "1")
+	invokeAs(stub, "tx3", "Org3MSP", "SubmitFactCheck", "rep-win", "1")
+
+	// 2 of 6 orgs agree: a lone official must not be able to close the vote early
+	res := invokeAs(stub, "tx4", "Org4MSP", "FinalizeReport", "rep-win")
+	if res.Status == 200 {
+		t.Fatalf("finalize inside the fact-check window must be rejected")
+	}
+	if !strings.Contains(res.Message, "fact-check window") {
+		t.Fatalf("expected fact-check window error, got %q", res.Message)
 	}
 }
 
 func TestManualFinalizeWithMajority(t *testing.T) {
 	stub := newTestStub(t)
-	// raise founding limit to 4 so we can register 4 orgs
-	invokeAs(stub, "tx-cfg", "Org1MSP", "SetFoundingOrgLimit", "4")
-	registerOrgs(t, stub, "Org1MSP", "Org2MSP", "Org3MSP", "Org4MSP")
+	// 6 orgs: required = ceil(2/3*6) = 4, eligible voters = 5
+	invokeAs(stub, "tx-cfg", "Org1MSP", "SetFoundingOrgLimit", "6")
+	registerOrgs(t, stub, "Org1MSP", "Org2MSP", "Org3MSP", "Org4MSP", "Org5MSP", "Org6MSP")
 
+	// submitted long ago, so the fact-check window has closed
+	stub.TxTimestamp = timestamppb.New(time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC))
 	if res := submitReport(stub, "tx1", "Org1MSP", "rep-mf"); res.Status != 200 {
 		t.Fatalf("submit failed: %s", res.Message)
 	}
 
-	// 4 orgs: required = ceil(2/3*4) = 3
-	// Org1: "1", Org2: "0" -> tally 1-1, no auto-transition
-	invokeAs(stub, "tx2", "Org1MSP", "SubmitFactCheck", "rep-mf", "1")
-	invokeAs(stub, "tx3", "Org2MSP", "SubmitFactCheck", "rep-mf", "0")
-
-	// Org3: "1" -> tally 2-1, still UNDER_REVIEW (2 < 3)
-	if res := invokeAs(stub, "tx4", "Org3MSP", "SubmitFactCheck", "rep-mf", "1"); res.Status != 200 {
-		t.Fatalf("org3 fact-check failed: %s", res.Message)
+	// Org2: "1", Org3: "1", Org4: "0" -> tally 2-1, 2 orgs left: 2+2 >= 4, still open
+	invokeAs(stub, "tx2", "Org2MSP", "SubmitFactCheck", "rep-mf", "1")
+	invokeAs(stub, "tx3", "Org3MSP", "SubmitFactCheck", "rep-mf", "1")
+	if res := invokeAs(stub, "tx4", "Org4MSP", "SubmitFactCheck", "rep-mf", "0"); res.Status != 200 {
+		t.Fatalf("org4 fact-check failed: %s", res.Message)
 	}
-	res := invokeAs(stub, "tx-q1", "Org4MSP", "QueryReport", "rep-mf")
+	res := invokeAs(stub, "tx-q1", "Org5MSP", "QueryReport", "rep-mf")
 	var rec ReportRecord
 	json.Unmarshal(res.Payload, &rec)
 	if rec.Status != statusUnderReview {
 		t.Fatalf("expected UNDER_REVIEW, got %s", rec.Status)
 	}
 
-	// Org4 can finalize: 3 fact-checks, majority is "1"
-	if res := invokeAs(stub, "tx5", "Org4MSP", "FinalizeReport", "rep-mf"); res.Status != 200 {
+	// window closed, 3 fact-checks, majority is "1"
+	if res := invokeAs(stub, "tx5", "Org5MSP", "FinalizeReport", "rep-mf"); res.Status != 200 {
 		t.Fatalf("finalize failed: %s", res.Message)
 	}
-	res = invokeAs(stub, "tx-q2", "Org4MSP", "QueryReport", "rep-mf")
+	res = invokeAs(stub, "tx-q2", "Org5MSP", "QueryReport", "rep-mf")
 	json.Unmarshal(res.Payload, &rec)
 	if rec.Status != statusFinal {
 		t.Fatalf("expected FINAL, got %s", rec.Status)
@@ -289,25 +324,24 @@ func TestManualFinalizeWithMajority(t *testing.T) {
 
 func TestRejectionByFactChecks(t *testing.T) {
 	stub := newTestStub(t)
-	// 6 orgs: required = ceil(2/3*6) = 4
-	invokeAs(stub, "tx-cfg", "Org1MSP", "SetFoundingOrgLimit", "6")
-	registerOrgs(t, stub, "Org1MSP", "Org2MSP", "Org3MSP", "Org4MSP", "Org5MSP", "Org6MSP")
+	// 9 orgs: required = ceil(2/3*9) = 6, eligible voters = 8
+	invokeAs(stub, "tx-cfg", "Org1MSP", "SetFoundingOrgLimit", "9")
+	registerOrgs(t, stub, "Org1MSP", "Org2MSP", "Org3MSP", "Org4MSP", "Org5MSP",
+		"Org6MSP", "Org7MSP", "Org8MSP", "Org9MSP")
 
+	stub.TxTimestamp = timestamppb.New(time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC))
 	if res := submitReport(stub, "tx1", "Org1MSP", "rep-rj"); res.Status != 200 {
 		t.Fatalf("submit failed: %s", res.Message)
 	}
 
-	// Org1: "0", Org2: "1", Org3: "0" -> tally 1-2, no auto-transition
-	invokeAs(stub, "tx2", "Org1MSP", "SubmitFactCheck", "rep-rj", "0")
-	invokeAs(stub, "tx3", "Org2MSP", "SubmitFactCheck", "rep-rj", "1")
-
-	// Org3: "0" -> tally 2-1, still UNDER_REVIEW (1 < 4)
-	if res := invokeAs(stub, "tx4", "Org3MSP", "SubmitFactCheck", "rep-rj", "0"); res.Status != 200 {
+	// Org2: "0", Org3: "0" -> tally1=0, 6 orgs left: 0+6 >= 6, still open
+	invokeAs(stub, "tx2", "Org2MSP", "SubmitFactCheck", "rep-rj", "0")
+	if res := invokeAs(stub, "tx3", "Org3MSP", "SubmitFactCheck", "rep-rj", "0"); res.Status != 200 {
 		t.Fatalf("org3 fact-check failed: %s", res.Message)
 	}
 
-	// finalize: majority is "0" (misinformation confirmed)
-	if res := invokeAs(stub, "tx5", "Org4MSP", "FinalizeReport", "rep-rj"); res.Status != 200 {
+	// window closed: majority of the votes cast is "0" (not misinformation)
+	if res := invokeAs(stub, "tx4", "Org4MSP", "FinalizeReport", "rep-rj"); res.Status != 200 {
 		t.Fatalf("finalize failed: %s", res.Message)
 	}
 	res := invokeAs(stub, "tx-q", "Org4MSP", "QueryReport", "rep-rj")
@@ -325,20 +359,18 @@ func TestRejectionByFactChecks(t *testing.T) {
 
 func TestEarlyAcceptance(t *testing.T) {
 	stub := newTestStub(t)
-	registerOrgs(t, stub, "Org1MSP", "Org2MSP", "Org3MSP")
+	// 6 orgs: required = 4, eligible voters = 5 (one is left over after FINAL)
+	invokeAs(stub, "tx-cfg", "Org1MSP", "SetFoundingOrgLimit", "6")
+	registerOrgs(t, stub, "Org1MSP", "Org2MSP", "Org3MSP", "Org4MSP", "Org5MSP", "Org6MSP")
 
 	if res := submitReport(stub, "tx1", "Org1MSP", "rep-ea"); res.Status != 200 {
 		t.Fatalf("submit failed: %s", res.Message)
 	}
 
-	// Org1: "1" -> UNDER_REVIEW
-	if res := invokeAs(stub, "tx2", "Org1MSP", "SubmitFactCheck", "rep-ea", "1"); res.Status != 200 {
-		t.Fatalf("org1 fact-check failed: %s", res.Message)
-	}
-
-	// Org2: "1" -> early acceptance (2 >= ceil(2/3*3)=2)
-	if res := invokeAs(stub, "tx3", "Org2MSP", "SubmitFactCheck", "rep-ea", "1"); res.Status != 200 {
-		t.Fatalf("org2 fact-check failed: %s", res.Message)
+	for i, msp := range []string{"Org2MSP", "Org3MSP", "Org4MSP", "Org5MSP"} {
+		if res := invokeAs(stub, "tx-v"+msp, msp, "SubmitFactCheck", "rep-ea", "1"); res.Status != 200 {
+			t.Fatalf("vote %d (%s) failed: %s", i, msp, res.Message)
+		}
 	}
 
 	res := invokeAs(stub, "tx4", "Org1MSP", "QueryReport", "rep-ea")
@@ -352,8 +384,13 @@ func TestEarlyAcceptance(t *testing.T) {
 	if rec.FinalLabel != "1" {
 		t.Fatalf("expected FinalLabel 1, got %s", rec.FinalLabel)
 	}
-	if rec.FinalizedBy != "Org2MSP" {
-		t.Fatalf("expected FinalizedBy Org2MSP, got %s", rec.FinalizedBy)
+	if rec.FinalizedBy != "Org5MSP" {
+		t.Fatalf("expected FinalizedBy Org5MSP, got %s", rec.FinalizedBy)
+	}
+
+	// no more fact-checks accepted after FINAL
+	if res := invokeAs(stub, "tx5", "Org6MSP", "SubmitFactCheck", "rep-ea", "1"); res.Status == 200 {
+		t.Fatalf("fact-check after FINAL should be rejected")
 	}
 }
 
@@ -367,13 +404,8 @@ func TestEarlyRejection(t *testing.T) {
 		t.Fatalf("submit failed: %s", res.Message)
 	}
 
-	// Org1: "0" -> UNDER_REVIEW (tally 0+2=2 >= 2, not rejected)
-	if res := invokeAs(stub, "tx2", "Org1MSP", "SubmitFactCheck", "rep-er", "0"); res.Status != 200 {
-		t.Fatalf("org1 fact-check failed: %s", res.Message)
-	}
-
-	// Org2: "0" -> early rejection (tally 0+1=1 < 2)
-	if res := invokeAs(stub, "tx3", "Org2MSP", "SubmitFactCheck", "rep-er", "0"); res.Status != 200 {
+	// Org2: "0" -> only Org3 left: 0+1 < 2, the quorum is out of reach
+	if res := invokeAs(stub, "tx2", "Org2MSP", "SubmitFactCheck", "rep-er", "0"); res.Status != 200 {
 		t.Fatalf("org2 fact-check failed: %s", res.Message)
 	}
 
@@ -387,26 +419,48 @@ func TestEarlyRejection(t *testing.T) {
 	}
 }
 
+func TestEarlyRejectionCountsOnlyEligibleVoters(t *testing.T) {
+	stub := newTestStub(t)
+	registerOrgs(t, stub, "Org1MSP", "Org2MSP", "Org3MSP")
+	if res := submitReport(stub, "tx1", "Org1MSP", "rep-split"); res.Status != 200 {
+		t.Fatalf("submit failed: %s", res.Message)
+	}
+
+	// Org2: "1" -> 1 + 1 remaining >= 2, still open
+	invokeAs(stub, "tx2", "Org2MSP", "SubmitFactCheck", "rep-split", "1")
+	// Org3: "0" -> every eligible org has voted and only 1 of 2 required YES
+	if res := invokeAs(stub, "tx3", "Org3MSP", "SubmitFactCheck", "rep-split", "0"); res.Status != 200 {
+		t.Fatalf("org3 fact-check failed: %s", res.Message)
+	}
+
+	res := invokeAs(stub, "tx4", "Org1MSP", "QueryReport", "rep-split")
+	var rec ReportRecord
+	json.Unmarshal(res.Payload, &rec)
+	// Counting the (ineligible) submitter as a pending voter would leave this
+	// report stuck in UNDER_REVIEW until it expired.
+	if rec.Status != statusRejected {
+		t.Fatalf("expected REJECTED once all eligible orgs voted, got %s", rec.Status)
+	}
+}
+
 // ---------- Tie Rejected on Finalize ----------
 
 func TestFinalizeTieRejected(t *testing.T) {
 	stub := newTestStub(t)
-	// 6 orgs: required = ceil(2/3*6) = 4
-	invokeAs(stub, "tx-cfg", "Org1MSP", "SetFoundingOrgLimit", "6")
-	registerOrgs(t, stub, "Org1MSP", "Org2MSP", "Org3MSP", "Org4MSP", "Org5MSP", "Org6MSP")
+	// 9 orgs: required = 6, eligible voters = 8
+	invokeAs(stub, "tx-cfg", "Org1MSP", "SetFoundingOrgLimit", "9")
+	registerOrgs(t, stub, "Org1MSP", "Org2MSP", "Org3MSP", "Org4MSP", "Org5MSP",
+		"Org6MSP", "Org7MSP", "Org8MSP", "Org9MSP")
 
+	stub.TxTimestamp = timestamppb.New(time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC))
 	if res := submitReport(stub, "tx1", "Org1MSP", "rep-tie"); res.Status != 200 {
 		t.Fatalf("submit failed: %s", res.Message)
 	}
 
-	// 2 "1" and 2 "0" -> tie, no auto-transition
-	// Org1: "1", Org2: "0", Org3: "1", Org4: "0"
-	invokeAs(stub, "tx2", "Org1MSP", "SubmitFactCheck", "rep-tie", "1")
-	invokeAs(stub, "tx3", "Org2MSP", "SubmitFactCheck", "rep-tie", "0")
-	invokeAs(stub, "tx4", "Org3MSP", "SubmitFactCheck", "rep-tie", "1")
-	invokeAs(stub, "tx5", "Org4MSP", "SubmitFactCheck", "rep-tie", "0")
+	// Org2: "1", Org3: "0" -> tie, 1 + 6 remaining >= 6, still open
+	invokeAs(stub, "tx2", "Org2MSP", "SubmitFactCheck", "rep-tie", "1")
+	invokeAs(stub, "tx3", "Org3MSP", "SubmitFactCheck", "rep-tie", "0")
 
-	// verify UNDER_REVIEW
 	res := invokeAs(stub, "tx-q", "Org5MSP", "QueryReport", "rep-tie")
 	var rec ReportRecord
 	json.Unmarshal(res.Payload, &rec)
@@ -414,16 +468,16 @@ func TestFinalizeTieRejected(t *testing.T) {
 		t.Fatalf("expected UNDER_REVIEW, got %s", rec.Status)
 	}
 
-	// finalize should fail: tie at 2-2
+	// finalize should fail: tie at 1-1
 	if res := invokeAs(stub, "tx6", "Org5MSP", "FinalizeReport", "rep-tie"); res.Status == 200 {
 		t.Fatalf("finalize with tie should be rejected")
 	}
 
-	// break the tie with 5th fact-check
-	if res := invokeAs(stub, "tx7", "Org5MSP", "SubmitFactCheck", "rep-tie", "1"); res.Status != 200 {
-		t.Fatalf("org5 fact-check failed: %s", res.Message)
+	// break the tie with a third fact-check
+	if res := invokeAs(stub, "tx7", "Org4MSP", "SubmitFactCheck", "rep-tie", "1"); res.Status != 200 {
+		t.Fatalf("org4 fact-check failed: %s", res.Message)
 	}
-	// now 3 "1" and 2 "0", majority is "1"
+	// now 2 "1" and 1 "0", majority is "1"
 	if res := invokeAs(stub, "tx8", "Org6MSP", "FinalizeReport", "rep-tie"); res.Status != 200 {
 		t.Fatalf("finalize after tie-break failed: %s", res.Message)
 	}
@@ -472,10 +526,10 @@ func TestExpireReport(t *testing.T) {
 
 func TestQueryFactChecksAndHistory(t *testing.T) {
 	stub := newTestStub(t)
-	registerOrgs(t, stub, "Org1MSP", "Org2MSP")
+	registerOrgs(t, stub, "Org1MSP", "Org2MSP", "Org3MSP")
 	invokeAs(stub, "tx1", "Org1MSP", "Submit", "rep-1", validHash, "1", "0.9", "model-v1", validTs)
-	invokeAs(stub, "tx2", "Org1MSP", "SubmitFactCheck", "rep-1", "1")
-	invokeAs(stub, "tx3", "Org2MSP", "SubmitFactCheck", "rep-1", "0")
+	invokeAs(stub, "tx2", "Org2MSP", "SubmitFactCheck", "rep-1", "1")
+	invokeAs(stub, "tx3", "Org3MSP", "SubmitFactCheck", "rep-1", "1")
 
 	res := invokeAs(stub, "tx4", "Org1MSP", "QueryReport", "rep-1")
 	var record ReportRecord
@@ -580,30 +634,34 @@ func TestABAC_NoRoleRejected(t *testing.T) {
 
 func TestABAC_FactCheckerCanFactCheck(t *testing.T) {
 	stub := newTestStubWithRole(t, "fact_checker")
-	registerOrgs(t, stub, "Org1MSP")
+	registerOrgs(t, stub, "Org1MSP", "Org2MSP")
 	submitReport(stub, "tx1", "Org1MSP", "rep-abac")
-	if res := invokeAs(stub, "tx2", "Org1MSP", "SubmitFactCheck", "rep-abac", "1"); res.Status != 200 {
+	if res := invokeAs(stub, "tx2", "Org2MSP", "SubmitFactCheck", "rep-abac", "1"); res.Status != 200 {
 		t.Fatalf("fact_checker should be able to fact-check: %s", res.Message)
 	}
 }
 
 func TestABAC_ObserverCannotFactCheck(t *testing.T) {
 	stub := newTestStubWithRole(t, "observer")
-	registerOrgs(t, stub, "Org1MSP")
+	registerOrgs(t, stub, "Org1MSP", "Org2MSP")
 	submitReport(stub, "tx1", "Org1MSP", "rep-abac")
-	if res := invokeAs(stub, "tx2", "Org1MSP", "SubmitFactCheck", "rep-abac", "1"); res.Status == 200 {
+	if res := invokeAs(stub, "tx2", "Org2MSP", "SubmitFactCheck", "rep-abac", "1"); res.Status == 200 {
 		t.Fatalf("observer should not be able to fact-check")
 	}
 }
 
 func TestABAC_FactCheckerCannotFinalize(t *testing.T) {
 	stub := newTestStubWithRole(t, "fact_checker")
-	registerOrgs(t, stub, "Org1MSP")
+	registerOrgs(t, stub, "Org1MSP", "Org2MSP")
 	submitReport(stub, "tx1", "Org1MSP", "rep-abac")
-	invokeAs(stub, "tx2", "Org1MSP", "SubmitFactCheck", "rep-abac", "1")
+	invokeAs(stub, "tx2", "Org2MSP", "SubmitFactCheck", "rep-abac", "1")
 	// FinalizeReport requires "official"
-	if res := invokeAs(stub, "tx3", "Org1MSP", "FinalizeReport", "rep-abac"); res.Status == 200 {
+	res := invokeAs(stub, "tx3", "Org1MSP", "FinalizeReport", "rep-abac")
+	if res.Status == 200 {
 		t.Fatalf("fact_checker should not be able to finalize")
+	}
+	if !strings.Contains(res.Message, "role") {
+		t.Fatalf("expected an ABAC role error, got %q", res.Message)
 	}
 }
 

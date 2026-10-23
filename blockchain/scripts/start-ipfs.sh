@@ -13,6 +13,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 COMPOSE="docker compose"
 docker compose version >/dev/null 2>&1 || COMPOSE="docker-compose"
+# Shared secrets (INTERNAL_API_TOKEN, JWT_SECRET, ...) from the repo-root .env
+. "${SCRIPT_DIR}/lib/env.sh"
 
 NODES=(ipfs-node ipfs-node-1 ipfs-node-2)
 # node 0 keeps :5001 for backwards compatibility; 1 and 2 are offset by 100.
@@ -23,6 +25,10 @@ if [[ "${1:-up}" == "down" ]]; then
   (cd "${PROJECT_ROOT}" && ${COMPOSE} -f apps/ipfs_gateway/docker-compose.yaml rm -sf "${NODES[@]}") >/dev/null 2>&1 || true
   exit 0
 fi
+
+# Node 0's datastore volume is declared external (it may predate compose);
+# create it on a fresh host so `compose up` does not fail.
+docker volume inspect ipfs-data >/dev/null 2>&1 || docker volume create ipfs-data >/dev/null
 
 echo ">> Starting IPFS swarm (${NODES[*]})..."
 (cd "${PROJECT_ROOT}" && ${COMPOSE} -f apps/ipfs_gateway/docker-compose.yaml up -d "${NODES[@]}") | tail -3
@@ -40,4 +46,7 @@ for port in "${RPC_PORTS[@]}"; do
   echo "   ready: http://localhost:${port}"
 done
 
+# Close the swarm (shared swarm.key, no public bootstrap) before wiring the
+# nodes together, so claim documents never reach the public IPFS network.
+"${SCRIPT_DIR}/ipfs-private-swarm.sh"
 "${SCRIPT_DIR}/peer-ipfs.sh"

@@ -5,14 +5,22 @@ services:
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       KAFKA_OUTPUT_TOPIC: claims.raw
+      # Secrets from the repo-root .env (blockchain/scripts/gen-secrets.sh)
+      PIPELINE_RAW_KEY: ${PIPELINE_RAW_KEY:?run blockchain/scripts/gen-secrets.sh}
+      INGEST_API_KEY: ${INGEST_API_KEY:?run blockchain/scripts/gen-secrets.sh}
+      # Public tips arrive via the web-client edge proxy, which sets X-Real-IP.
+      TRUST_PROXY_HEADERS: "true"
     ports:
-      - "8003:8000"
+      - "127.0.0.1:8003:8000"
     networks:
       - kafka_net
+      - misinfo_net
     restart: unless-stopped
 
 networks:
   # Owned by apps/kafka/docker-compose.yaml — start that (or a stack that
   # includes it) first.
   kafka_net:
+    external: true
+  misinfo_net:
     external: true

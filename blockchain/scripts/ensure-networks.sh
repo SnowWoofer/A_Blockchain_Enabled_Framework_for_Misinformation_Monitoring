@@ -6,9 +6,12 @@
 # declares a network external, an `include`-based aggregator can never
 # un-external it, so nothing here creates kafka_net via `docker compose up`
 # — it has to already exist first. Called from startup.sh; safe to re-run.
+#
+# misinfo_net joins the gateways, the app-layer services and the web edge so
+# they reach one another by container name, with no host ports involved.
 set -euo pipefail
 
-for net in kafka_net; do
+for net in kafka_net misinfo_net; do
   if ! docker network inspect "${net}" >/dev/null 2>&1; then
     echo ">> Creating docker network '${net}'..."
     docker network create "${net}" >/dev/null

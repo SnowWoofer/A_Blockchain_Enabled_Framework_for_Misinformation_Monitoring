@@ -12,6 +12,12 @@
 # volume, so every CID already anchored on the ledger stays resolvable. Nodes
 # 1 and 2 are new and start empty; they fetch blocks peer-to-peer on demand,
 # which is exactly the behaviour worth demonstrating.
+#
+# Port exposure: kubo's RPC API (5001/5101/5201) is an admin interface (pin,
+# config, shutdown) and the HTTP gateways serve every block, so both are
+# published on loopback only. The swarm port 4001 stays reachable for
+# consortium peers on other hosts; the private swarm key (ipfs-private-swarm.sh)
+# keeps everyone else out.
 
 services:
   ipfs-node:
@@ -22,8 +28,8 @@ services:
     ports:
       - "4001:4001"
       - "4001:4001/udp"
-      - "5001:5001"
-      - "8081:8080"
+      - "127.0.0.1:5001:5001"
+      - "127.0.0.1:8081:8080"
     networks:
       - ipfs_net
     restart: unless-stopped
@@ -40,9 +46,9 @@ services:
     volumes:
       - ipfs-data-1:/data/ipfs
     ports:
-      - "4101:4001"
-      - "5101:5001"
-      - "8181:8080"
+      - "127.0.0.1:4101:4001"
+      - "127.0.0.1:5101:5001"
+      - "127.0.0.1:8181:8080"
     networks:
       - ipfs_net
     restart: unless-stopped
@@ -59,9 +65,9 @@ services:
     volumes:
       - ipfs-data-2:/data/ipfs
     ports:
-      - "4201:4001"
-      - "5201:5001"
-      - "8281:8080"
+      - "127.0.0.1:4201:4001"
+      - "127.0.0.1:5201:5001"
+      - "127.0.0.1:8281:8080"
     networks:
       - ipfs_net
     restart: unless-stopped
@@ -84,10 +90,13 @@ services:
       # reaches node 0 by service name instead of bouncing off the host's
       # published port. Any of the three would serve the same bytes.
       - IPFS_API_URL=http://ipfs-node:5001/api/v0
+      # /add requires this shared secret (repo-root .env, gen-secrets.sh)
+      - INTERNAL_API_TOKEN=${INTERNAL_API_TOKEN:?run blockchain/scripts/gen-secrets.sh}
     networks:
       - ipfs_net
+      - misinfo_net
     ports:
-      - "9101:9101"
+      - "127.0.0.1:9101:9101"
     restart: unless-stopped
     healthcheck:
       # No curl in the python:3.11-slim base image — use Python itself.
@@ -108,3 +117,5 @@ volumes:
 networks:
   ipfs_net:
     name: ipfs_net
+  misinfo_net:
+    external: true

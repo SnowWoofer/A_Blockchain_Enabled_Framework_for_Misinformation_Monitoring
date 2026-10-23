@@ -8,7 +8,9 @@ services:
       KAFKA_TOPIC_PARTITIONS: 3
       KAFKA_HEAP_OPTS: "-Xmx512m -Xms256m"
     ports:
-      - "9094:9094"
+      # PLAINTEXT, unauthenticated listener for host tools: loopback only.
+      # Pipeline messages are HMAC-signed end to end regardless.
+      - "127.0.0.1:9094:9094"
     volumes:
       - kafka-data:/var/lib/kafka/data
     networks:

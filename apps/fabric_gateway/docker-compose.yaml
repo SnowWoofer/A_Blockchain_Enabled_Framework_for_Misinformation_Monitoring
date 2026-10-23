@@ -6,6 +6,8 @@ services:
     environment:
       - CRYPTO_PATH=/crypto
       - ORGS=${ORGS_LIST}
+      # Default identity for requests that do not name a role; the blockchain
+      # gateway always passes the caller's role (official / fact_checker).
       - GATEWAY_ROLE=official
       - IDENTITY_ORG4=${IDENTITY_ORG4:-User1}
       - IDENTITY_ORG5=${IDENTITY_ORG5:-User1}
@@ -14,14 +16,22 @@ services:
       - GATEWAY_PEER=peer0.org1.example.com
       - GATEWAY_TARGET=peer0.org1.example.com:7051
       - TLS_NAME_OVERRIDE=0
+      # This service holds every org's signing keys: /invoke and /query
+      # require this shared secret (from the repo-root .env, gen-secrets.sh).
+      - INTERNAL_API_TOKEN=${INTERNAL_API_TOKEN:?run blockchain/scripts/gen-secrets.sh}
     ports:
-      - "9100:9100"
+      # Host access is for the start script's health probe only; the
+      # blockchain gateway reaches it as fabric-gateway:9100 on misinfo_net.
+      - "127.0.0.1:9100:9100"
     volumes:
       - ../../blockchain/fabric-samples/test-network/organizations:/crypto:ro
     networks:
       - fabric_test
+      - misinfo_net
     restart: unless-stopped
 
 networks:
   fabric_test:
+    external: true
+  misinfo_net:
     external: true

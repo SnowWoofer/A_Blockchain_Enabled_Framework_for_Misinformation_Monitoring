@@ -2,7 +2,10 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException
+import hmac
+from typing import Optional
+
+from fastapi import FastAPI, Header, HTTPException
 from fastapi.responses import Response
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
@@ -22,6 +25,11 @@ state: dict = {}
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Fail before the (slow) model load if the pipeline keys are missing.
+    if settings.kafka_enabled and not settings.pipeline_allow_unsigned and not (
+            settings.pipeline_raw_key and settings.pipeline_flagged_key):
+        raise RuntimeError("PIPELINE_RAW_KEY / PIPELINE_FLAGGED_KEY are not set "
+                           "(run blockchain/scripts/gen-secrets.sh)")
     logger.info(
         "Loading model: device=%s quantization=%s batch=%d delay_ms=%d",
         settings.torch_device,
@@ -73,7 +81,9 @@ async def health():
 
 
 @app.post("/predict", response_model=PredictResponse)
-async def predict(req: PredictRequest):
+async def predict(req: PredictRequest, x_api_key: Optional[str] = Header(None, alias="X-API-Key")):
+    if settings.predict_api_key and not (x_api_key and hmac.compare_digest(x_api_key, settings.predict_api_key)):
+        raise HTTPException(status_code=401, detail="missing or invalid X-API-Key")
     if not req.post_text.strip():
         raise HTTPException(status_code=422, detail="post_text must not be empty")
     batcher: DynamicBatcher = state["batcher"]

@@ -12,7 +12,7 @@ class ClaimMessage(BaseModel):
 
 
 class PredictRequest(BaseModel):
-    post_text: str = Field(..., min_length=1)
+    post_text: str = Field(..., min_length=1, max_length=20_000)
 
 
 class PredictResponse(BaseModel):

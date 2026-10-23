@@ -1,26 +1,13 @@
 from __future__ import annotations
-import hashlib
 
-
-def _api_key_header(client, org="org1"):
-    api_key = hashlib.sha256(f"test-key-{org}".encode()).hexdigest()
-    client.store.upsert_org_key(api_key, org)
-    return {"X-API-Key": api_key}
+from tests.conftest import api_key, submit
 
 
 class TestHistory:
-    def test_history_returns_list(self, client):
-        headers = _api_key_header(client)
-        resp = client.post("/api/reports", json={
-            "msg_id": "history-test",
-            "label": "0",
-            "confidence": 0.7,
-            "model_version": "v1",
-            "content": "History test.",
-            "source_platform": "test",
-        }, headers=headers)
-        report_id = resp.json()["id"]
-
-        hist_resp = client.get(f"/api/reports/{report_id}/history", headers=headers)
-        assert hist_resp.status_code == 200
-        assert isinstance(hist_resp.json(), list)
+    def test_history_records_each_transaction(self, client):
+        report_id = submit(client, api_key(client, "org1"))
+        client.post(f"/api/reports/{report_id}/fact-check", json={"outcome": "1", "reasoning": "r"},
+                    headers=api_key(client, "org2"))
+        history = client.get(f"/api/reports/{report_id}/history", headers=api_key(client)).json()
+        assert [h["record"]["status"] for h in history] == ["PENDING", "UNDER_REVIEW"]
+        assert all(len(h["tx_id"]) == 64 for h in history)

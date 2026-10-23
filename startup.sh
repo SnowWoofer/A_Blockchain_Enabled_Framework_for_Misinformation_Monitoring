@@ -9,6 +9,7 @@ SAMPLES=50
 MAX_ORGS=30
 MAX_SAMPLES=100000
 SKIP_CALIPER=false
+SECURE=false
 
 usage() {
   cat <<'EOF'
@@ -19,7 +20,14 @@ validation load/benchmark against it. For the application pipeline (Kafka, flagg
   --orgs N            founding org limit, default 3 & max 30
   --test-samples N    validation requests to drive against gateway, default 50 & max 100000
   --skip-caliper      skip Caliper benchmark, run only load-http.py (Caliper Scaler: writes=N*10 & reads=N*10)
+  --secure            prototype mode: no well-known benchmark API keys (key-orgN, stress-key),
+                      no validation load (it needs stress-key and would pollute the public
+                      portal). Users sign in through the web client instead.
   --help              show this
+
+Both modes generate secrets (repo-root .env, secrets/) and seed one official and
+one fact-checker account per org; their one-time passwords are appended to
+secrets/initial-credentials.txt (mode 0600).
 EOF
   exit 0
 }
@@ -30,6 +38,7 @@ while [ "$#" -gt 0 ]; do
     --orgs) shift; ORGS="${1:-}" ;;
     --test-samples) shift; SAMPLES="${1:-}" ;;
     --skip-caliper) SKIP_CALIPER=true ;;
+    --secure) SECURE=true ;;
     *) echo "ERROR: unknown flag '$1' (try --help)" >&2; exit 1 ;;
   esac
   shift
@@ -54,8 +63,9 @@ fi
 
 mkdir -p results/local
 
-echo ">> 1/7: Ensuring Docker networks exist..."
+echo ">> 1/7: Ensuring Docker networks exist + secrets are generated..."
 "${SCRIPT_DIR}/blockchain/scripts/ensure-networks.sh"
+"${SCRIPT_DIR}/blockchain/scripts/gen-secrets.sh"
 
 echo ">> 2/7: Provisioning ${ORGS}-org Fabric network..."
 DEPLOY_ARGS=()
@@ -71,7 +81,9 @@ echo ">> 3/7: Starting IPFS + IPFS Gateway..."
 echo ">> 4/7: Bootstrapping API keys for org1..org${ORGS} (idempotent)..."
 ORG_ARGS=()
 for n in $(seq 1 "${ORGS}"); do ORG_ARGS+=("org${n}"); done
-"${SCRIPT_DIR}/blockchain/scripts/bootstrap-keys.sh" "${ORG_ARGS[@]}"
+KEY_ARGS=()
+[ "${SECURE}" = true ] && KEY_ARGS+=(--no-dev-keys)
+"${SCRIPT_DIR}/blockchain/scripts/bootstrap-keys.sh" ${KEY_ARGS[@]+"${KEY_ARGS[@]}"} "${ORG_ARGS[@]}"
 
 echo ">> 5/7: Starting Fabric Gateway SDK sidecar + blockchain gateway..."
 ORG_LIST="$(IFS=,; echo "${ORG_ARGS[*]}")"
@@ -79,19 +91,28 @@ export ORGS_LIST="${ORG_LIST}"
 "${SCRIPT_DIR}/blockchain/scripts/start-gateway-service.sh" up
 "${SCRIPT_DIR}/blockchain/scripts/start-blockchain-gateway.sh"
 
+echo ">> Seeding an official + a fact-checker account per org (existing accounts kept)..."
+CREDS="${SCRIPT_DIR}/secrets/initial-credentials.txt"
+(umask 077; docker exec blockchain-gateway python api/manage.py seed --orgs "${ORG_LIST}" | tee -a "${CREDS}" >/dev/null)
+echo "   one-time passwords (if any were created): ${CREDS}"
+
 echo ">> Checking API gateway reachability..."
 API_BASE_URL="${API_BASE_URL:-http://localhost:8000}"
-GW_STATUS="$(curl -s -m 5 -o /dev/null -w "%{http_code}" "${API_BASE_URL}/api/status" -H "X-API-Key: stress-key")"
+GW_STATUS="$(curl -s -m 5 -o /dev/null -w "%{http_code}" "${API_BASE_URL}/healthz")"
 if [ "${GW_STATUS}" != "200" ]; then
   echo "ERROR: API gateway unreachable (HTTP ${GW_STATUS})." >&2
   exit 1
 fi
 
-echo ">> 6/7: Quick validation load (orgs=${ORGS}, test-samples=${SAMPLES})..."
-"${SCRIPT_DIR}/benchmarks/load-http.py" \
-  --base "${API_BASE_URL}" \
-  --samples "${SAMPLES}" \
-  --output results/local/http.csv
+if [ "${SECURE}" = true ]; then
+  echo ">> 6/7: Skipping validation load (--secure: no stress-key is issued)."
+else
+  echo ">> 6/7: Quick validation load (orgs=${ORGS}, test-samples=${SAMPLES})..."
+  "${SCRIPT_DIR}/benchmarks/load-http.py" \
+    --base "${API_BASE_URL}" \
+    --samples "${SAMPLES}" \
+    --output results/local/http.csv
+fi
 
 if [ "${SKIP_CALIPER}" = false ]; then
   echo ">> [7/7] Caliper benchmark (writes=$((SAMPLES * 10)), reads=$((SAMPLES * 20)))..."
@@ -104,4 +125,6 @@ else
   echo ">> 7/7: Skipping Caliper (--skip-caliper)."
 fi
 
-echo ">> Done. Teardown with:  ${SCRIPT_DIR}/blockchain/scripts/deploy.sh down"
+echo ">> Done. Next: docker compose up -d --build   (AI pipeline, fact-checking service, web client)"
+echo ">>       then open https://localhost:${WEB_HTTPS_PORT:-8443} and sign in with secrets/initial-credentials.txt"
+echo ">> Teardown with:  ${SCRIPT_DIR}/blockchain/scripts/deploy.sh down"

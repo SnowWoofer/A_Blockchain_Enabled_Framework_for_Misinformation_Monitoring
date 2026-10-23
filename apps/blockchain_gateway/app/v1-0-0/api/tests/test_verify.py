@@ -1,34 +1,28 @@
 from __future__ import annotations
-import hashlib
+import json
 
-
-def _api_key_header(client, org="org1"):
-    api_key = hashlib.sha256(f"test-key-{org}".encode()).hexdigest()
-    client.store.upsert_org_key(api_key, org)
-    return {"X-API-Key": api_key}
+from tests.conftest import api_key, submit
 
 
 class TestVerify:
-    def test_verify_intact_report(self, client):
-        headers = _api_key_header(client)
-        resp = client.post("/api/reports", json={
-            "msg_id": "verify-test",
-            "label": "0",
-            "confidence": 0.8,
-            "model_version": "v1",
-            "content": "Verify me.",
-            "source_platform": "test",
-        }, headers=headers)
-        report_id = resp.json()["id"]
-
-        verify_resp = client.get(f"/api/reports/{report_id}/verify", headers=headers)
-        assert verify_resp.status_code == 200
-        data = verify_resp.json()
-        assert data["verified"] is True
+    def test_untampered_report_verifies(self, client):
+        headers = api_key(client)
+        report_id = submit(client, headers, content="Verify me.")
+        data = client.get(f"/api/reports/{report_id}/verify", headers=headers).json()
         assert data["off_chain_intact"] is True
         assert data["matches_on_chain"] is True
+        assert data["verified"] is True
 
-    def test_verify_missing_report_returns_404(self, client):
-        headers = _api_key_header(client)
-        resp = client.get("/api/reports/nonexistent/verify", headers=headers)
-        assert resp.status_code == 404
+    def test_tampered_off_chain_copy_detected(self, client):
+        headers = api_key(client)
+        report_id = submit(client, headers, content="Original claim text.")
+        row = client.store._conn.execute(
+            "SELECT cid FROM report_index WHERE report_id=?", (report_id,)).fetchone()
+        ipfs = client.store._ipfs
+        doc = json.loads(ipfs.blobs[row["cid"]])
+        doc["source"]["content"] = "Edited after the vote."
+        ipfs.blobs[row["cid"]] = json.dumps(doc).encode()
+        data = client.get(f"/api/reports/{report_id}/verify", headers=headers).json()
+        assert data["off_chain_intact"] is False
+        assert data["verified"] is False
+

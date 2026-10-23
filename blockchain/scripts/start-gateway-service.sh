@@ -6,6 +6,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 COMPOSE="docker compose"
 docker compose version >/dev/null 2>&1 || COMPOSE="docker-compose"
+# Shared secrets (INTERNAL_API_TOKEN, JWT_SECRET, ...) from the repo-root .env
+. "${SCRIPT_DIR}/lib/env.sh"
 
 if [[ "${1:-up}" == "down" ]]; then
   echo ">> Stopping Fabric Gateway SDK service..."

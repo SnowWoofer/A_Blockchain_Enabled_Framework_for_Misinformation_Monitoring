@@ -18,8 +18,12 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       KAFKA_INPUT_TOPIC: claims.raw
       KAFKA_OUTPUT_TOPIC: claims.flagged
+      PIPELINE_RAW_KEY: ${PIPELINE_RAW_KEY:?run blockchain/scripts/gen-secrets.sh}
+      PIPELINE_FLAGGED_KEY: ${PIPELINE_FLAGGED_KEY:?run blockchain/scripts/gen-secrets.sh}
+      # Optional: require X-API-Key on POST /predict (benchmarks call it directly).
+      PREDICT_API_KEY: ${PREDICT_API_KEY:-}
     ports:
-      - "8004:8000"
+      - "127.0.0.1:8004:8000"
     networks:
       - kafka_net
     restart: unless-stopped

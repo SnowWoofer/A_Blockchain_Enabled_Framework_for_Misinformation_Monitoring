@@ -6,29 +6,33 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       KAFKA_INPUT_TOPIC: claims.flagged
       KAFKA_CONSUMER_GROUP: submission-worker
-      # blockchain_gateway is its own independent service/compose stack —
-      # host.docker.internal (below) resolves to the host from inside the
-      # container regardless of whether it's running dockerized there or
-      # directly on the host. Override BLOCKCHAIN_API_KEY with a real key
-      # from blockchain/scripts/bootstrap-keys.sh.
-      BLOCKCHAIN_API_BASE: ${BLOCKCHAIN_API_BASE:-http://host.docker.internal:8000}
-      BLOCKCHAIN_API_KEY: ${BLOCKCHAIN_API_KEY:-key-org1}
+      # blockchain_gateway is its own compose stack; both join misinfo_net, so
+      # it is reachable by container name.
+      BLOCKCHAIN_API_BASE: ${BLOCKCHAIN_API_BASE:-http://blockchain-gateway:8000}
+      # A dedicated ai_submitter key (bootstrap-keys.sh registers it): it can
+      # submit reports and nothing else, unlike an org's official key.
+      BLOCKCHAIN_API_KEY: ${SUBMITTER_API_KEY:?run blockchain/scripts/gen-secrets.sh}
+      PIPELINE_FLAGGED_KEY: ${PIPELINE_FLAGGED_KEY:?run blockchain/scripts/gen-secrets.sh}
       DEFAULT_LANGUAGE: ${DEFAULT_LANGUAGE:-eng}
       OUTPUT_PATH: /data/failed_claims.jsonl
+      PROCESSED_DB: /data/processed.db
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
       - submission-data:/data
     ports:
-      - "8001:8000"
+      - "127.0.0.1:8001:8000"
     networks:
       - kafka_net
+      - misinfo_net
     restart: unless-stopped
 
 networks:
   # Owned by apps/kafka/docker-compose.yaml — start that (or a stack that
   # includes it) first.
   kafka_net:
+    external: true
+  misinfo_net:
     external: true
 
 volumes:

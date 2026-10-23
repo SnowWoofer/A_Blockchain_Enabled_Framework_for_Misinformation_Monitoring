@@ -19,6 +19,10 @@ BATCH_SIZE = Histogram(
     "Number of requests per inference batch",
     buckets=(1, 2, 4, 8, 16, 32, 64, 128, 256),
 )
+REJECTED_MESSAGES_TOTAL = Counter(
+    "flagging_engine_rejected_messages_total",
+    "claims.raw messages dropped because their HMAC signature did not verify",
+)
 QUEUE_DEPTH = Gauge(
     "flagging_engine_queue_depth", "Current number of pending requests in the batching queue"
 )

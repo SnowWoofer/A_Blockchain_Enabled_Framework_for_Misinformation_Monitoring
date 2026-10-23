@@ -14,7 +14,8 @@ ARG TORCH_INDEX_URL=https://download.pytorch.org/whl/cpu
 
 ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
-    MODEL_PATH=/app/model
+    MODEL_PATH=/app/model \
+    HF_HOME=/tmp/hf
 
 WORKDIR /app
 
@@ -25,6 +26,11 @@ RUN pip install -r requirements.txt
 
 COPY app ./app
 COPY model ./model
+
+
+# Stateless service: no reason to run as root.
+RUN useradd --system --uid 10001 --no-create-home app
+USER app
 
 EXPOSE 8000
 

@@ -1,0 +1,10 @@
+# The api/ dir doubles as the bind-mounted data dir: never bake its databases
+# (password and API-key hashes, audit log, demo ledger state) into an image.
+**/*.db
+**/*.db-journal
+**/*.db-wal
+**/*.db-shm
+**/mock-ledger.json*
+**/tests
+**/__pycache__
+**/*.pyc

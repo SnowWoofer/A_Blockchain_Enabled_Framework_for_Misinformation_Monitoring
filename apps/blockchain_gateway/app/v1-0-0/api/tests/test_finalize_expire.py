@@ -1,89 +1,48 @@
 from __future__ import annotations
-import hashlib
+
+from tests.conftest import api_key, reset_ledger, submit, user_headers, vote
 
 
-def _api_key_header(client, org="org1"):
-    api_key = hashlib.sha256(f"test-key-{org}".encode()).hexdigest()
-    client.store.upsert_org_key(api_key, org)
-    return {"X-API-Key": api_key}
-
-
-def _setup_report_with_fact_check(client):
-    headers = _api_key_header(client)
-    resp = client.post("/api/reports", json={
-        "msg_id": "fin-test",
-        "label": "0",
-        "confidence": 0.75,
-        "model_version": "v1",
-        "content": "Finalize me.",
-        "source_platform": "test",
-    }, headers=headers)
-    report_id = resp.json()["id"]
-
-    fc_headers = _api_key_header(client, "org2")
-    client.post(f"/api/reports/{report_id}/fact-check", json={
-        "outcome": "1", "reasoning": "misinfo", "support": [],
-    }, headers=fc_headers)
-
+def _split_report(client):
+    """6 orgs (quorum 4): two YES and one NO leaves the report open."""
+    reset_ledger(client, orgs=6)
+    report_id = submit(client, api_key(client, "org1"))
+    vote(client, api_key(client, "org2"), report_id, "1")
+    vote(client, api_key(client, "org3"), report_id, "1")
+    vote(client, api_key(client, "org4"), report_id, "0")
     return report_id
 
 
 class TestFinalize:
-    def test_finalize_sets_final_status(self, client):
-        report_id = _setup_report_with_fact_check(client)
-        headers = _api_key_header(client)
+    def test_finalize_blocked_while_window_open(self, client):
+        report_id = _split_report(client)
+        resp = client.post(f"/api/reports/{report_id}/finalize", headers=api_key(client, "org5"))
+        assert resp.status_code == 400
+        assert "fact-check window" in resp.json()["detail"]
 
-        resp = client.post(f"/api/reports/{report_id}/finalize", headers=headers)
-        assert resp.status_code == 200
-
-        chain_resp = client.get(f"/api/reports/{report_id}/chain", headers=headers)
-        data = chain_resp.json()
-        assert data["status"] == "FINAL"
-        assert data["final_label"] == "1"
-        assert data["finalized_by"] == "Org1MSP"
-
-    def test_finalize_updates_off_chain_status(self, client):
-        report_id = _setup_report_with_fact_check(client)
-        headers = _api_key_header(client)
-
-        client.post(f"/api/reports/{report_id}/finalize", headers=headers)
-
-        report_resp = client.get(f"/api/reports/{report_id}", headers=headers)
-        assert report_resp.json()["fact_check_status"] == "Verified_Misinformation"
+    def test_finalize_after_window_by_majority(self, client):
+        reset_ledger(client, orgs=6, window_s=0)
+        report_id = submit(client, api_key(client, "org1"))
+        vote(client, api_key(client, "org2"), report_id, "1")
+        vote(client, api_key(client, "org3"), report_id, "1")
+        vote(client, api_key(client, "org4"), report_id, "0")
+        official = user_headers(client, "boss", "org5", "official")
+        assert client.post(f"/api/reports/{report_id}/finalize", headers=official).status_code == 200
+        chain = client.get(f"/api/reports/{report_id}/chain", headers=official).json()
+        assert chain["status"] == "FINAL" and chain["final_label"] == "1" and chain["finalized_by"] == "Org5MSP"
+        doc = client.get(f"/api/reports/{report_id}", headers=official).json()
+        assert doc["fact_check_status"] == "Verified_Misinformation"
 
 
 class TestExpire:
-    def test_expire_sets_expired_status(self, client):
-        headers = _api_key_header(client)
-        resp = client.post("/api/reports", json={
-            "msg_id": "expire-test",
-            "label": "0",
-            "confidence": 0.5,
-            "model_version": "v1",
-            "content": "Expire me.",
-            "source_platform": "test",
-        }, headers=headers)
-        report_id = resp.json()["id"]
+    def test_expire_blocked_while_window_open(self, client):
+        report_id = submit(client, api_key(client))
+        assert client.post(f"/api/reports/{report_id}/expire", headers=api_key(client)).status_code == 400
 
-        expire_resp = client.post(f"/api/reports/{report_id}/expire", headers=headers)
-        assert expire_resp.status_code == 200
-
-        chain_resp = client.get(f"/api/reports/{report_id}/chain", headers=headers)
-        assert chain_resp.json()["status"] == "EXPIRED"
-
-    def test_expire_updates_off_chain_status(self, client):
-        headers = _api_key_header(client)
-        resp = client.post("/api/reports", json={
-            "msg_id": "expire-offchain-test",
-            "label": "0",
-            "confidence": 0.5,
-            "model_version": "v1",
-            "content": "Expire me.",
-            "source_platform": "test",
-        }, headers=headers)
-        report_id = resp.json()["id"]
-
-        client.post(f"/api/reports/{report_id}/expire", headers=headers)
-
-        report_resp = client.get(f"/api/reports/{report_id}", headers=headers)
-        assert report_resp.json()["fact_check_status"] == "Expired"
+    def test_expire_after_window(self, client):
+        reset_ledger(client, window_s=0)
+        headers = api_key(client)
+        report_id = submit(client, headers)
+        assert client.post(f"/api/reports/{report_id}/expire", headers=headers).status_code == 200
+        assert client.get(f"/api/reports/{report_id}/chain", headers=headers).json()["status"] == "EXPIRED"
+        assert client.get(f"/api/reports/{report_id}", headers=headers).json()["fact_check_status"] == "Expired"

@@ -1,6 +1,8 @@
 from __future__ import annotations
+import hashlib
 import json
 import os
+import re
 import sqlite3
 import threading
 import time
@@ -8,12 +10,28 @@ import urllib.error
 import urllib.request
 import uuid
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 from report import canonical_json
 
 
 class StorageError(Exception):
     pass
+
+
+def hash_api_key(api_key: str) -> str:
+    # API keys are high-entropy bearer secrets, so a plain digest is enough to
+    # keep them out of the database without slowing every request with bcrypt.
+    return hashlib.sha256(api_key.encode("utf-8")).hexdigest()
+
+
+def internal_headers() -> Dict[str, str]:
+    """Shared-secret header for the gateway's own sidecars (fabric_gateway,
+    ipfs_gateway). Empty when INTERNAL_API_TOKEN is unset (dev only)."""
+    token = os.environ.get("INTERNAL_API_TOKEN", "")
+    return {"X-Internal-Token": token} if token else {}
+
+
+_FTS_TOKEN = re.compile(r"\w+", re.UNICODE)
 
 
 class CryptoGate:
@@ -89,7 +107,8 @@ class IpfsStore:
     def add_bytes(self, data: bytes) -> str:
         req = urllib.request.Request(
             f"{self.api_url}/add", data=data,
-            headers={"Content-Type": "application/octet-stream"}, method="POST",
+            headers={"Content-Type": "application/octet-stream", **internal_headers()},
+            method="POST",
         )
         try:
             with urllib.request.urlopen(req, timeout=15) as r:
@@ -134,12 +153,50 @@ class OffChainStore:
         with self._conn:
             self._conn.execute(
                 """
-                CREATE TABLE IF NOT EXISTS org_keys (
-                    api_key TEXT PRIMARY KEY,
-                    org      TEXT NOT NULL
+                CREATE TABLE IF NOT EXISTS api_keys (
+                    key_hash   TEXT PRIMARY KEY,
+                    org        TEXT NOT NULL,
+                    role       TEXT NOT NULL DEFAULT 'official',
+                    label      TEXT NOT NULL DEFAULT '',
+                    created_at TEXT NOT NULL DEFAULT '',
+                    revoked    INTEGER NOT NULL DEFAULT 0
                 )
                 """
             )
+            # Older databases kept API keys in plaintext (org_keys). Hash them
+            # into api_keys once and drop the plaintext copy.
+            legacy = self._conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='org_keys'"
+            ).fetchone()
+            if legacy:
+                now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+                for row in self._conn.execute("SELECT api_key, org FROM org_keys").fetchall():
+                    self._conn.execute(
+                        "INSERT OR IGNORE INTO api_keys (key_hash, org, role, label, created_at) "
+                        "VALUES (?, ?, 'official', 'migrated', ?)",
+                        (hash_api_key(row["api_key"]), row["org"], now),
+                    )
+                self._conn.execute("DROP TABLE org_keys")
+            self._conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS report_meta (
+                    report_id  TEXT PRIMARY KEY,
+                    msg_id     TEXT NOT NULL DEFAULT '',
+                    platform   TEXT NOT NULL DEFAULT '',
+                    content    TEXT NOT NULL DEFAULT '',
+                    created_at TEXT NOT NULL DEFAULT ''
+                )
+                """
+            )
+            self._conn.execute("CREATE INDEX IF NOT EXISTS report_meta_msg ON report_meta(msg_id)")
+            try:
+                self._conn.execute(
+                    "CREATE VIRTUAL TABLE IF NOT EXISTS report_fts USING "
+                    "fts5(content, report_id UNINDEXED, tokenize='unicode61 remove_diacritics 2')"
+                )
+                self._fts = True
+            except sqlite3.OperationalError:
+                self._fts = False  # sqlite built without FTS5: fall back to LIKE
             self._conn.execute(
                 """
                 CREATE TABLE IF NOT EXISTS reports (
@@ -191,20 +248,98 @@ class OffChainStore:
     def verify_onboarding_token(self, org: str, token: bytes) -> bool:
         return self._gate.verify_token(token)
 
-    def upsert_org_key(self, api_key: str, org: str) -> None:
+    def upsert_org_key(self, api_key: str, org: str, role: str = "official", label: str = "") -> None:
+        now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
         with self._lock:
             with self._conn:
                 self._conn.execute(
-                    "INSERT OR REPLACE INTO org_keys (api_key, org) VALUES (?, ?)",
-                    (api_key, org),
+                    "INSERT OR REPLACE INTO api_keys (key_hash, org, role, label, created_at, revoked) "
+                    "VALUES (?, ?, ?, ?, ?, 0)",
+                    (hash_api_key(api_key), org, role, label, now),
                 )
 
-    def org_for_key(self, api_key: str) -> Optional[str]:
+    def principal_for_key(self, api_key: str) -> Optional[Tuple[str, str, str]]:
+        """(org, role, label) for a live API key, else None."""
         with self._lock:
             row = self._conn.execute(
-                "SELECT org FROM org_keys WHERE api_key=?", (api_key,)
+                "SELECT org, role, label FROM api_keys WHERE key_hash=? AND revoked=0",
+                (hash_api_key(api_key),),
             ).fetchone()
-        return row["org"] if row else None
+        return (row["org"], row["role"], row["label"]) if row else None
+
+    def org_for_key(self, api_key: str) -> Optional[str]:
+        found = self.principal_for_key(api_key)
+        return found[0] if found else None
+
+    def revoke_keys(self, *, label: Optional[str] = None, api_key: Optional[str] = None) -> int:
+        with self._lock:
+            with self._conn:
+                if api_key is not None:
+                    cur = self._conn.execute(
+                        "UPDATE api_keys SET revoked=1 WHERE key_hash=?", (hash_api_key(api_key),)
+                    )
+                else:
+                    cur = self._conn.execute("UPDATE api_keys SET revoked=1 WHERE label=?", (label,))
+        return cur.rowcount
+
+    # --- local search index (public "has this claim been checked?" lookup) --
+
+    def index_report(self, report_id: str, msg_id: str, platform: str, content: str, created_at: str) -> None:
+        with self._lock:
+            with self._conn:
+                existed = self._conn.execute(
+                    "SELECT 1 FROM report_meta WHERE report_id=?", (report_id,)
+                ).fetchone()
+                self._conn.execute(
+                    "INSERT OR REPLACE INTO report_meta (report_id, msg_id, platform, content, created_at) "
+                    "VALUES (?, ?, ?, ?, ?)",
+                    (report_id, msg_id, platform, content, created_at),
+                )
+                if self._fts and not existed:
+                    self._conn.execute(
+                        "INSERT INTO report_fts (content, report_id) VALUES (?, ?)", (content, report_id)
+                    )
+
+    def report_meta(self, report_ids: List[str]) -> Dict[str, Dict[str, Any]]:
+        if not report_ids:
+            return {}
+        marks = ",".join("?" * len(report_ids))
+        with self._lock:
+            rows = self._conn.execute(
+                f"SELECT report_id, msg_id, platform, content, created_at FROM report_meta "
+                f"WHERE report_id IN ({marks})",
+                list(report_ids),
+            ).fetchall()
+        return {r["report_id"]: dict(r) for r in rows}
+
+    def report_id_for_msg(self, msg_id: str) -> Optional[str]:
+        with self._lock:
+            row = self._conn.execute(
+                "SELECT report_id FROM report_meta WHERE msg_id=? ORDER BY created_at DESC LIMIT 1",
+                (msg_id,),
+            ).fetchone()
+        return row["report_id"] if row else None
+
+    def search_reports(self, query: str, limit: int = 500) -> List[str]:
+        """Report ids whose claim text matches every word in `query`. Words are
+        extracted and quoted, so user input can never form FTS5 syntax."""
+        tokens = _FTS_TOKEN.findall(query)[:12]
+        if not tokens:
+            return []
+        with self._lock:
+            if self._fts:
+                expr = " ".join('"' + t.replace('"', "") + '"' for t in tokens)
+                rows = self._conn.execute(
+                    "SELECT report_id FROM report_fts WHERE report_fts MATCH ? ORDER BY rank LIMIT ?",
+                    (expr, limit),
+                ).fetchall()
+            else:
+                clause = " AND ".join("content LIKE ?" for _ in tokens)
+                rows = self._conn.execute(
+                    f"SELECT report_id FROM report_meta WHERE {clause} LIMIT ?",
+                    [f"%{t}%" for t in tokens] + [limit],
+                ).fetchall()
+        return [r["report_id"] for r in rows]
 
     def save_report(self, report: Dict[str, Any]) -> str:
         # content_hash is set by report.make_report() over the claim's fixed

@@ -1,0 +1,114 @@
+# Edge proxy for the web client: the only service browsers talk to.
+# TLS termination, the SPA, same-origin routing to the backend services, rate
+# limits and security headers. ${...} values are filled in from the
+# container environment at start (nginx image template processing).
+
+server_tokens off;
+
+# HSTS is per host, not per port: on a `localhost` deployment it would force
+# HTTPS onto every other local dev server, so it defaults to 0 (off). Set
+# HSTS_MAX_AGE=63072000 when serving a real domain with a real certificate.
+map $host $hsts_value {
+    default "max-age=${HSTS_MAX_AGE}; includeSubDomains";
+}
+
+# Per-client-IP rate limits. Login and the anonymous tip line are the two
+# endpoints worth brute-forcing or flooding, so they get the tightest budgets.
+limit_req_zone $binary_remote_addr zone=login:10m rate=10r/m;
+limit_req_zone $binary_remote_addr zone=tips:10m rate=6r/m;
+limit_req_zone $binary_remote_addr zone=api:10m rate=30r/s;
+limit_conn_zone $binary_remote_addr zone=perip:10m;
+limit_req_status 429;
+limit_conn_status 429;
+
+server {
+    listen 8080;
+    server_name _;
+    location / {
+        return 301 https://$host:${PUBLIC_HTTPS_PORT}$request_uri;
+    }
+}
+
+server {
+    listen 8443 ssl;
+    http2 on;
+    server_name _;
+
+    ssl_certificate     /etc/nginx/tls/server.crt;
+    ssl_certificate_key /etc/nginx/tls/server.key;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305;
+    ssl_prefer_server_ciphers off;
+    ssl_session_cache shared:TLS:10m;
+    ssl_session_timeout 1d;
+    ssl_session_tickets off;
+
+    client_max_body_size 64k;
+    client_body_timeout 15s;
+    client_header_timeout 15s;
+    keepalive_timeout 30s;
+    limit_conn perip 50;
+
+    # Upstreams resolve lazily through Docker's DNS, so the edge starts even
+    # before the gateways (which startup.sh brings up separately) exist.
+    resolver ${DNS_RESOLVER} valid=10s ipv6=off;
+    set $gateway   http://${GATEWAY_UPSTREAM};
+    set $factcheck http://${FACT_CHECK_UPSTREAM};
+    set $ingest    http://${INGEST_UPSTREAM};
+
+    root /usr/share/nginx/html;
+    include /etc/nginx/snippets/security-headers.conf;
+
+    error_page 429 = @rate_limited;
+    location @rate_limited {
+        default_type application/json;
+        return 429 '{"detail":"Too many requests. Please wait a moment and try again."}';
+    }
+
+    location = /api/auth/login {
+        limit_req zone=login burst=5 nodelay;
+        include /etc/nginx/snippets/proxy.conf;
+        proxy_pass $gateway;
+    }
+
+    location /api/ {
+        limit_req zone=api burst=60 nodelay;
+        include /etc/nginx/snippets/proxy.conf;
+        proxy_pass $gateway;
+    }
+
+    location /fc/ {
+        limit_req zone=api burst=60 nodelay;
+        include /etc/nginx/snippets/proxy.conf;
+        rewrite ^/fc/(.*)$ /$1 break;
+        proxy_pass $factcheck;
+    }
+
+    # Anonymous public tip line. Not logged: the portal promises reporters
+    # that their IP address is not stored with or alongside their report.
+    location = /tips {
+        limit_except POST { deny all; }
+        limit_req zone=tips burst=3 nodelay;
+        access_log off;
+        include /etc/nginx/snippets/proxy.conf;
+        rewrite ^ /public/tip break;
+        proxy_pass $ingest;
+    }
+
+    # Everything else on the backends (FastAPI /docs, /metrics, ...) stays internal.
+    location ~ ^/(docs|redoc|openapi\.json|metrics|healthz)$ {
+        return 404;
+    }
+
+    location /assets/ {
+        include /etc/nginx/snippets/security-headers.conf;
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+        try_files $uri =404;
+    }
+
+    location / {
+        include /etc/nginx/snippets/security-headers.conf;
+        add_header Cache-Control "no-cache" always;
+        try_files $uri /index.html;
+    }
+}

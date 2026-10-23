@@ -6,8 +6,10 @@ import logging
 
 from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
 
+from . import signing
 from .batcher import DynamicBatcher
 from .config import settings
+from .metrics import REJECTED_MESSAGES_TOTAL
 from .schemas import ClaimMessage
 
 logger = logging.getLogger(__name__)
@@ -67,6 +69,11 @@ class FlaggingConsumer:
                 logger.exception("Failed to process message at offset %s", msg.offset)
 
     async def _handle(self, payload: dict):
+        if not settings.pipeline_allow_unsigned and not signing.verify(payload, settings.pipeline_raw_key):
+            REJECTED_MESSAGES_TOTAL.inc()
+            logger.warning("Dropping unsigned/forged message on %s (msg_id=%s)",
+                           settings.kafka_input_topic, payload.get("msg_id") if isinstance(payload, dict) else None)
+            return
         claim = ClaimMessage.model_validate(payload)
         result = await self.batcher.submit(claim.content)
         out = {
@@ -78,5 +85,7 @@ class FlaggingConsumer:
             "model_version": self.model_version,
             "inference_timestamp": dt.datetime.now(dt.timezone.utc).isoformat(),
         }
+        if settings.pipeline_flagged_key:
+            out = signing.sign(out, settings.pipeline_flagged_key)
         assert self.producer is not None
         await self.producer.send_and_wait(settings.kafka_output_topic, out)

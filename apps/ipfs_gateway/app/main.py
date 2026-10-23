@@ -11,21 +11,31 @@ org's own systems) can hit this directly without going through
 blockchain_gateway's org-authenticated API at all, since IPFS content is
 already content-addressed: knowing the CID is itself the access grant, the
 same trust model any public IPFS gateway uses."""
+import hashlib
+import hmac
 import json
+import re
 import time
 import urllib.error
 import urllib.request
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException, Request, Response
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI, Header, HTTPException, Request, Response
 
 from .config import settings
 
 app = FastAPI(title="IPFS Gateway")
-app.add_middleware(
-    CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"],
-)
+
+# CIDv0 (base58btc, Qm...) or CIDv1 (multibase base32 b... / base36 k...).
+# Anything else is refused before it is spliced into kubo's ?arg= query.
+CID_RE = re.compile(r"^(Qm[1-9A-HJ-NP-Za-km-z]{44}|b[a-z2-7]{20,100}|k[0-9a-z]{20,100})$")
+
+
+def _token_ok(presented: Optional[str]) -> bool:
+    if not settings.internal_api_token or presented is None:
+        return False
+    digest = lambda v: hashlib.sha256(v.encode("utf-8")).digest()  # noqa: E731
+    return hmac.compare_digest(digest(presented), digest(settings.internal_api_token))
 
 
 class IpfsError(Exception):
@@ -51,11 +61,18 @@ def health():
 
 
 @app.post("/add")
-async def add(request: Request):
+async def add(request: Request, x_internal_token: Optional[str] = Header(None, alias="X-Internal-Token")):
     """Store raw request-body bytes in IPFS, return its CID."""
+    if not _token_ok(x_internal_token):
+        raise HTTPException(status_code=401, detail="missing or invalid X-Internal-Token")
+    declared = request.headers.get("content-length")
+    if declared and declared.isdigit() and int(declared) > settings.max_add_bytes:
+        raise HTTPException(status_code=413, detail="blob too large")
     data = await request.body()
     if not data:
         raise HTTPException(status_code=400, detail="empty body")
+    if len(data) > settings.max_add_bytes:
+        raise HTTPException(status_code=413, detail="blob too large")
     boundary = "----ipfsgw" + str(time.time_ns())
     body = (
         f"--{boundary}\r\n"
@@ -82,6 +99,8 @@ async def add(request: Request):
 @app.get("/cat/{cid}")
 def cat(cid: str):
     """Fetch raw bytes for a CID, exactly as stored — no reinterpretation."""
+    if not CID_RE.fullmatch(cid):
+        raise HTTPException(status_code=400, detail="malformed CID")
     req = urllib.request.Request(f"{settings.ipfs_api_url}/cat?arg={cid}", data=b"", method="POST")
     try:
         with urllib.request.urlopen(req, timeout=15) as r:

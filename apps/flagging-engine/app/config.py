@@ -24,6 +24,16 @@ class Settings(BaseSettings):
     kafka_output_topic: str = "claims.flagged"
     kafka_consumer_group: str = "flagging-engine"
 
+    # HMAC keys (see app/signing.py): verify what claim-ingest-worker put on
+    # claims.raw, sign what this engine puts on claims.flagged.
+    pipeline_raw_key: str = ""
+    pipeline_flagged_key: str = ""
+    pipeline_allow_unsigned: bool = False
+
+    # Optional X-API-Key for POST /predict. The port is loopback-only, and the
+    # benchmark harness calls it directly, so it is off unless set.
+    predict_api_key: str = ""
+
     log_level: str = "INFO"
 
 

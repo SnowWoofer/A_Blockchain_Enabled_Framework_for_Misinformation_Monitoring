@@ -20,6 +20,24 @@ const GATEWAY_TARGET = process.env.GATEWAY_TARGET || `${GATEWAY_PEER}:7051`;
 const TLS_NAME_OVERRIDE = process.env.TLS_NAME_OVERRIDE === '1';
 const INVOKE_TIMEOUT_MS = parseInt(process.env.INVOKE_TIMEOUT_MS || '60000', 10);
 const QUERY_TIMEOUT_MS = parseInt(process.env.QUERY_TIMEOUT_MS || '15000', 10);
+// Shared secret the blockchain gateway presents as X-Internal-Token. This
+// service holds every org's signing keys, so nothing reaches /invoke or /query
+// without it.
+const INTERNAL_API_TOKEN = process.env.INTERNAL_API_TOKEN || '';
+const DEFAULT_ROLE = (process.env.GATEWAY_ROLE || 'official').trim();
+const ROLES = ['official', 'fact_checker'];
+
+// Only the misinformation contract's own transactions are callable, and
+// read-only functions only through /query.
+const INVOKE_FUNCTIONS = new Set([
+  'RegisterOrg', 'RequestOrgAdmission', 'VoteOnOrgAdmission', 'FinalizeOrgAdmission',
+  'SetFoundingOrgLimit', 'Submit', 'SubmitFactCheck', 'FinalizeReport', 'ExpireReport',
+]);
+const QUERY_FUNCTIONS = new Set([
+  'ListRegisteredOrgs', 'QueryOrgAdmission', 'QueryReport', 'QueryAllReports', 'QueryReportHistory',
+]);
+const MAX_ARGS = 16;
+const MAX_ARG_LENGTH = 4096;
 
 const PEER_ORG_PREFIX = path.join(CRYPTO_PATH, 'peerOrganizations');
 const ORG_DOMAIN = GATEWAY_PEER.replace(/^[^.]+\./, ''); // org1.example.com
@@ -38,14 +56,16 @@ function readPrivateKey(dir) {
 // User1 (OU=client) and keep its admin key offline — set IDENTITY_ORG4=User1.
 //
 // For ABAC, role-bearing identities are registered by register-roles.sh:
-//   officialN@orgN.example.com   — role=official  (admin/governance)
-//   factcheckerN@orgN.example.com — role=fact_checker (submit/fact-check)
-// Set GATEWAY_ROLE=official or GATEWAY_ROLE=fact_checker to select one.
-function identityNameFor(num) {
-  const role = (process.env.GATEWAY_ROLE || '').trim();
-  if (role === 'official')   return `official${num}`;
-  if (role === 'fact_checker') return `factchecker${num}`;
-  return process.env[`IDENTITY_ORG${num}`] || 'Admin';
+//   officialN@orgN.example.com     — role=official     (admin/governance)
+//   fact_checkerN@orgN.example.com — role=fact_checker (submit/fact-check)
+// Each request names the role it acts under (the gateway passes the caller's
+// role), so the chaincode sees a fact-checker as a fact-checker rather than
+// every call signing as official. GATEWAY_ROLE is the default for requests
+// that name none.
+function identityNamesFor(num, role) {
+  if (role === 'official') return [`official${num}`];
+  if (role === 'fact_checker') return [`fact_checker${num}`, `factchecker${num}`];
+  return [process.env[`IDENTITY_ORG${num}`] || 'Admin'];
 }
 
 function loadCert(signcertsDir, user) {
@@ -57,16 +77,12 @@ function loadCert(signcertsDir, user) {
   throw new Error(`no certificate found in ${signcertsDir}`);
 }
 
-function loadIdentity(org) {
+function loadIdentity(org, role) {
   const num = org.replace(/^org/, '');
-  const user = `${identityNameFor(num)}@org${num}.example.com`;
-  const mspDir = path.join(
-    PEER_ORG_PREFIX,
-    `org${num}.example.com`,
-    'users',
-    user,
-    'msp'
-  );
+  const usersDir = path.join(PEER_ORG_PREFIX, `org${num}.example.com`, 'users');
+  const candidates = identityNamesFor(num, role).map((name) => `${name}@org${num}.example.com`);
+  const user = candidates.find((u) => fs.existsSync(path.join(usersDir, u, 'msp'))) || candidates[0];
+  const mspDir = path.join(usersDir, user, 'msp');
   return {
     mspId: `Org${num}MSP`,
     cert: loadCert(path.join(mspDir, 'signcerts'), user),
@@ -88,15 +104,17 @@ function newGrpcConnection() {
   return new grpc.Client(GATEWAY_TARGET, creds, options);
 }
 
-const grpcClient = newGrpcConnection();
-const contracts = new Map(); // org -> Contract
+let grpcClient = null; // connected on first use, so the module loads without crypto (tests)
+const contracts = new Map(); // `${org}:${role}` -> Contract
 
-function getContract(org) {
+function getContract(org, role) {
   if (!ORGS.includes(org)) {
     throw new Error(`org "${org}" not configured (configured: ${ORGS.join(',')})`);
   }
-  if (!contracts.has(org)) {
-    const id = loadIdentity(org);
+  const key = `${org}:${role}`;
+  if (!contracts.has(key)) {
+    const id = loadIdentity(org, role);
+    if (!grpcClient) grpcClient = newGrpcConnection();
     const gateway = connect({
       client: grpcClient,
       identity: { mspId: id.mspId, credentials: id.cert },
@@ -106,14 +124,43 @@ function getContract(org) {
       submitOptions: () => ({ deadline: Date.now() + INVOKE_TIMEOUT_MS }),
       commitStatusOptions: () => ({ deadline: Date.now() + INVOKE_TIMEOUT_MS }),
     });
-    contracts.set(org, gateway.getNetwork(CHANNEL).getContract(CHAINCODE));
+    contracts.set(key, gateway.getNetwork(CHANNEL).getContract(CHAINCODE));
   }
-  return contracts.get(org);
+  return contracts.get(key);
 }
 
 // ------------------------------------------------------------------ app ----
 const app = express();
-app.use(express.json({ limit: '1mb' }));
+app.disable('x-powered-by');
+app.use(express.json({ limit: '64kb' }));
+
+function tokenMatches(presented) {
+  if (!INTERNAL_API_TOKEN || typeof presented !== 'string') return false;
+  const a = crypto.createHash('sha256').update(presented).digest();
+  const b = crypto.createHash('sha256').update(INTERNAL_API_TOKEN).digest();
+  return crypto.timingSafeEqual(a, b);
+}
+
+function requireInternalToken(req, res, next) {
+  if (!tokenMatches(req.get('X-Internal-Token'))) {
+    return res.status(401).json({ ok: false, error: 'missing or invalid X-Internal-Token' });
+  }
+  next();
+}
+
+// Validates and normalises an /invoke or /query body; returns an error string
+// or the parsed call.
+function parseCall(body, allowed) {
+  const { org = 'org1', role = DEFAULT_ROLE, function: fn, args = [] } = body || {};
+  if (!fn) return { error: 'missing "function"' };
+  if (!allowed.has(fn)) return { error: `function "${fn}" is not allowed here` };
+  if (!ROLES.includes(role)) return { error: `role must be one of ${ROLES.join(', ')}` };
+  if (typeof org !== 'string' || !/^org[0-9]{1,3}$/.test(org)) return { error: 'malformed org' };
+  if (!Array.isArray(args) || args.length > MAX_ARGS) return { error: `args must be an array of at most ${MAX_ARGS}` };
+  const strArgs = args.map(String);
+  if (strArgs.some((a) => a.length > MAX_ARG_LENGTH)) return { error: 'argument too long' };
+  return { org, role, fn, args: strArgs };
+}
 
 app.get('/health', (_req, res) => {
   res.json({
@@ -123,7 +170,8 @@ app.get('/health', (_req, res) => {
     chaincode: CHAINCODE,
     gateway_peer: GATEWAY_PEER,
     gateway_target: GATEWAY_TARGET,
-    gateway_role: process.env.GATEWAY_ROLE || 'admin',
+    default_role: DEFAULT_ROLE,
+    roles: ROLES,
     identities: ORGS,
   });
 });
@@ -149,12 +197,13 @@ function parseResult(buf) {
   }
 }
 
-app.post('/invoke', async (req, res) => {
-  const { org = 'org1', function: fn, args = [] } = req.body || {};
-  if (!fn) return res.status(400).json({ error: 'missing "function"' });
+app.post('/invoke', requireInternalToken, async (req, res) => {
+  const call = parseCall(req.body, INVOKE_FUNCTIONS);
+  if (call.error) return res.status(400).json({ ok: false, error: call.error });
+  const { org, role, fn, args } = call;
   try {
-    const contract = getContract(org);
-    const submitted = await contract.submitAsync(fn, { arguments: args.map(String) });
+    const contract = getContract(org, role);
+    const submitted = await contract.submitAsync(fn, { arguments: args });
     const status = await submitted.getStatus(); // waits for commit on ordering
     if (!status.successful) {
       return res.status(500).json({
@@ -172,20 +221,30 @@ app.post('/invoke', async (req, res) => {
   }
 });
 
-app.post('/query', async (req, res) => {
-  const { org = 'org1', function: fn, args = [] } = req.body || {};
-  if (!fn) return res.status(400).json({ error: 'missing "function"' });
+app.post('/query', requireInternalToken, async (req, res) => {
+  const call = parseCall(req.body, QUERY_FUNCTIONS);
+  if (call.error) return res.status(400).json({ ok: false, error: call.error });
+  const { org, role, fn, args } = call;
   try {
-    const result = await getContract(org).evaluateTransaction(fn, ...args.map(String));
+    const result = await getContract(org, role).evaluateTransaction(fn, ...args);
     res.json({ ok: true, function: fn, org, result: parseResult(result) });
   } catch (err) {
     res.status(500).json({ ok: false, function: fn, org, error: errorMessage(err) });
   }
 });
 
-app.listen(PORT, () => {
-  console.log(
-    `[gateway-service] listening on :${PORT} | channel=${CHANNEL} cc=${CHAINCODE} ` +
-      `peer=${GATEWAY_TARGET} override=${TLS_NAME_OVERRIDE} role=${process.env.GATEWAY_ROLE || 'admin'} orgs=[${ORGS.join(',')}]`
-  );
-});
+module.exports = { app, parseCall, tokenMatches };
+
+if (require.main === module) {
+  if (!INTERNAL_API_TOKEN) {
+    console.error('[gateway-service] INTERNAL_API_TOKEN is not set; refusing to expose signing keys ' +
+      'unauthenticated (run blockchain/scripts/gen-secrets.sh)');
+    process.exit(1);
+  }
+  app.listen(PORT, () => {
+    console.log(
+      `[gateway-service] listening on :${PORT} | channel=${CHANNEL} cc=${CHAINCODE} ` +
+        `peer=${GATEWAY_TARGET} override=${TLS_NAME_OVERRIDE} default_role=${DEFAULT_ROLE} orgs=[${ORGS.join(',')}]`
+    );
+  });
+}

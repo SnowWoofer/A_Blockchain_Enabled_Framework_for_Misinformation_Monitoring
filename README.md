@@ -7,6 +7,65 @@ a consortium of organizations who fact checks and vote on them via Hyperledger
 Fabric. The chain anchors only a SHA-256 hash + off-chain URI per report; full
 content lives in IPFS.
 
+The prototype adds three things on top of that pipeline:
+
+* a **public transparency portal**, where anyone can check whether a claim has
+  been fact-checked, read the verdict with each organisation's reasoning and
+  evidence, verify the record has not been tampered with, and submit tips
+  anonymously;
+* a **fact-checker workspace**, with a review queue per organisation, blind
+  review, verdicts with reasoning and evidence links, a tamper check and ledger
+  history;
+* an **officials' console**, for stalled reports, consortium admission votes,
+  the organisation's user accounts and a tamper-evident audit log;
+
+all served over HTTPS behind a hardened edge, with individual accounts, roles
+mapped onto Fabric ABAC identities, and authenticated service-to-service
+traffic. See **[SECURITY.md](./SECURITY.md)** for the threat model, the
+controls and the known limitations.
+
+## Quick start: one command up, one command down
+
+```bash
+python3 up.py        # bring the whole system up (secure prototype, 3 orgs)
+python3 down.py      # shut everything down and clean up
+```
+
+`up.py` checks the prerequisites and removes anything left from a previous run.
+It downloads the Fabric binaries if they are missing, generates secrets, and
+starts the Fabric network, chaincode, IPFS and gateways (`startup.sh --secure`).
+It then starts Kafka, the AI pipeline, the fact-checking service, the web client
+and monitoring, and waits until each one is healthy. At the end it prints where
+to sign in. The first run downloads and builds everything, so it takes a while;
+later runs reuse the images.
+
+|Option|Effect|
+|-|-|
+|`--orgs N`|consortium size, 3 to 30 (default 3)|
+|`--benchmark`|well-known API keys + validation load, for `feed_samples.py` / `load-http.py`|
+|`--no-ai`|skip the flagging engine (2.2 GB model, ~3 GB RAM)|
+|`--explorer`|also start Hyperledger Explorer|
+|`--smoke`|finish by sending one tip through the whole pipeline to the ledger|
+|`--demo`|web client on the in-memory mock ledger, no Fabric (light)|
+|`--dry-run`|run the checks and show the plan without changing anything|
+|`--status`|only list the running containers with their IP addresses and how to reach them|
+
+When the system is up, `up.py` prints a table of every running container. It
+shows the container's IP address on each Docker network, the host address and
+port to open it on (marked `[this host only]` or `[public]`), the LAN address
+for public ports, and the name other containers use to reach it. Container IPs
+change when a container is recreated, so use the host addresses to connect.
+
+`down.py` stops and removes every container, volume, network, chaincode image
+and runtime file the system created. It never touches `results/`, `data/`, the
+model weights or the Fabric binaries. `python3 down.py --purge` also deletes
+the generated secrets and the built images, and `--dry-run` shows what would be
+removed. Container names are fixed, so both scripts also replace containers of
+the same name started from another clone of this repository.
+
+Output is mirrored to `logs/up-<timestamp>.log`. The sections below describe
+the same steps individually.
+
 ## How it works
 
 The system has **two layers** that run independently:
@@ -27,17 +86,19 @@ The system has **two layers** that run independently:
     Role-bearing identities (`officialN`, `factcheckerN`) are registered via `register-roles.sh` through each org's Fabric CA during network setup.
 
   * `Submit` — an org submits a report (PENDING, 72h fact-check window)
-  * `SubmitFactCheck` — another org records a verdict (`"0"`=non-misinfo, `"1"`=misinfo). After each vote the chaincode applies the consensus rule with
+  * `SubmitFactCheck` — another org records a verdict (`"0"`=non-misinfo, `"1"`=misinfo). **The submitting org cannot vote on its own report** (conflict of interest). After each vote the chaincode applies the consensus rule with
     `required = ceil(2/3 × registered_orgs)`:
 
     * **Early acceptance → FINAL**: once `tally["1"] >= required` (a 2/3 supermajority of YES).
-    * **Early rejection → REJECTED**: once `tally["1"] + remaining_unvoted < required` — even if every remaining org later votes YES, the threshold is mathematically unreachable, so the report is finalised immediately without waiting for the rest.
-  * `FinalizeReport` — closes an UNDER_REVIEW report (≥2 fact-checks, no tie)
+    * **Early rejection → REJECTED**: once `tally["1"] + remaining_eligible < required`, where `remaining_eligible` counts registered orgs that have not voted, excluding the submitter. Even if every remaining org later votes YES, the threshold is mathematically unreachable, so the report is finalised immediately without waiting for the rest.
+  * `FinalizeReport` — closes a **stalled** report by simple majority of the votes cast (≥2 fact-checks, no tie), and **only after its 72h window has closed**. While voting is open, only the 2/3 rule can reach FINAL, so a single official cannot cut a vote short.
+
+    > **Changed in chaincode v2.3** (security hardening). The quorum formula is unchanged, and the benchmark harness already never lets the submitter vote, so FINAL/REJECTED outcomes are the same. A REJECTED report may now close up to one vote earlier, because the submitter is no longer counted as a pending voter. Results collected with v2.2 are in git history.
   * `ExpireReport` — expires PENDING reports past their deadline
   * `RegisterOrg` / `RequestOrgAdmission` / `VoteOnOrgAdmission` / `FinalizeOrgAdmission` — org governance (admission needs 2/3 of registered orgs)
-* **Fabric Gateway SDK sidecar** (`:9100`): Node.js wrapper around `@hyperledger/fabric-gateway`. Uses `GATEWAY_ROLE` env var (`official` or `fact_checker`) to select which identity the sidecar submits transactions as.
-* **IPFS Gateway** (`:9101`): thin add/cat bridge over kubo
-* **Blockchain Gateway** (`:8000`): FastAPI, the only thing orgs talk to. Dual auth (API-key for benchmarks, JWT for demos), IPFS storage, chaincode invocation
+* **Fabric Gateway SDK sidecar** (`:9100`, loopback): Node.js wrapper around `@hyperledger/fabric-gateway`. Each request names the role it acts under, and the sidecar signs with that org's matching identity (`officialN` / `fact_checkerN`). Requires the internal service token.
+* **IPFS Gateway** (`:9101`, loopback): thin add/cat bridge over kubo; `/add` requires the internal service token
+* **Blockchain Gateway** (`:8000`): FastAPI, the only thing orgs talk to. User accounts (JWT) and hashed, role-scoped API keys, role checks on every route, an audit log, IPFS storage, chaincode invocation, and the public read API
 
 ### Application pipeline (`docker compose up -d --build`)
 
@@ -45,8 +106,9 @@ The system has **two layers** that run independently:
 * **Claim Ingest Worker** (`:8003`): accepts raw claim texts, publishes to `claims.raw`
 * **Flagging Engine** (`:8004`): AI model, Kafka consumer/producer + dynamic batching + Prometheus metrics
 * **Submission Worker** (`:8001`): consumes flagged claims, submits to blockchain gateway
-* **Fact-Checking Service** (`:8002`): lets orgs review/interact with pending claims
-* **Prometheus** (`:9090`) + **Grafana** (`:3000`): monitoring
+* **Fact-Checking Service** (`:8002`): backend for the fact-checker workspace (review queue, blind review, votes); forwards the caller's own credential and holds none
+* **Web client** (`https://localhost:8443`): the public portal, fact-checker workspace and officials' console, behind an nginx TLS edge. The only public entry point.
+* **Prometheus** (`:9090`) + **Grafana** (`:3000`): monitoring (loopback; Grafana needs `admin` / `GRAFANA_ADMIN_PASSWORD` from `.env`)
 
 The application pipeline routes claims as follows: `POST /ingest` into
 claim-ingest-worker (`:8003`) publishes to the Kafka topic `claims.raw`; the
@@ -79,7 +141,11 @@ fact-check them. Two submission modes:
 
 |Path|Purpose|
 |-|-|
-|`startup.sh`|blockchain layer: deploy + load + gateways|
+|`up.py` / `down.py`|one-command bring-up / teardown and cleanup of the whole system|
+|`startup.sh`|blockchain layer: deploy + load + gateways (`--secure` for prototype mode)|
+|`demo.sh`|web client demo without Fabric (mock ledger)|
+|`SECURITY.md`|threat model, security controls, known limitations|
+|`blockchain/scripts/gen-secrets.sh`|generates `.env` secrets + the edge TLS certificate (git-ignored, in `secrets/`)|
 |`docker-compose.yml`|application pipeline: Kafka + services + monitoring|
 |`benchmarks/`|`feed_samples.py` (pipeline + consensus sim), `load-http.py` (synthetic load), `caliper/` (Caliper suite)|
 |`blockchain/scripts/`|deploy, bootstrap, gateway launchers, role registration|
@@ -92,7 +158,8 @@ fact-check them. Two submission modes:
 |`apps/claim-ingest-worker/`|Kafka producer, raw claims|
 |`apps/flagging-engine/`|AI model + Kafka consumer/producer (`model/` weights)|
 |`apps/submission-worker/`|Kafka consumer, submits to blockchain|
-|`apps/fact-checking-service/`|org review/interaction proxy|
+|`apps/fact-checking-service/`|fact-checker workspace backend (credential pass-through)|
+|`apps/web-client/`|React web client + nginx TLS edge|
 |`apps/kafka/`|Kafka broker (KRaft)|
 |`monitoring/`|Prometheus + Grafana provisioning|
 |`documentation/`|architecture diagrams, source formats|
@@ -176,44 +243,82 @@ blockchain/scripts/bootstrap-keys.sh org1 org2 org3 ... orgN
 `factcheckerN`) via each org's Fabric CA — this step is only needed for a clean
 manual setup.
 
-### Auth mode (optional)
+### Accounts, keys and secrets
 
-The gateway supports two authentication modes controlled by the `AUTH_MODE` environment variable:
+`gen-secrets.sh` (run by `startup.sh` and `demo.sh`) writes every shared
+secret once to a mode-0600 `.env` at the repo root, which `docker compose`
+reads automatically, and a self-signed certificate to `secrets/tls/`. Both are
+git-ignored and never overwritten. Compose files refuse to start if a secret is
+missing.
 
-|Mode|Auth method|Use case|
+**People** sign in to the web client with individual accounts (`AUTH_MODE=jwt`,
+the default). Each account belongs to one org and has one role:
+
+|Role|Can|Signs on-chain as|
 |-|-|-|
-|`bootstrap` (default)|API keys via `X-API-Key` header|Benchmarks, load testing|
-|`jwt`|JWT tokens via `Authorization: Bearer` header|Onboarding flows|
+|`official`|everything below, plus finalise/expire stalled reports, admission votes, manage the org's users, read the audit log|`officialN`|
+|`fact_checker`|review the queue, cast the org's vote with reasoning + evidence, escalate claims|`fact_checkerN`|
+|`observer`|read only|— (queries only)|
 
-Passwords are hashed with **bcrypt** (cost factor 12) — no plaintext storage.
+The first official and fact-checker of each org are seeded automatically
+(`official.orgN`, `checker.orgN`). Their **one-time passwords** are appended to
+`secrets/initial-credentials.txt`, and each must choose a new password at
+first sign-in. Officials create further accounts in the web console. From the
+host:
 
-**Environment variables:**
+```bash
+docker exec -it blockchain-gateway python api/manage.py create-user --username thandi --org org2 --role fact_checker
+docker exec -it blockchain-gateway python api/manage.py reset --username thandi    # new one-time password, 2FA cleared
+docker exec    blockchain-gateway python api/manage.py list-users
+docker exec    blockchain-gateway python api/manage.py verify-audit
+```
+
+There is no open self-registration (the old `POST /api/auth/register` is gone).
+Accounts can enable TOTP two-factor authentication under *Your account*.
+
+**Machines** use API keys (`X-API-Key`), stored hashed and scoped to an org and
+a role. The submission worker's key (`SUBMITTER_API_KEY`) has the
+`ai_submitter` role and can only submit reports.
+
+|Mode|API keys issued|Use|
+|-|-|-|
+|`./startup.sh` (benchmark mode)|well-known `key-org1..N` and `stress-key` (role `official`)|the benchmark harnesses, unchanged|
+|`./startup.sh --secure`|none (left-over well-known keys are revoked); no validation load|the prototype|
 
 |Variable|Default|Description|
 |-|-|-|
-|`AUTH_MODE`|`bootstrap`|`bootstrap` or `jwt`|
-|`JWT_SECRET`|random per process|Secret key for signing JWT tokens|
-|`JWT_EXPIRY_S`|`86400`|Token expiry in seconds (24 hours)|
+|`AUTH_MODE`|`jwt`|`jwt` = accounts + API keys; `bootstrap` = API keys only (legacy)|
+|`ACCESS_TOKEN_TTL_S`|`900`|access-token lifetime (kept in browser memory)|
+|`REFRESH_TOKEN_TTL_S`|`28800`|session lifetime (rotating HttpOnly cookie)|
+|`MAX_FAILED_LOGINS` / `LOCKOUT_S`|`5` / `900`|account lockout|
+|`GATEWAY_BIND`|`127.0.0.1`|set `0.0.0.0` to let remote benchmark clients reach `:8000`|
+|`WEB_HTTPS_PORT` / `HSTS_MAX_AGE`|`8443` / `0`|edge port; HSTS for a real domain + certificate|
 
-To use JWT mode:
+API sign-in, for scripting:
 
 ```bash
-export AUTH_MODE=jwt
-export JWT_SECRET=my-secret-key    # optional, auto-generated if not set
-
-# Register a user
-curl -X POST http://localhost:8000/api/auth/register \
-  -d '{"org":"org1","password":"secret123"}'
-
-# Login and get a token
-TOKEN=$(curl -X POST http://localhost:8000/api/auth/login \
-  -d '{"org":"org1","password":"secret123"}' | jq -r '.token')
-
-# Use the token
-curl -H "Authorization: Bearer $TOKEN" http://localhost:8000/api/status
+TOKEN=$(curl -sk https://localhost:8443/api/auth/login -H 'Content-Type: application/json' \
+  -d '{"username":"checker.org2","password":"<password>"}' | jq -r .access_token)
+curl -sk -H "Authorization: Bearer $TOKEN" https://localhost:8443/fc/claims/pending
 ```
 
-Benchmark harnesses (`feed_samples.py`, `load-http.py`) use the bootstrap API-key system and are unaffected by `AUTH_MODE`.
+### Quick demo without Fabric
+
+To show or develop the web client on a laptop without the 5-6 GB stack:
+
+```bash
+./demo.sh up        # gateway on an in-memory mock ledger + fact-checking service + web edge, seeded
+# open https://localhost:8443, sign in with secrets/initial-credentials.txt
+./demo.sh down      # or: ./demo.sh reset  to forget the demo data
+```
+
+The mock ledger applies the chaincode's consensus and ABAC rules, but it is
+**not a blockchain**, and the UI shows a banner saying so. Seeded votes say
+they are demo data. Its container names match the full stack's, so stop that
+first. For front-end work, `cd apps/web-client && npm install && npm run dev`
+serves on `http://localhost:5173` and proxies `/api`, `/fc` and `/tips` to the
+local services. Run the gateway with `COOKIE_SECURE=0` for that, since the
+dev server is plain HTTP.
 
 ## Run it end to end
 
@@ -223,26 +328,29 @@ layer first — the app layer depends on it being reachable.
 ### Step 0: Purge stale containers
 
 ```
-docker rm -f $(docker ps -aq) 2>/dev/null
+python3 down.py
 ```
 
 > Leftover containers from earlier consortium sizes repeatedly break builds
-> and IPFS checkpoints. Always purge first.
+> and IPFS checkpoints. Always purge first. `down.py` removes only this
+> system's containers (by name and by its Docker networks), not every
+> container on the host.
 
 ### Step 1: Start the blockchain layer
 
 ```
-./startup.sh --orgs 5 --test-samples 10 --skip-caliper
+./startup.sh --orgs 5 --test-samples 10 --skip-caliper          # benchmark mode
+./startup.sh --orgs 5 --skip-caliper --secure                     # prototype mode (no well-known keys)
 ```
 
 This runs 7 steps automatically:
 
-1. Ensures Docker networks exist (`ensure-networks.sh`)
+1. Ensures Docker networks exist (`ensure-networks.sh`) and generates secrets (`gen-secrets.sh`)
 2. Provisions the Fabric network (peers, orderer, channel, chaincode)
 3. Starts IPFS + IPFS Gateway
 4. Bootstraps API keys for org1..orgN (idempotent — safe to re-run)
-5. Starts Fabric Gateway SDK sidecar + blockchain gateway
-6. Runs a validation load (10 synthetic requests to confirm the gateway works)
+5. Starts Fabric Gateway SDK sidecar + blockchain gateway, and seeds an official + a fact-checker account per org
+6. Runs a validation load (10 synthetic requests to confirm the gateway works; skipped with `--secure`)
 7. Optionally runs a Caliper benchmark (skip with `--skip-caliper`)
 
 After this, the blockchain gateway is live at `:8000`. Scale the consortium
@@ -274,7 +382,10 @@ docker compose up -d --build
 ```
 
 Brings up Kafka, claim-ingest-worker, flagging-engine, submission-worker,
-fact-checking-service, Prometheus, and Grafana. The gateway services (`:9100`,
+fact-checking-service, the **web client** (`https://localhost:8443`), Prometheus,
+and Grafana. The browser will warn about the self-signed certificate until you
+trust `secrets/tls/server.crt` or replace it with a real one. Sign in with an
+account from `secrets/initial-credentials.txt`. The gateway services (`:9100`,
 `:9101`, `:8000`) are **deliberately not part of this file** — they are
 provisioned by `startup.sh` with the exact org count it deployed. Keeping them
 out means an app-layer `docker compose up` can never recreate a gateway with a
@@ -898,53 +1009,70 @@ Returns the full transaction history for a report — every time it was modified
 
 ## API quick reference
 
-All endpoints require authentication. In bootstrap mode (default), use `-H "X-API-Key: <key>"`. In JWT mode, use `-H "Authorization: Bearer <token>"` after logging in via `/api/auth/login`.
+Through the web edge everything is same-origin: `https://localhost:8443/api/...`
+(gateway), `/fc/...` (fact-checking service), `/tips` (public tip line). On
+the host the services also listen on loopback ports.
 
-Write endpoints enforce **ABAC** via the Fabric CA `role` attribute on the submitting identity — the gateway's `GATEWAY_ROLE` env var controls which identity is used (see [How it works](#how-it-works)).
+Authenticate with `Authorization: Bearer <token>` (from `/api/auth/login`) or
+`X-API-Key: <key>`. Every write is checked twice: by the gateway's role check,
+and by chaincode ABAC on the role identity the gateway signs with.
 
 ### Blockchain gateway (`:8000`)
 
-|Method & path|Purpose|Role required|
+|Method & path|Purpose|Roles|
 |-|-|-|
-|`GET /api/status`|IPFS backend status|any|
-|`POST /api/reports`|Submit a report (body: `msg_id`, `label` 0/1, `confidence`, `model_version`, `content`, `source_platform`)|`official` or `fact_checker`|
-|`GET /api/reports`|List reports (optional `?status=PENDING`)|any|
-|`GET /api/reports/{id}`|Report + off-chain payload|any|
-|`GET /api/reports/{id}/chain`|On-chain record (hash, uri, status, fact-checks)|any|
-|`GET /api/reports/{id}/verify`|Tamper-evidence check|any|
-|`GET /api/reports/{id}/history`|Full tx/history via Fabric's `GetHistoryForKey`|any|
-|`POST /api/reports/{id}/fact-check`|Org submits a fact-check verdict (body: `outcome` "0"/"1", `reasoning`, `support`)|`official` or `fact_checker`|
-|`POST /api/reports/{id}/finalize`|Finalize a report (consensus reached)|`official`|
-|`POST /api/reports/{id}/expire`|Expire a report past its voting deadline|`official`|
-|`POST /api/orgs/apply`, `/api/orgs/{msp}/admission`, `/vote`, `/finalize`|New-org admission workflow|`official` (vote/finalize)|
-|`GET /api/orgs`, `GET /api/orgs/{msp}/admission`|Registered orgs / admission status|any|
-|`POST /api/auth/register`|Register user credentials (JWT mode only, body: `org`, `password`)|any|
-|`POST /api/auth/login`|Login and get JWT token (JWT mode only, body: `org`, `password`)|any|
+|`GET /api/public/info`, `/api/public/stats`|ledger backend, member count, quorum, verdict counts|public|
+|`GET /api/public/reports?q=&verdict=&page=`|search/browse **closed** reports|public|
+|`GET /api/public/reports/{id}`|verdict, per-org reasoning + evidence, integrity check, tx history|public|
+|`GET /api/public/tips/{reference}`|status of a public tip|public|
+|`GET /healthz`|liveness|public|
+|`POST /api/auth/login`|sign in (`username`, `password`, `otp` if 2FA) → access token + refresh cookie|public|
+|`POST /api/auth/refresh`, `/logout`|rotate / end the session (cookie + `X-Requested-With`)|session|
+|`GET /api/auth/me`|who am I|any|
+|`POST /api/auth/password`, `/mfa/setup`, `/mfa/enable`, `/mfa/disable`|own account|users|
+|`GET/POST /api/users`, `PATCH /api/users/{u}`, `POST /api/users/{u}/reset`|manage own org's accounts|official (signed in)|
+|`GET /api/status`|IPFS backend + ledger/auth mode|any|
+|`POST /api/reports`|submit a report (`msg_id`, `label` 0/1, `confidence`, `model_version`, `content`, `source_platform`)|official, fact_checker, ai_submitter|
+|`GET /api/reports`|list reports (optional `?status=PENDING`)|official, fact_checker, observer|
+|`GET /api/reports/{id}`, `/chain`, `/verify`, `/history`, `/consensus`|off-chain doc, on-chain record, tamper check, tx history, quorum progress|official, fact_checker, observer|
+|`POST /api/reports/{id}/fact-check`|the caller's org votes (`outcome` "0"/"1", `reasoning`, `support` = up to 10 http(s) URLs)|official, fact_checker|
+|`POST /api/reports/{id}/finalize`|close a stalled report by majority (after the window)|official|
+|`POST /api/reports/{id}/expire`|expire a report past its window|official|
+|`POST /api/orgs/apply`, `/api/orgs/{msp}/admission`, `/vote`, `/finalize`|new-org admission workflow|official|
+|`GET /api/orgs`, `GET /api/orgs/{msp}/admission`|registered orgs / admission status|official, fact_checker, observer|
+|`GET /api/audit`, `/api/audit/verify`|own org's audit log / hash-chain check|official|
 
 ### Claim Ingest Worker (`:8003`)
 
 |Method & path|Purpose|
 |-|-|
-|`POST /ingest`|Queue claims (body: `{"claims": ["text1", ...]}`)|
-|`GET /health`|Health check|
+|`POST /ingest`|queue claims (body: `{"claims": ["text1", ...]}`, at most 100); needs `X-API-Key: $INGEST_API_KEY`|
+|`POST /public/tip`|one claim from the public (`{"claim": "..."}`, 10-2000 chars), rate-limited; via the edge at `/tips`|
+|`GET /health`|health check|
 
 ### Flagging Engine (`:8004`)
 
 |Method & path|Purpose|
 |-|-|
-|`POST /predict`|Direct inference (body: `{"post_text": "..."}`)|
-|`GET /health`|Health check|
+|`POST /predict`|direct inference (body: `{"post_text": "..."}`); `X-API-Key` only if `PREDICT_API_KEY` is set|
+|`GET /health`|health check|
 
-### Fact-Checking Service (`:8002`)
+### Fact-Checking Service (`:8002`, `/fc/` through the edge)
+
+Forwards the caller's own `Authorization` / `X-API-Key` to the gateway.
 
 |Method & path|Purpose|
 |-|-|
-|`GET /claims/pending`|Pending claims this org hasn't fact-checked|
-|`GET /claims/{id}`|Claim detail + prior fact-checks|
-|`POST /claims/{id}/report`|Submit fact-check (body: `outcome` "0"/"1", `reasoning`, `support`)|
-|`POST /claims/{id}/finalize`|Finalize claim|
+|`GET /claims/pending?sort=&ai_label=&limit=&offset=`|open claims the caller's org may still vote on (not its own, not already voted)|
+|`GET /claims/reviewed`|claims the caller's org has voted on|
+|`GET /claims/{id}`|claim + consensus progress; other orgs' verdicts hidden until the caller's org has voted (blind review)|
+|`POST /claims/{id}/fact-check`|vote (`outcome`, `reasoning` ≥ 20 chars, `support`)|
+|`POST /claims/{id}/finalize`|finalise (official, after the window)|
 
 ## Teardown
+
+`python3 down.py` does all of the following in one go (plus leftover containers,
+chaincode images and volumes). The individual commands:
 
 ```
 # Application pipeline (Kafka, workers, monitoring)
@@ -987,9 +1115,17 @@ docker compose -f blockchain/explorer/docker-compose.yaml down   # or down -v to
 |IPFS nodes crash-loop with `Error: lock /data/ipfs/repo.lock: permission denied`|The named IPFS volume carries ownership from an earlier container generation. `docker rm -f` does **not** remove volumes: run `docker compose down -v --remove-orphans` (also wipes app-layer state + IPFS volumes; legacy standalone `ipfs-data` may survive) then purge + rebuild from `startup.sh`.|
 |Runs stop silently after a Windows reboot / lid-close / sleep|WSL terminates detached processes; `feed_samples.py` writes its CSV **only on step completion**, so a killed run banks nothing — replay the same seed (`--seed 100`) and identical samples are re-fed. No corruption, partial steps are simply lost.|
 |Builds fail intermittently (keepalive ACK timeouts, high load, `ipfs … did not become ready`) with swap exhausted|Restore swap: `sudo fallocate -l 8G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile`. Note `sudo -n` (non-interactive) fails on this box — run such commands in an interactive shell.|
-|`/api/auth/register` or `/api/auth/login` returns 400|`AUTH_MODE` is not set to `jwt`. Set `export AUTH_MODE=jwt` and restart the gateway.|
-|JWT auth: all endpoints return 401 "missing Authorization header"|After login, pass the token as `-H "Authorization: Bearer <token>"`.|
-|JWT auth: 401 "invalid or expired token"|Token expired (default 24h). Re-login via `/api/auth/login` to get a fresh token.|
+|`/api/auth/login` returns 400 "only available in JWT auth mode"|The gateway runs with `AUTH_MODE=bootstrap`. Unset it (the default is `jwt`) and restart the gateway.|
+|401 "invalid or expired token"|Access tokens last 15 minutes; the web client renews them silently. Scripts should sign in again.|
+|403 "password change required before continuing"|The account is still on its one-time password. Sign in to the web client (or call `POST /api/auth/password`).|
+|423 on sign-in|Account locked after 5 failed attempts. Wait 15 minutes or have an official use *Reset access* (or `manage.py reset`).|
+|`required variable ... is missing a value: run blockchain/scripts/gen-secrets.sh`|Secrets not generated yet. Run `blockchain/scripts/gen-secrets.sh` (startup.sh and demo.sh do it for you).|
+|Fact-check returns 400 "... cannot fact-check it (conflict of interest)"|The org that submitted a report cannot vote on it. Working as designed.|
+|Finalize returns 400 "still within its fact-check window"|Manual finalise only applies to stalled reports after the 72h window; during the window the 2/3 rule decides.|
+|Remote benchmark client cannot reach `:8000`|The gateway listens on loopback by default. Start it with `GATEWAY_BIND=0.0.0.0`.|
+|Browser certificate warning at `https://localhost:8443`|Self-signed certificate from `gen-secrets.sh`. Trust `secrets/tls/server.crt` locally, or replace both files in `secrets/tls/` with a real certificate.|
+|`web-client` exits at start with `40-require-config.sh: ERROR`|nginx could not render its config or read the TLS files. Check that `secrets/tls/` exists and that `HOST_UID`/`HOST_GID` in `.env` match the owner of those files.|
+|Submission worker logs "Dropping unsigned/forged claim"|A message on `claims.flagged` was not signed with `PIPELINE_FLAGGED_KEY`. All pipeline services must share the repo-root `.env`.|
 |Apply org returns 400 "not registered on-chain"|The target org must be registered via `RegisterOrg` before `apply_org` can generate its API key. |
 |IPFS nodes crash-loop with `Error: lock /data/ipfs/repo.lock: permission denied`|Run `docker run --rm -v ipfs_gateway_ipfs-data-1:/data -u root alpine chown -R 1000:1000 /data` (and `ipfs-data-2`), then `docker restart ipfs-node ipfs-node-1 ipfs-node-2`.|
 |Explorer shows no blocks / sync errors|Use `--build` when starting Explorer: `docker compose -f blockchain/explorer/docker-compose.yaml up -d --build`. The patched image handles Fabric 2.5.x missing `lscc`.|

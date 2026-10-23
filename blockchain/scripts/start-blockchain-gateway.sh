@@ -6,6 +6,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 COMPOSE="docker compose"
 docker compose version >/dev/null 2>&1 || COMPOSE="docker-compose"
+# Shared secrets (INTERNAL_API_TOKEN, JWT_SECRET, ...) from the repo-root .env
+. "${SCRIPT_DIR}/lib/env.sh"
 
 if [[ "${1:-up}" == "down" ]]; then
   echo ">> Stopping blockchain gateway..."
@@ -18,9 +20,9 @@ echo ">> Building + starting blockchain gateway..."
 
 echo ">> Waiting for health on :8000..."
 for _ in $(seq 1 30); do
-  if curl -sf -H "X-API-Key: stress-key" http://localhost:8000/api/status >/dev/null 2>&1; then
+  if curl -sf http://localhost:8000/healthz >/dev/null 2>&1; then
     echo ">> blockchain gateway ready: http://localhost:8000"
-    curl -s -H "X-API-Key: stress-key" http://localhost:8000/api/status
+    curl -s http://localhost:8000/api/public/info
     echo
     exit 0
   fi
@@ -28,7 +30,5 @@ for _ in $(seq 1 30); do
 done
 
 echo "ERROR: blockchain gateway did not become healthy on :8000" >&2
-echo "  (HTTP 401 here usually just means API keys aren't bootstrapped yet — run:" >&2
-echo "   blockchain/scripts/bootstrap-keys.sh org1 org2 org3)" >&2
 (cd "${PROJECT_ROOT}" && ${COMPOSE} -f apps/blockchain_gateway/docker-compose.yaml logs --tail 30 blockchain-gateway)
 exit 1

@@ -7,6 +7,12 @@ import urllib.request
 from typing import Any, Dict, List, Optional, Sequence
 
 
+def _internal_headers() -> Dict[str, str]:
+    # Shared secret the fabric_gateway sidecar requires on /invoke and /query.
+    token = os.environ.get("INTERNAL_API_TOKEN", "")
+    return {"X-Internal-Token": token} if token else {}
+
+
 class FabricBridge:
 
     def __init__(
@@ -15,6 +21,7 @@ class FabricBridge:
         chaincode: str = "misinformation",
         peer_bin: str = "peer",
         org: str = "org1",
+        role: str = "official",
         test_network: str = os.path.join(
             os.path.dirname(os.path.abspath(__file__)),
             *([".."] * 5),
@@ -28,6 +35,9 @@ class FabricBridge:
         self.chaincode = chaincode
         self.peer_bin = peer_bin
         self.org = org
+        # The CLI fallback signs as the org Admin (no ABAC role attribute), so
+        # writes through it are refused by the chaincode; reads still work.
+        self.role = role
         self.test_network = test_network
         self.endorsers = endorsers or ["org1", "org2"]
         self._env = self._build_env()
@@ -164,6 +174,7 @@ class FabricGatewayBridge:
         channel: str = "mychannel",
         chaincode: str = "misinformation",
         org: str = "org1",
+        role: str = "official",
         endorsers: Optional[Sequence[str]] = None,
         timeout_invoke: float = 60.0,
         timeout_query: float = 30.0,
@@ -172,6 +183,9 @@ class FabricGatewayBridge:
         self.channel = channel
         self.chaincode = chaincode
         self.org = org
+        # Which of the org's role-bearing identities the sidecar signs with
+        # (officialN / fact_checkerN), so chaincode ABAC sees the caller's role.
+        self.role = role
         self.endorsers = endorsers or ["org1", "org2"]
         self.timeout_invoke = timeout_invoke
         self.timeout_query = timeout_query
@@ -191,7 +205,7 @@ class FabricGatewayBridge:
         req = urllib.request.Request(
             f"{self.gateway_url}{path}",
             data=data,
-            headers={"Content-Type": "application/json"},
+            headers={"Content-Type": "application/json", **_internal_headers()},
             method="POST",
         )
         try:
@@ -217,6 +231,7 @@ class FabricGatewayBridge:
             "/invoke",
             {
                 "org": self.org,
+                "role": self.role,
                 "channel": self.channel,
                 "chaincode": self.chaincode,
                 "function": function,
@@ -235,6 +250,7 @@ class FabricGatewayBridge:
             "/query",
             {
                 "org": self.org,
+                "role": self.role,
                 "channel": self.channel,
                 "chaincode": self.chaincode,
                 "function": function,

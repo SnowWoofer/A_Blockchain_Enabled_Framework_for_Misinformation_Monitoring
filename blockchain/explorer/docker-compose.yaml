@@ -44,7 +44,8 @@ services:
       - DISCOVERY_AS_LOCALHOST=false
       - PORT=8080
     ports:
-      - 8080:8080
+      # Admin tool with default credentials (config.json): loopback only.
+      - "127.0.0.1:8080:8080"
     volumes:
       - ./config.json:/opt/explorer/app/platform/fabric/config.json
       - ./connection-profile:/opt/explorer/app/platform/fabric/connection-profile

@@ -587,6 +587,11 @@ func (c *MisinformationContract) SubmitFactCheck(
 	if record.Status != statusPending && record.Status != statusUnderReview {
 		return fmt.Errorf("report %s is %s; only PENDING/UNDER_REVIEW reports accept fact-checks", reportID, record.Status)
 	}
+	// Conflict of interest: the submitting org (e.g. the AI stakeholder org)
+	// must not be able to confirm its own claim.
+	if checkerMSP == record.SubmittedBy {
+		return fmt.Errorf("org %s submitted report %s and cannot fact-check it (conflict of interest)", checkerMSP, reportID)
+	}
 	for _, v := range record.FactChecks {
 		if v.CheckerMSP == checkerMSP {
 			return fmt.Errorf("org %s has already fact-checked report %s", checkerMSP, reportID)
@@ -604,7 +609,7 @@ func (c *MisinformationContract) SubmitFactCheck(
 	if err == nil && len(totalOrgs) > 0 {
 		required := int(math.Ceil(2.0 / 3.0 * float64(len(totalOrgs))))
 		tally := tallyFactChecks(record.FactChecks)
-		remaining := len(totalOrgs) - len(record.FactChecks)
+		remaining := remainingEligibleVoters(totalOrgs, record)
 
 		//early acceptance
 		if tally["1"] >= required {
@@ -640,7 +645,27 @@ func tallyFactChecks(checks []FactCheck) map[string]int {
 	return tally
 }
 
-// FinalizeReport closes a report once at least 2 ouyt of 3 fact-checks exist and one outcome has a strict majority
+// remainingEligibleVoters counts registered orgs that may still vote on the
+// report: everyone except the submitter and orgs that already voted. Counting
+// the submitter here would keep a mathematically settled report open.
+func remainingEligibleVoters(orgs []*RegisteredOrg, record ReportRecord) int {
+	voted := make(map[string]bool, len(record.FactChecks))
+	for _, v := range record.FactChecks {
+		voted[v.CheckerMSP] = true
+	}
+	remaining := 0
+	for _, o := range orgs {
+		if o.MSPID != record.SubmittedBy && !voted[o.MSPID] {
+			remaining++
+		}
+	}
+	return remaining
+}
+
+// FinalizeReport closes a stalled report by simple majority of the votes cast
+// (at least 2, no tie). It is only available once the fact-check window has
+// closed: while voting is open the 2/3 quorum rule in SubmitFactCheck is the
+// only way to reach FINAL, so a single official cannot cut a vote short.
 func (c *MisinformationContract) FinalizeReport(
 	ctx contractapi.TransactionContextInterface,
 	reportID string,
@@ -674,6 +699,13 @@ func (c *MisinformationContract) FinalizeReport(
 	}
 	if record.Status != statusPending && record.Status != statusUnderReview {
 		return fmt.Errorf("report %s is %s; only PENDING/UNDER_REVIEW reports can be finalised", reportID, record.Status)
+	}
+	closed, err := isPastDeadline(record.FactCheckDeadline)
+	if err != nil {
+		return err
+	}
+	if !closed {
+		return fmt.Errorf("report %s is still within its fact-check window (deadline %s); consensus is decided by the 2/3 quorum until then", reportID, record.FactCheckDeadline)
 	}
 	if len(record.FactChecks) < 2 {
 		return fmt.Errorf("report %s has %d fact-check(s); at least 2 fact-checks are required to finalise", reportID, len(record.FactChecks))
