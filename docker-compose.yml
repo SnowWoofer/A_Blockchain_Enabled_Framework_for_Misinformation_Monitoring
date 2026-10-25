@@ -1,5 +1,0 @@
-# Generated v3 projects contain their own private network, credentials and state.
-# Set the path AND use the matching project name printed in experiment.json.
-# Normal entry point: ./startup.sh
-include:
-  - path: ${MISINFO_COMPOSE_FILE:?Use ./startup.sh or set MISINFO_COMPOSE_FILE to blockchain/runtime/NAME/compose.json}

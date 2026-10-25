@@ -1,5 +1,0 @@
-{
-  "_comment": "Template only; use manage.sh to generate the selected deployment configuration.",
-  "network-configs": {},
-  "license": "Apache-2.0"
-}

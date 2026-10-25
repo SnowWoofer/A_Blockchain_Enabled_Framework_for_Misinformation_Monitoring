@@ -23,7 +23,7 @@ def main():
         ('explorer',[cpu,'-m','pytest','-q','-p','no:cacheprovider','blockchain/explorer/tests'],ROOT),
         ('signer-syntax',['node','--check','apps/fabric_gateway/src/secure-server.js'],ROOT),
         ('load-generator-syntax',['node','--check','benchmarks/load.js'],ROOT),
-        ('shell-syntax',['bash','-n','startup.sh','blockchain/scripts/deploy.sh','blockchain/scripts/add-orgs.sh'],ROOT)]
+        ('shell-syntax',['bash','-n','startup.sh','benchmarks/caliper/run-caliper.sh','blockchain/explorer/manage.sh'],ROOT)]
     for name,args,cwd in commands:
         proc=subprocess.run(args,cwd=cwd,capture_output=True,text=True,timeout=120,env=os.environ|{'GOCACHE':'/tmp/misinfo-repair-go-cache'})
         output=proc.stdout+proc.stderr;write(out/(name+'.log'),output)

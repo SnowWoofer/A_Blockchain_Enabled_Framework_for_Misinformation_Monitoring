@@ -57,24 +57,14 @@ blockchain/chaincode/misinformation/go/vendor/
 blockchain/chaincode/misinformation/go/misinformation
 blockchain/exp*
 !blockchain/explorer/
-!blockchain/explorer/config.json
 !blockchain/explorer/docker-compose.yaml
 !blockchain/explorer/connection-profile/
 blockchain/chaincode/misinformation/D*
 venv*
 blockchain/fabric-samples/*
-!blockchain/fabric-samples/L*
 info/*
 !info/ArtyIndo/
-!blockchain/fabric-samples/CHANGELOG.md
-!blockchain/fabric-samples/CO*
-!blockchain/fabric-samples/RE*
-!blockchain/fabric-samples/S*
-!blockchain/fabric-samples/M*
-!blockchain/fabric-samples/.*
-blockchain/fabric-samples/.gith*
 TODO*
-!blockchain/explorer/config.json
 apps/submission-worker/data/
 apps/ai_service/app/v1-0-0/api/offchain.db
 
@@ -96,3 +86,4 @@ info
 experiments
 !data/
 apps/ai_service/app/v1-0-0/data
+.*

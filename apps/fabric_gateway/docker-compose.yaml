@@ -1,4 +1,0 @@
-# v3: use the generated isolated project; legacy configuration is archived.
-# Normal entry point: ./startup.sh from the repository root.
-include:
-  - path: ${MISINFO_COMPOSE_FILE:?Legacy v2 gateway composition retired. Use ./startup.sh or blockchain/scripts/deployment.py}
