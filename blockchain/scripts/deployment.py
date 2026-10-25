@@ -1,9 +1,4 @@
 #!/usr/bin/env python3
-"""Isolated v3 Fabric experiments. No global container cleanup or shared state.
-
-Each name owns one Compose project, generated config, keys, volumes and ports.
-No Docker socket is mounted into a container. Existing deployments are untouched.
-"""
 from __future__ import annotations
 import argparse
 import base64
@@ -31,17 +26,13 @@ from blockchain.scripts.transport import PROFILE,prepare_tls,secure_services,con
 BIN=ROOT/'blockchain/fabric-samples/bin'
 GO=ROOT/'blockchain/chaincode/misinformation/go'
 RUNTIME=ROOT/'blockchain/runtime'
-LEGACY_RUNTIME=ROOT/'experiments/runtime'
 WORKFLOW_VERSION='governance-v1'
 
 
 def runtime_path(name):
     if not re.fullmatch('[a-z][a-z0-9-]{0,39}', name):
         raise ValueError('name must be lowercase alphanumeric/hyphen, beginning with a letter')
-    current=RUNTIME/name;legacy=LEGACY_RUNTIME/name
-    if current.exists() and legacy.exists():
-        raise ValueError('deployment name exists in both runtime directories; resolve explicitly')
-    return legacy if legacy.exists() else current
+    return RUNTIME/name
 
 
 

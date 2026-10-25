@@ -3,10 +3,8 @@
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
-PYTHON="${MISINFO_PYTHON:-$SCRIPT_DIR/repair/.venv/bin/python}"
-if [ -z "${MISINFO_PYTHON:-}" ] && [ ! -x "$PYTHON" ]; then
-  PYTHON=python3
-fi
+PYTHON="${MISINFO_PYTHON:-python3}"
+"$PYTHON" -c 'import yaml, cryptography, pydantic_settings, aiokafka' 2>/dev/null || { echo "Python environment is missing the project dependencies. Activate it first: source .venv/bin/activate (or set MISINFO_PYTHON)." >&2; exit 1; }
 NAME=development
 OPTIONS=()
 OUTPUT=()

@@ -81,7 +81,7 @@ swarm.key
 # Generated private deployment identities and configuration
 blockchain/runtime/
 results
-repair
+.venv/
 info
 experiments
 !data/

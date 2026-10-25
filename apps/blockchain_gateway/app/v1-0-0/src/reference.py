@@ -1,8 +1,3 @@
-"""Centralised SQLite reference backend for controlled workflow comparisons.
-
-This is an application audit log under one administrator, not an independently
-endorsed ledger. Its threat assumptions are documented in info/ArtyIndo/repair/RESEARCH.md.
-"""
 from __future__ import annotations
 import datetime as dt
 import hashlib

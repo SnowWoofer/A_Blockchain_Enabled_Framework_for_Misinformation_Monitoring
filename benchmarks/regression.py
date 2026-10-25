@@ -13,7 +13,7 @@ from blockchain.scripts.deployment import ROOT,write,source_manifest
 def main():
     stamp=dt.datetime.now(dt.timezone.utc).strftime('%Y%m%d-%H%M%S')
     out=ROOT/'results/repair/validation'/stamp;out.mkdir(parents=True,exist_ok=False)
-    checks=[];cpu=str(ROOT/'repair/.venv/bin/python')
+    checks=[];cpu=sys.executable
     commands=[('contract',['go','test','-mod=vendor','-count=1','-json','./...'],ROOT/'blockchain/chaincode/misinformation/go'),
         ('api',[cpu,'-m','pytest','-q','-p','no:cacheprovider','apps/blockchain_gateway/app/v1-0-0/api/tests'],ROOT),
         ('submission-recovery',[cpu,'-m','pytest','-q','-p','no:cacheprovider','apps/submission-worker/tests'],ROOT),

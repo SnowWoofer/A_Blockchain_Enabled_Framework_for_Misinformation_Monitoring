@@ -230,7 +230,7 @@ def run_pipeline(a,runtime,cfg,port,selected,dataset,log):
         'KAFKA_SSL_KEYFILE':str(runtime/'transport/kafka-client/server.key')}
     def start(app,service_port,extra):
         log=(work/(app+'.log')).open('w');handles.append(log)
-        proc=subprocess.Popen([str(ROOT/'repair/.venv/bin/python'),'-m','uvicorn','app.main:app','--host','127.0.0.1','--port',str(service_port),
+        proc=subprocess.Popen([sys.executable,'-m','uvicorn','app.main:app','--host','127.0.0.1','--port',str(service_port),
             '--ssl-certfile',str(runtime/'transport'/app/'server.crt'),
             '--ssl-keyfile',str(runtime/'transport'/app/'server.key')],
             cwd=ROOT/'apps'/app,env=common|extra,stdout=log,stderr=subprocess.STDOUT)

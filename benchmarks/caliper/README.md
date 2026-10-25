@@ -1,6 +1,6 @@
 # Caliper
 
-Current setup and both benchmark paths are documented in the [root README](../../README.md). Run `benchmarks/caliper/run-caliper.sh --help` from the repository root for options. The runner generates connection and benchmark settings for the selected deployment and saves unique logs, JSON and HTML reports. Original legacy scripts are archived under `info/ArtyIndo/caliper-legacy/`.
+Current setup and both benchmark paths are documented in the [root README](../../README.md). Run `benchmarks/caliper/run-caliper.sh --help` from the repository root for options. The runner generates connection and benchmark settings for the selected deployment and saves unique logs, JSON and HTML reports.
 
 ```bash
 benchmarks/caliper/run-caliper.sh --count 1000 --workers 2 --load 100
