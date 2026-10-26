@@ -35,6 +35,9 @@ class FlaggingConsumer:
             group_id=settings.kafka_consumer_group,
             value_deserializer=lambda v: json.loads(v.decode("utf-8")),
             enable_auto_commit=True,
+            # A fresh group starts at the beginning of the topic, so claims queued
+            # while the model was still loading are scored rather than skipped.
+            auto_offset_reset="earliest",
         )
         self.producer = AIOKafkaProducer(
             bootstrap_servers=settings.kafka_bootstrap_servers,

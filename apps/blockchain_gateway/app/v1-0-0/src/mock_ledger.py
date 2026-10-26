@@ -164,9 +164,6 @@ class MockLedger:
             if rec["status"] not in OPEN_STATUSES:
                 raise ChaincodeError(
                     f"report {report_id} is {rec['status']}; only PENDING/UNDER_REVIEW reports accept fact-checks")
-            if msp == rec["submitted_by"]:
-                raise ChaincodeError(
-                    f"org {msp} submitted report {report_id} and cannot fact-check it (conflict of interest)")
             if any(fc["checker_msp"] == msp for fc in rec["fact_checks"]):
                 raise ChaincodeError(f"org {msp} has already fact-checked report {report_id}")
             tx = self._txid()
@@ -175,7 +172,7 @@ class MockLedger:
             required = quorum_for(len(self.orgs))
             yes = sum(1 for fc in rec["fact_checks"] if fc["outcome"] == "1")
             voted = {fc["checker_msp"] for fc in rec["fact_checks"]}
-            remaining = sum(1 for m in self.orgs if m != rec["submitted_by"] and m not in voted)
+            remaining = sum(1 for m in self.orgs if m not in voted)
             if yes >= required:
                 rec.update(status=STATUS_FINAL, final_label="1", finalized_by=msp,
                            finalized_at=_rfc3339(self._now()))

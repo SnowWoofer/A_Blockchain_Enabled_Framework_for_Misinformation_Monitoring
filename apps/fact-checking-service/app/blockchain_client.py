@@ -75,7 +75,7 @@ class BlockchainClient:
         is_open = status in OPEN_STATUSES
         my_vote = next((c for c in checks if c.get("checker_msp") == viewer_msp), None)
         reveal = not is_open or my_vote is not None
-        eligible = max(registered - 1, 0)
+        eligible = registered  # every registered org votes, the submitter included
         claim: Dict[str, Any] = {
             "id": record.get("id"),
             "content": source.get("content", "(off-chain content unavailable)"),
@@ -94,11 +94,11 @@ class BlockchainClient:
                 "required_yes": quorum_for(registered),
                 "eligible_voters": eligible,
                 "votes_cast": len(checks),
-                "remaining_voters": max(eligible - len(voted - {submitter}), 0),
+                "remaining_voters": max(eligible - len(voted), 0),
             },
             "my_org_is_submitter": viewer_msp == submitter,
             "my_org_vote": my_vote.get("outcome") if my_vote else None,
-            "can_vote": is_open and viewer_msp != submitter and my_vote is None,
+            "can_vote": is_open and my_vote is None,
             "blind": not reveal,
         }
         if reveal:
@@ -121,14 +121,13 @@ class BlockchainClient:
 
     async def queue(self, creds: Dict[str, str], viewer_msp: str, *, limit: int, offset: int,
                     sort: str, ai_label: Optional[str]) -> Dict[str, Any]:
-        """Open claims this org may still vote on: not its own submissions and
-        not already voted on. Most urgent (earliest deadline) first by default."""
+        """Open claims this org has not voted on yet, its own submissions
+        included. Most urgent (earliest deadline) first by default."""
         records, registered = await asyncio.gather(
             self.request("GET", creds, "/api/reports"), self.registered_orgs(creds))
         todo = [
             r for r in records
             if r.get("status") in OPEN_STATUSES
-            and r.get("submitted_by") != viewer_msp
             and all(c.get("checker_msp") != viewer_msp for c in r.get("fact_checks") or [])
             and (ai_label is None or r.get("inference_label") == ai_label)
         ]

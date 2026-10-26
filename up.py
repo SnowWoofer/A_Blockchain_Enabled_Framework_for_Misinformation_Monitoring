@@ -8,6 +8,7 @@
     python3 up.py --no-ai          skip the flagging engine (2.2 GB model, ~3 GB RAM)
     python3 up.py --explorer       also start Hyperledger Explorer
     python3 up.py --smoke          finish by sending one tip through the whole pipeline
+    python3 up.py --seed-claims 0  start with an empty review queue (default: 10 claims from data/test.json)
     python3 up.py --demo           web client on the in-memory mock ledger (no Fabric, light)
     python3 up.py --dry-run        show the plan and run the pre-flight checks only
     python3 up.py --status         list running containers, their IP addresses and how to reach them
@@ -266,6 +267,15 @@ def smoke_test(env: dict) -> bool:
     return False
 
 
+def seed_claims(count: int, env: dict, engine_ready: bool) -> bool:
+    """A fixed sample of data/test.json through the real pipeline, so the review queue starts filled."""
+    cmd = [sys.executable, "-u", str(ROOT / "blockchain/scripts/seed-claims.py"), "--count", str(count), "--force"]
+    if not engine_ready:
+        say("   the flagging engine is still loading: queuing the claims without waiting for them")
+        cmd += ["--wait", "0"]
+    return run(cmd, env=env, check=False) == 0
+
+
 # --- container addresses -----------------------------------------------------
 
 # What a published port is for, so the table says how to open it.
@@ -323,7 +333,7 @@ def describe(c: dict, lan: str | None) -> tuple[str, list[str], list[str]]:
     """(display name, ["IP (network)"], ["how to reach it"])"""
     name = c["Name"].lstrip("/")
     display = name
-    if name.startswith("dev-peer"):  # chaincode container, e.g. dev-peer0.org1.example.com-misinformation_2.3-<hash>
+    if name.startswith("dev-peer"):  # chaincode container, e.g. dev-peer0.org1.example.com-misinformation_2.4-<hash>
         display = name.split(".example.com")[0] + " chaincode"
     nets = c.get("NetworkSettings", {}).get("Networks") or {}
     short = lambda n: n if len(n) <= 24 else n[:21] + "..."  # noqa: E731  compose default nets are long
@@ -389,12 +399,19 @@ def main() -> int:
     ap.add_argument("--no-ai", action="store_true", help="skip the flagging engine")
     ap.add_argument("--explorer", action="store_true", help="also start Hyperledger Explorer")
     ap.add_argument("--smoke", action="store_true", help="send one tip through the whole pipeline at the end")
+    ap.add_argument("--seed-claims", type=int, metavar="N",
+                    help="claims from data/test.json to fill the review queue with (default 10, "
+                         "0 with --benchmark; 0: none)")
     ap.add_argument("--dry-run", action="store_true", help="pre-flight checks and plan only")
     ap.add_argument("--status", action="store_true",
                     help="only list the running containers with their IP addresses and how to reach them")
     args = ap.parse_args()
     if not 3 <= args.orgs <= 30:
         ap.error("--orgs must be between 3 and 30")
+    if args.seed_claims is None:
+        args.seed_claims = 0 if args.benchmark or args.demo else 10  # demo.sh seeds its own mock claims
+    if args.seed_claims < 0:
+        ap.error("--seed-claims must be 0 or more")
 
     global LOG
     LOG = Log(args.dry_run or args.status)
@@ -405,7 +422,7 @@ def main() -> int:
     mode_name = "demo (mock ledger)" if args.demo else ("benchmark" if args.benchmark else "secure prototype")
     say(f"Misinformation Monitor: bringing the system up, mode={mode_name}, orgs={args.orgs}"
         + ("" if args.demo else f", ai={'off' if args.no_ai else 'on'}"))
-    STEP[1] = 5 if args.demo else 8 + int(args.explorer) + int(args.smoke)
+    STEP[1] = 5 if args.demo else 8 + int(args.explorer) + int(args.smoke) + int(args.seed_claims > 0)
 
     step("Pre-flight checks")
     warnings = preflight(args)
@@ -451,6 +468,14 @@ def main() -> int:
 
     step("Health checks")
     results = health_checks(args, env)
+    seed_ok = None
+    if args.seed_claims and not args.demo:
+        step(f"Review queue: {args.seed_claims} claims from data/test.json through the AI pipeline")
+        if args.no_ai:
+            say("   skipped: the claims are screened by the flagging engine")
+        else:
+            engine_ready = any(good for name, _, good, _ in results if name.startswith("flagging engine"))
+            seed_ok = seed_claims(args.seed_claims, env, engine_ready)
     smoke_ok = None
     if args.smoke and not args.demo:
         step("End-to-end smoke test")
@@ -465,6 +490,9 @@ def main() -> int:
     say(f"   Web client        {web}   (self-signed certificate: accept the browser warning)")
     say("   Sign-in accounts  secrets/initial-credentials.txt   (one-time passwords; change at first sign-in)")
     say("                     checker.orgN = fact-checker, official.orgN = official console")
+    if seed_ok:
+        say(f"   Review queue      {args.seed_claims} claims from data/test.json, submitted by the AI's org (org1),")
+        say("                     in every org's queue, org1 included")
     if not args.demo:
         say("   Gateway API       http://localhost:8000   (loopback only)")
         say("   Grafana           http://localhost:3000   (admin / GRAFANA_ADMIN_PASSWORD in .env)")
@@ -478,6 +506,9 @@ def main() -> int:
         say(f"   WARNING: {w}")
     if optional_down:
         say(f"   Still starting or unavailable (optional): {', '.join(optional_down)}")
+    if seed_ok is False:
+        say("   Review queue NOT fully seeded: see the review-queue step above "
+            "(re-run: python3 blockchain/scripts/seed-claims.py)")
     if smoke_ok is False:
         say("   Smoke test FAILED: the pipeline did not deliver the test tip to the ledger")
     say("\n   Containers, their IP addresses and how to reach them (again any time: python3 up.py --status)\n")

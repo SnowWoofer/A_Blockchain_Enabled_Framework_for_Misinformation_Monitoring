@@ -35,9 +35,15 @@ python3 down.py      # shut everything down and clean up
 It downloads the Fabric binaries if they are missing, generates secrets, and
 starts the Fabric network, chaincode, IPFS and gateways (`startup.sh --secure`).
 It then starts Kafka, the AI pipeline, the fact-checking service, the web client
-and monitoring, and waits until each one is healthy. At the end it prints where
-to sign in. The first run downloads and builds everything, so it takes a while;
-later runs reuse the images.
+and monitoring, and waits until each one is healthy. It then fills the review
+queue: 10 claims picked from `data/test.json` with a fixed seed (so every
+fresh deployment starts with the same claims) go through the real pipeline,
+where the AI scores each one before it is anchored on the ledger. Only the
+statement text is sent, not the dataset's label, so review stays blind. The
+AI's org (org1) submits them, and every org reviews them, org1 included
+(`checker.org1`, `checker.org2`, ...). At the end it prints where to sign in.
+The first run downloads and builds everything, so it takes a while; later runs
+reuse the images.
 
 |Option|Effect|
 |-|-|
@@ -46,6 +52,7 @@ later runs reuse the images.
 |`--no-ai`|skip the flagging engine (2.2 GB model, ~3 GB RAM)|
 |`--explorer`|also start Hyperledger Explorer|
 |`--smoke`|finish by sending one tip through the whole pipeline to the ledger|
+|`--seed-claims N`|claims from `data/test.json` to fill the review queue with (default 10; 0 for none, the default with `--benchmark`). Skipped with `--no-ai`. Re-run on its own with `python3 blockchain/scripts/seed-claims.py`|
 |`--demo`|web client on the in-memory mock ledger, no Fabric (light)|
 |`--dry-run`|run the checks and show the plan without changing anything|
 |`--status`|only list the running containers with their IP addresses and how to reach them|
@@ -86,12 +93,14 @@ The system has **two layers** that run independently:
     Role-bearing identities (`officialN`, `factcheckerN`) are registered via `register-roles.sh` through each org's Fabric CA during network setup.
 
   * `Submit` — an org submits a report (PENDING, 72h fact-check window)
-  * `SubmitFactCheck` — another org records a verdict (`"0"`=non-misinfo, `"1"`=misinfo). **The submitting org cannot vote on its own report** (conflict of interest). After each vote the chaincode applies the consensus rule with
+  * `SubmitFactCheck` — a registered org records a verdict (`"0"`=non-misinfo, `"1"`=misinfo), one vote per org. **The submitting org votes too**, like any other: its review is on the record next to everyone else's, and since `required` is at least 2 it can never confirm its own report alone. After each vote the chaincode applies the consensus rule with
     `required = ceil(2/3 × registered_orgs)`:
 
     * **Early acceptance → FINAL**: once `tally["1"] >= required` (a 2/3 supermajority of YES).
-    * **Early rejection → REJECTED**: once `tally["1"] + remaining_eligible < required`, where `remaining_eligible` counts registered orgs that have not voted, excluding the submitter. Even if every remaining org later votes YES, the threshold is mathematically unreachable, so the report is finalised immediately without waiting for the rest.
+    * **Early rejection → REJECTED**: once `tally["1"] + remaining_eligible < required`, where `remaining_eligible` counts registered orgs that have not voted, the submitter included. Even if every remaining org later votes YES, the threshold is mathematically unreachable, so the report is finalised immediately without waiting for the rest.
   * `FinalizeReport` — closes a **stalled** report by simple majority of the votes cast (≥2 fact-checks, no tie), and **only after its 72h window has closed**. While voting is open, only the 2/3 rule can reach FINAL, so a single official cannot cut a vote short.
+
+    > **Changed in chaincode v2.4** (collaborative review). The submitting org now votes on its own report instead of being excluded. Under v2.3 the exclusion made the 2/3 rule unanimous among the other orgs for consortiums of 3 to 5 (2 of 2 with 3 orgs, so one NO settled a report). Now 2 of 3 must agree with 3 orgs, and a single NO is outvoted. The quorum formula is unchanged. The benchmark harness now lets every org vote; its accept/reject plans still end FINAL/REJECTED as before, but each report gets one more vote transaction, so vote counts and timings are not directly comparable with v2.3 results (in git history).
 
     > **Changed in chaincode v2.3** (security hardening). The quorum formula is unchanged, and the benchmark harness already never lets the submitter vote, so FINAL/REJECTED outcomes are the same. A REJECTED report may now close up to one vote earlier, because the submitter is no longer counted as a pending voter. Results collected with v2.2 are in git history.
   * `ExpireReport` — expires PENDING reports past their deadline
@@ -127,9 +136,8 @@ fact-check them. Two submission modes:
 
 * **Direct mode (default)** :  org1 is the **AI stakeholder org**. It submits
   `--ai-pct%` of reports (the ones the AI processed); the remaining reports are
-  submitted by a random `org2..orgN`. Every org except the report's submitter
-  votes, so org1 votes on reports it did not submit. With `--ai-pct 100` org1
-  submits everything.
+  submitted by a random `org2..orgN`. Every org votes on every report, its
+  submitter included. With `--ai-pct 100` org1 submits everything.
 * **Indirect mode** : a random org is chosen to submit every report — simulates
   a human-in-the-loop workflow where every org is a normal stakeholder.
 
@@ -163,10 +171,10 @@ fact-check them. Two submission modes:
 |`apps/kafka/`|Kafka broker (KRaft)|
 |`monitoring/`|Prometheus + Grafana provisioning|
 |`documentation/`|architecture diagrams, source formats|
-|`data/`|test samples (git-ignored)|
+|`data/`|multilingual claim dataset (`train.json`, `val.json`, `test.json`); `test.json` seeds the review queue and feeds the benchmarks|
 |`results/local/`|benchmark CSVs (`http.csv`, `caliper.csv`, `real_loads.csv`)|
 > Git-ignored: Python virtualenv, `blockchain/fabric-samples/`, `offchain.db`,
-> `apps/flagging-engine/model/model.safetensors`, `data/`.
+> `apps/flagging-engine/model/model.safetensors`.
 
 ## Prerequisites
 
@@ -441,7 +449,7 @@ Results are appended to `results/local/real_loads.csv`.
 |`--samples N`|Randomly select N samples|all|
 |`--ai-pct P`|% of reports the AI processed (submitted by org1 in direct mode)|100|
 |`--num-orgs N`|Override on-chain org count|**auto-detected** from `/api/orgs`|
-|`--mode`|`direct` (org1 = AI stakeholder, submits ai_pct%, random orgs submit the rest, everyone-except-submitter votes) or `indirect` (random org submits each report)|direct|
+|`--mode`|`direct` (org1 = AI stakeholder, submits ai_pct%, random orgs submit the rest, every org votes) or `indirect` (random org submits each report)|direct|
 |`--reject-pct P`|% of reports with sub-2/3 consensus (REJECTED)|0|
 |`--fact-check`|Simulate fact-checking (consensus voting) after submission|**on**|
 |`--no-fact-check`|Disable fact-checking|—|
@@ -564,7 +572,7 @@ Results are appended to `results/local/real_loads.csv`.
 |`--samples N`|Randomly select N samples|all|
 |`--ai-pct P`|% of reports the AI processed (submitted by org1 in direct mode)|100|
 |`--num-orgs N`|Override on-chain org count|**auto-detected** from `/api/orgs`|
-|`--mode`|`direct` (org1 = AI stakeholder, submits ai_pct%, random orgs submit the rest, everyone-except-submitter votes) or `indirect` (random org submits each report)|direct|
+|`--mode`|`direct` (org1 = AI stakeholder, submits ai_pct%, random orgs submit the rest, every org votes) or `indirect` (random org submits each report)|direct|
 |`--reject-pct P`|% of reports with sub-2/3 consensus (REJECTED)|0|
 |`--fact-check`|Simulate fact-checking (consensus voting) after submission|**on**|
 |`--no-fact-check`|Disable fact-checking|—|
@@ -1120,7 +1128,6 @@ docker compose -f blockchain/explorer/docker-compose.yaml down   # or down -v to
 |403 "password change required before continuing"|The account is still on its one-time password. Sign in to the web client (or call `POST /api/auth/password`).|
 |423 on sign-in|Account locked after 5 failed attempts. Wait 15 minutes or have an official use *Reset access* (or `manage.py reset`).|
 |`required variable ... is missing a value: run blockchain/scripts/gen-secrets.sh`|Secrets not generated yet. Run `blockchain/scripts/gen-secrets.sh` (startup.sh and demo.sh do it for you).|
-|Fact-check returns 400 "... cannot fact-check it (conflict of interest)"|The org that submitted a report cannot vote on it. Working as designed.|
 |Finalize returns 400 "still within its fact-check window"|Manual finalise only applies to stalled reports after the 72h window; during the window the 2/3 rule decides.|
 |Remote benchmark client cannot reach `:8000`|The gateway listens on loopback by default. Start it with `GATEWAY_BIND=0.0.0.0`.|
 |Browser certificate warning at `https://localhost:8443`|Self-signed certificate from `gen-secrets.sh`. Trust `secrets/tls/server.crt` locally, or replace both files in `secrets/tls/` with a real certificate.|

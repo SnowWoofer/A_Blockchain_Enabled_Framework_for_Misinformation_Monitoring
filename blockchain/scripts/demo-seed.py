@@ -74,7 +74,7 @@ def main() -> int:
         print("SUBMITTER_API_KEY is not set (source the repo-root .env)", file=sys.stderr)
         return 2
     if args.orgs < 3:
-        print("--orgs must be at least 3 (the submitter cannot vote on its own claims)", file=sys.stderr)
+        print("--orgs must be at least 3 (demo.sh's smallest consortium)", file=sys.stderr)
         return 2
 
     rng = random.Random(args.seed)

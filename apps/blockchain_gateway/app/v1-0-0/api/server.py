@@ -428,13 +428,13 @@ def list_reports(status: Optional[str] = Query(None, max_length=16), principal: 
 
 
 def consensus_summary(record: Dict[str, Any], registered: int, viewer_msp: str = "") -> Dict[str, Any]:
-    """Where a report stands against the chaincode's 2/3 rule. The submitter
-    may not vote, so it is excluded from the eligible voters."""
+    """Where a report stands against the chaincode's 2/3 rule. Every registered
+    org votes, the submitter included."""
     checks = record.get("fact_checks") or []
     yes = sum(1 for c in checks if c.get("outcome") == "1")
     voted = {c.get("checker_msp") for c in checks}
     submitter = record.get("submitted_by", "")
-    eligible = max(registered - 1, 0)
+    eligible = registered
     status = record.get("status", "")
     return {
         "report_id": record.get("id"),
@@ -445,13 +445,13 @@ def consensus_summary(record: Dict[str, Any], registered: int, viewer_msp: str =
         "votes_cast": len(checks),
         "yes": yes,
         "no": len(checks) - yes,
-        "remaining_voters": max(eligible - len(voted - {submitter}), 0),
+        "remaining_voters": max(eligible - len(voted), 0),
         "submitted_by": submitter,
         "deadline": record.get("fact_check_deadline", ""),
         "my_org_voted": bool(viewer_msp) and viewer_msp in voted,
         "my_org_is_submitter": bool(viewer_msp) and viewer_msp == submitter,
         "can_vote": (bool(viewer_msp) and status in ("PENDING", "UNDER_REVIEW")
-                     and viewer_msp != submitter and viewer_msp not in voted),
+                     and viewer_msp not in voted),
     }
 
 

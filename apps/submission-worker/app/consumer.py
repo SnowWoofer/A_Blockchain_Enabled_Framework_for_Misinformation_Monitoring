@@ -70,6 +70,9 @@ class SubmissionConsumer:
             group_id=settings.kafka_consumer_group,
             value_deserializer=lambda v: json.loads(v.decode("utf-8")),
             enable_auto_commit=True,
+            # A fresh group starts at the beginning of the topic, so claims scored
+            # before this worker joined are submitted rather than skipped.
+            auto_offset_reset="earliest",
         )
         await self.consumer.start()
         self._task = asyncio.create_task(self._run())

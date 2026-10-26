@@ -1,5 +1,4 @@
 .env
-data
 temp*
 __pycache__
 *.pyc
@@ -93,3 +92,16 @@ blockchain/scripts/swarm.key
 apps/blockchain_gateway/app/v1-0-0/api/*.db-*
 apps/blockchain_gateway/app/v1-0-0/api/mock-ledger.json*
 logs/
+/AI Model training results/
+/artifact/
+/results/
+/CLAUDE.md
+/Research Report/
+/Poster/
+# Build output, regenerated config and personal files the running system does not need
+blockchain/chaincode/misinformation/go/*.test
+blockchain/explorer/connection-profile/networkConfig.json
+benchmarks/results/
+apps/flagging-engine/model/training_args.bin
+apps/flagging-engine/model/misinfo_metrics.json
+/.claude/

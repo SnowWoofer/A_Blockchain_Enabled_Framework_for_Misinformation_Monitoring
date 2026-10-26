@@ -46,7 +46,7 @@ export default function VerdictDetail() {
           <section className="panel">
             <h2 className="panel-title">How the consortium voted</h2>
             <ConsensusMeter yes={data.votes.yes} no={data.votes.no} cast={data.votes.cast}
-              eligible={Math.max(data.votes.registered_orgs - 1, 0)} required={data.votes.required_yes} />
+              eligible={data.votes.registered_orgs} required={data.votes.required_yes} />
             <ul className="factchecks">
               {data.fact_checks.map((fc) => (
                 <li key={fc.tx_id} className="factcheck">

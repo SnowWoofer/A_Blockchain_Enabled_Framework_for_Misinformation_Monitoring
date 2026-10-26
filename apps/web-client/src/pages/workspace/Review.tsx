@@ -160,7 +160,7 @@ export default function Review() {
           </section>
 
           {claim.my_org_is_submitter && (
-            <Notice tone="info">Your organisation raised this claim, so it cannot vote on it (conflict of interest).</Notice>
+            <Notice tone="info">Your organisation raised this claim. It votes like every other member, once and on the record, and at least one other organisation must agree before the claim is confirmed.</Notice>
           )}
           {claim.my_org_vote && (
             <Notice tone="info">Your organisation voted: <OutcomeBadge outcome={claim.my_org_vote} /></Notice>

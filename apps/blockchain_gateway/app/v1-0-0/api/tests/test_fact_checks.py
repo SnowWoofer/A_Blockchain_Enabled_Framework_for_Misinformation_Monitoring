@@ -21,11 +21,24 @@ class TestSubmitFactCheck:
         chain = client.get(f"/api/reports/{report_id}/chain", headers=api_key(client)).json()
         assert chain["status"] == "FINAL" and chain["final_label"] == "1"
 
-    def test_submitter_cannot_vote_on_own_report(self, client):
+    def test_submitter_votes_but_cannot_decide_alone(self, client):
         report_id = submit(client, api_key(client, "org1"))
-        resp = vote(client, user_headers(client, "own", "org1", "fact_checker"), report_id)
-        assert resp.status_code == 400
-        assert "conflict of interest" in resp.json()["detail"]
+        assert vote(client, user_headers(client, "own", "org1", "fact_checker"), report_id, "1").status_code == 200
+        chain = client.get(f"/api/reports/{report_id}/chain", headers=api_key(client)).json()
+        assert chain["status"] == "UNDER_REVIEW"
+        assert [c["checker_msp"] for c in chain["fact_checks"]] == ["Org1MSP"]
+        vote(client, api_key(client, "org2"), report_id, "1")
+        chain = client.get(f"/api/reports/{report_id}/chain", headers=api_key(client)).json()
+        assert chain["status"] == "FINAL" and chain["final_label"] == "1"
+
+    def test_single_no_does_not_settle_a_report(self, client):
+        report_id = submit(client, api_key(client, "org1"))
+        vote(client, api_key(client, "org2"), report_id, "0")
+        chain = client.get(f"/api/reports/{report_id}/chain", headers=api_key(client)).json()
+        assert chain["status"] == "UNDER_REVIEW"
+        vote(client, api_key(client, "org3"), report_id, "0")
+        chain = client.get(f"/api/reports/{report_id}/chain", headers=api_key(client)).json()
+        assert chain["status"] == "REJECTED"
 
     def test_duplicate_vote_rejected(self, client):
         report_id = submit(client, api_key(client, "org1"))
@@ -82,10 +95,10 @@ class TestConsensus:
         summary = client.get(f"/api/reports/{report_id}/consensus", headers=org3).json()
         assert summary["registered_orgs"] == 3
         assert summary["required_yes"] == 2
-        assert summary["eligible_voters"] == 2
-        assert summary["votes_cast"] == 1 and summary["remaining_voters"] == 1
+        assert summary["eligible_voters"] == 3
+        assert summary["votes_cast"] == 1 and summary["remaining_voters"] == 2
         assert summary["can_vote"] is True
 
         org1 = user_headers(client, "erin", "org1", "fact_checker")
         own = client.get(f"/api/reports/{report_id}/consensus", headers=org1).json()
-        assert own["my_org_is_submitter"] is True and own["can_vote"] is False
+        assert own["my_org_is_submitter"] is True and own["can_vote"] is True

@@ -60,7 +60,7 @@ export default function Home() {
           <h2>How a verdict is reached</h2>
           <ol className="steps">
             <li><strong>Screening.</strong> An AI model (AfroXLM-R, fine-tuned on claims in South African languages) flags potentially misleading claims, including tips from the public.</li>
-            <li><strong>Independent review.</strong> Each member organisation investigates and casts one vote, without seeing the others' verdicts first. The organisation that raised a claim cannot vote on it.</li>
+            <li><strong>Independent review.</strong> Each member organisation investigates and casts one vote, without seeing the others' verdicts first. The organisation that raised a claim votes too, but its vote counts once, like every other, so no organisation can confirm a claim on its own.</li>
             <li><strong>Two-thirds rule.</strong> A claim is confirmed as misinformation only when {info.data ? `${info.data.required_yes} of ${info.data.registered_orgs}` : 'two-thirds of'} member organisations agree.</li>
             <li><strong>Tamper-evident record.</strong> The claim's fingerprint and every vote are written to a Hyperledger Fabric blockchain, so anyone can check that a published claim was not altered.</li>
           </ol>

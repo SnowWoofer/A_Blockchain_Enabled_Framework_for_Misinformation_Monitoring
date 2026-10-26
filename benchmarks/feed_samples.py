@@ -356,8 +356,8 @@ def main() -> int:
             final_status = "SUBMITTED"
             if args.fact_check:
                 is_rejected = (i in reject_indices)
-                available_keys = [k for k in voting_org_keys
-                                  if k != submit_key]
+                # every org votes, the submitter included (chaincode v2.4)
+                available_keys = list(voting_org_keys)
                 rng.shuffle(available_keys)
                 votes = _decide_voting_outcomes(
                     num_orgs, len(available_keys), is_rejected, rng)

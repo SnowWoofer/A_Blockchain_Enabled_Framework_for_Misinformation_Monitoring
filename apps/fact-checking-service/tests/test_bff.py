@@ -56,7 +56,7 @@ def env(tmp_path):
     auth.init_user_store(str(tmp_path / "users.db"))
     audit.init_audit(str(tmp_path / "audit.db"))
     auth._login_ip_limiter._hits.clear()
-    ledger = MockLedger(["org1", "org2", "org3", "org4"])  # quorum 3, 3 eligible voters
+    ledger = MockLedger(["org1", "org2", "org3", "org4"])  # quorum 3, 4 eligible voters
     original = server.bridge_for
     server.bridge_for = lambda org, role="official", endorsers=None: MockLedgerBridge(ledger, org, role)
     store.upsert_org_key("ai-key", "org1", role="ai_submitter", label="ai")
@@ -89,12 +89,14 @@ def test_requires_credentials(env):
     assert client.get("/claims/pending", headers={"Authorization": "Bearer junk"}).status_code == 401
 
 
-def test_queue_excludes_own_org_and_already_voted(env):
+def test_queue_includes_own_submissions_until_voted(env):
     client, user, submit = env
     report_id = submit()
     org1 = user("ann", "org1")
     org2 = user("ben", "org2")
-    assert client.get("/claims/pending", headers=org1).json()["total"] == 0  # org1 submitted it
+    own = client.get("/claims/pending", headers=org1).json()  # org1 submitted it and still reviews it
+    assert own["total"] == 1 and own["items"][0]["my_org_is_submitter"] is True
+    assert own["items"][0]["can_vote"] is True
     queue = client.get("/claims/pending", headers=org2).json()
     assert queue["total"] == 1
     item = queue["items"][0]
@@ -127,9 +129,12 @@ def test_blind_until_own_vote(env):
 def test_votes_sign_as_the_individual_callers_org(env):
     client, user, submit = env
     report_id = submit()
+    ann = user("ann", "org1")
     resp = client.post(f"/claims/{report_id}/fact-check", json={"outcome": "1", "reasoning": REASON},
-                       headers=user("ann", "org1"))
-    assert resp.status_code == 400 and "conflict of interest" in resp.json()["detail"]
+                       headers=ann)
+    assert resp.status_code == 200
+    claim = client.get(f"/claims/{report_id}", headers=ann).json()
+    assert [fc["checker_msp"] for fc in claim["fact_checks"]] == ["Org1MSP"] and claim["my_org_vote"] == "1"
 
 
 def test_validation(env):

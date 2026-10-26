@@ -50,15 +50,17 @@ network by name.
 
 * **ABAC**: every write checks the `role` attribute in the caller's X.509
   certificate (`official` / `fact_checker`).
-* **Conflict of interest**: the organisation that submitted a report cannot
-  fact-check it, so the AI stakeholder org cannot confirm its own flags.
+* **No unilateral verdicts**: the organisation that submitted a report votes
+  on it like any other, once and on the record, but the 2/3 quorum is at
+  least 2 orgs, so it can never confirm its own claim (or the AI's flags)
+  without another organisation agreeing.
 * **Quorum cannot be cut short**: `FinalizeReport` (simple majority of votes
   cast) is only available after the 72 h window. While voting is open, only
   the 2/3 rule in `SubmitFactCheck` can reach `FINAL`, so a single official
   can no longer finalise with 2 of N votes.
-* **Exact early rejection**: "remaining voters" counts only eligible orgs (not
-  the submitter, not those who voted), so settled reports close immediately
-  instead of hanging until expiry.
+* **Exact early rejection**: "remaining voters" counts every registered org
+  that has not voted yet, the submitter included, so a report closes as soon
+  as the quorum is out of reach and not before.
 * One vote per org per report; finalised reports are immutable; full history
   via `GetHistoryForKey`.
 
