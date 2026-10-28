@@ -1,12 +1,7 @@
 #!/usr/bin/env bash
-#
-# Demonstrates, against the running three-node swarm, the four IPFS properties
-# this project actually depends on — and which a conventional object store or
-# database could not provide.
-#
-#   ./blockchain/scripts/ipfs-demo.sh [<cid>]
-#
-# With no argument it uses the newest claim anchored on the ledger.
+
+# Demonstrates, against the running three-node swarm, the four IPFS properties this project actually depends on and which a conventional object store or database could not provide.
+
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

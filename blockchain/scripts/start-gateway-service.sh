@@ -22,12 +22,6 @@ if ! docker network ls --format '{{.Name}}' | grep -qx 'fabric_test'; then
 fi
 
 echo ">> Building + starting Fabric Gateway SDK service (official @hyperledger/fabric-gateway)..."
-# --force-recreate: the container's crypto material is a bind mount that gets
-# regenerated on every network deploy, but compose only recreates a container
-# when its own config changes — not when files under a mount change on disk.
-# Without this, a sidecar left running across a redeploy keeps stale TLS certs
-# in memory (server.js reads them once at startup) and every call fails with
-# "unable to verify the first certificate" even though /health reports ok.
 (cd "${PROJECT_ROOT}" && ${COMPOSE} -f apps/fabric_gateway/docker-compose.yaml up -d --build --force-recreate fabric-gateway) | tail -2
 
 echo ">> Waiting for health on :9100..."

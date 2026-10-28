@@ -57,7 +57,7 @@ func submitReport(stub *MockStub, txID, msp, reportID string) *peer.Response {
 		"Submit", reportID, validHash, "1", "0.97", "model-v1", validTs)
 }
 
-// ---------- Organisation Registration ----------
+// Organisation Registration
 
 func TestRegisterOrgAndList(t *testing.T) {
 	stub := newTestStub(t)
@@ -82,8 +82,7 @@ func TestBootstrapClosedAfterFoundingLimit(t *testing.T) {
 	}
 }
 
-// ---------- Admission Workflow ----------
-
+// Admission Workflow 
 func TestAdmissionWorkflow(t *testing.T) {
 	stub := newTestStub(t)
 	registerOrgs(t, stub, "Org1MSP", "Org2MSP")
@@ -117,7 +116,7 @@ func TestAdmissionWorkflow(t *testing.T) {
 	}
 }
 
-// ---------- Submit and Query ----------
+// Submit and Query 
 
 func TestUnregisteredCannotSubmit(t *testing.T) {
 	stub := newTestStub(t)
@@ -191,7 +190,7 @@ func TestInvalidInputsRejected(t *testing.T) {
 	}
 }
 
-// ---------- Fact-Check and Finalization ----------
+// Fact-Check and Finalization 
 
 func TestFactCheckAndFinalize(t *testing.T) {
 	stub := newTestStub(t)
@@ -243,7 +242,7 @@ func TestFactCheckAndFinalize(t *testing.T) {
 	}
 }
 
-// ---------- Submitter votes ----------
+//  Submitter votes 
 
 func TestSubmitterVotesButCannotDecideAlone(t *testing.T) {
 	stub := newTestStub(t)
@@ -275,7 +274,7 @@ func TestSubmitterVotesButCannotDecideAlone(t *testing.T) {
 	}
 }
 
-// ---------- Manual finalize (only after the fact-check window) ----------
+//  Manual finalize (only after the fact-check window) 
 
 func TestFinalizeBlockedDuringWindow(t *testing.T) {
 	stub := newTestStub(t)
@@ -370,7 +369,7 @@ func TestRejectionByFactChecks(t *testing.T) {
 	}
 }
 
-// ---------- Early Acceptance ----------
+// Early Acceptance 
 
 func TestEarlyAcceptance(t *testing.T) {
 	stub := newTestStub(t)
@@ -409,7 +408,7 @@ func TestEarlyAcceptance(t *testing.T) {
 	}
 }
 
-// ---------- Early Rejection ----------
+// Early Rejection 
 
 func TestEarlyRejection(t *testing.T) {
 	stub := newTestStub(t)
@@ -473,7 +472,7 @@ func TestSplitVoteStaysOpenForSubmitter(t *testing.T) {
 	}
 }
 
-// ---------- Tie Rejected on Finalize ----------
+// Tie Rejected on Finalize 
 
 func TestFinalizeTieRejected(t *testing.T) {
 	stub := newTestStub(t)
@@ -521,7 +520,7 @@ func TestFinalizeTieRejected(t *testing.T) {
 	}
 }
 
-// ---------- Expiry ----------
+// Expiry 
 
 func TestExpireReport(t *testing.T) {
 	stub := newTestStub(t)
@@ -552,7 +551,7 @@ func TestExpireReport(t *testing.T) {
 	}
 }
 
-// ---------- Query ----------
+// Query 
 
 func TestQueryFactChecksAndHistory(t *testing.T) {
 	stub := newTestStub(t)
@@ -592,7 +591,7 @@ func TestQueryAllReports(t *testing.T) {
 	}
 }
 
-// ---------- Quorum Math ----------
+// Quorum Math 
 
 func TestQuorumFor(t *testing.T) {
 	cases := []struct {
@@ -626,10 +625,9 @@ func TestQuorumForMatchesEarlyAcceptanceThreshold(t *testing.T) {
 	}
 }
 
-// ---------- ABAC (Attribute-Based Access Control) ----------
+// ABAC (Attribute-Based Access Control) 
 
-// newTestStubWithRole creates a stub where the caller identity carries the
-// given "role" attribute in its X509 certificate.
+// newTestStubWithRole creates a stub where the caller identity carries the given "role" attribute in its X509 certificate.
 func newTestStubWithRole(t *testing.T, role string) *MockStub {
 	t.Helper()
 	stub := newTestStub(t)

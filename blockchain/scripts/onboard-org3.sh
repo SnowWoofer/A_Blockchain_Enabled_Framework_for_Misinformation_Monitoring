@@ -1,14 +1,5 @@
 #!/usr/bin/env bash
-# Onboard Org3: install + approve the misinformation chaincode on all THREE
-# orgs and re-commit with a 2-of-3 endorsement policy.
-#
-# Prereqs (in order):
-#   1. ./scripts/deploy.sh              # 2-org network + chaincode committed
-#   2. test-network/addOrg3/addOrg3.sh up   # org3 peer running + on channel
-# Then: ./scripts/onboard-org3.sh
-#
-# Outcome: endorsement policy becomes OutOf(2, Org1MSP, Org2MSP, Org3MSP) —
-# a quorum of 2 of the 3 stakeholder orgs must endorse every transaction.
+# Onboard Org3: install + approve the misinformation chaincode on all THREE orgs and re-commit with a 2-of-3 endorsement policy.
 
 set -euo pipefail
 

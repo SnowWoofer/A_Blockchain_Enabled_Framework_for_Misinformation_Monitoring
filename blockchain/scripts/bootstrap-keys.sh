@@ -1,18 +1,7 @@
 #!/usr/bin/env bash
-#
+
 # Seeds the blockchain gateway's API keys (stored hashed in offchain.db).
-#
-#   bootstrap-keys.sh [-r] [--no-dev-keys] org1 org2 ... orgN
-#
-# Always: registers SUBMITTER_API_KEY (from the repo-root .env) as the
-#   submission worker's ai_submitter key for the AI stakeholder org
-#   (AI_STAKEHOLDER_ORG, default org1). It can submit reports and nothing else.
-# Default (benchmark mode): also the well-known benchmark keys
-#   key-orgN -> orgN and stress-key -> org1, all role=official, which
-#   feed_samples.py / load-http.py expect.
-# --no-dev-keys (secure mode): skips those and revokes any left over from an
-#   earlier benchmark run, so nobody holding a well-known key keeps access.
-# -r: also register the orgs on the ledger (register-orgs.sh).
+
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

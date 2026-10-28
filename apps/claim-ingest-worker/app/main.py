@@ -1,14 +1,3 @@
-"""Claim ingestion worker.
-
-Real feed ingestion (scraping, platform subscriptions) isn't built yet. Two
-entry points queue claims onto claims.raw in exactly the shape
-flagging-engine expects, each message HMAC-signed (app/signing.py):
-
-* POST /ingest      bulk, for internal tools and tests; needs X-API-Key.
-* POST /public/tip  one claim from a member of the public via the web
-                    client; size-limited and rate-limited per client IP.
-                    Returns a reference the submitter can use to follow the
-                    claim through review."""
 import collections
 import datetime as dt
 import hmac

@@ -211,7 +211,7 @@ def _write_csv(path: Path, results: list[dict]) -> None:
 def main() -> int:
     ap = argparse.ArgumentParser(
         description="Feed samples")
-    ap.add_argument("--data", default="data/translated_masked_samples_test.json",
+    ap.add_argument("--data", default="data/test.json",
                     help="path samples file")
     ap.add_argument("--samples", type=int, default=0,
                     help="select N samples")

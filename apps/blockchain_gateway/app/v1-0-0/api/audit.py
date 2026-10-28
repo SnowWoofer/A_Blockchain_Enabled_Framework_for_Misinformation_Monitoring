@@ -1,11 +1,3 @@
-"""Append-only, hash-chained audit log of security-relevant gateway events
-(logins, account changes, votes, governance actions, denied requests).
-
-Every entry stores SHA-256(previous entry hash || canonical entry), so editing
-or deleting any past row breaks the chain from that point on and
-GET /api/audit/verify reports where. It is tamper-evident, not tamper-proof:
-an attacker with write access to the file could rebuild the whole chain, which
-is why the ledger, not this log, remains the source of truth for votes."""
 from __future__ import annotations
 
 import hashlib
@@ -130,8 +122,7 @@ def get_audit() -> Optional[AuditLog]:
 
 
 def record(**kwargs: Any) -> None:
-    """Best-effort: an audit write failure is logged, never turned into a
-    failed request (the ledger write it describes may already be committed)."""
+    # Best-effort: an audit write failure is logged, never turned into a failed request.
     if _log is None:
         return
     try:

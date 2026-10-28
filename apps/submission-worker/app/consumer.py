@@ -18,19 +18,12 @@ from .metrics import (
 
 logger = logging.getLogger(__name__)
 
-# Fields the claim must actually carry. Anything missing is a broken upstream
-# contract, not something to paper over with a default — the claim goes to the
-# dead-letter file so it can be replayed once the producer is fixed.
+# Fields the claim must actually carry. Anything missing is a broken upstream contract, not something to paper over with a default — the claim goes to the dead-letter file so it can be replayed once the producer is fixed.
 REQUIRED_FIELDS = ("msg_id", "confidence", "model_version", "content", "source_platform")
 
 
 class SubmissionConsumer:
-    """Reads scored claims off KAFKA_INPUT_TOPIC (claims.flagged) and submits
-    each one to the blockchain gateway's POST /api/reports (writes off-chain
-    to IPFS, anchors the hash on-chain). A claim that fails to submit — the
-    gateway being down, an invalid API key, etc. — is appended as a line to
-    OUTPUT_PATH instead, so nothing is silently dropped and failures can be
-    replayed later rather than lost."""
+    # Reads scored claims off KAFKA_INPUT_TOPIC (claims.flagged) and submits each one to the blockchain gateway's POST /api/reports (writes off-chain to IPFS, anchors the hash on-chain). 
 
     def __init__(self):
         self.consumer: AIOKafkaConsumer | None = None
@@ -70,8 +63,7 @@ class SubmissionConsumer:
             group_id=settings.kafka_consumer_group,
             value_deserializer=lambda v: json.loads(v.decode("utf-8")),
             enable_auto_commit=True,
-            # A fresh group starts at the beginning of the topic, so claims scored
-            # before this worker joined are submitted rather than skipped.
+            # A fresh group starts at the beginning of the topic, so claims scored before this worker joined are submitted rather than skipped.
             auto_offset_reset="earliest",
         )
         await self.consumer.start()

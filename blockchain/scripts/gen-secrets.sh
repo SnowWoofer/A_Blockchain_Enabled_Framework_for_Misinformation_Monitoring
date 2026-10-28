@@ -1,24 +1,8 @@
 #!/usr/bin/env bash
-#
-# Generates every secret the stack needs, once, and never overwrites one that
-# already exists (safe to re-run; called by startup.sh and demo.sh).
-#
-#   .env (repo root, mode 0600) - read automatically by `docker compose`
-#     JWT_SECRET            signs user access tokens (blockchain gateway)
-#     INTERNAL_API_TOKEN    gateway -> fabric_gateway / ipfs_gateway sidecars
-#     PSEUDONYM_KEY         HMAC for the reviewer pseudonyms in off-chain docs
-#     PIPELINE_RAW_KEY      HMAC on claims.raw     (ingest -> flagging engine)
-#     PIPELINE_FLAGGED_KEY  HMAC on claims.flagged (flagging engine -> submission)
-#     INGEST_API_KEY        X-API-Key for the claim-ingest worker's bulk /ingest
-#     SUBMITTER_API_KEY     the submission worker's ai_submitter gateway key
-#     GRAFANA_ADMIN_PASSWORD
-#     HOST_UID / HOST_GID   containers that read host files (TLS key, gateway
-#                           data dir) run as this user instead of root
-#   secrets/tls/server.{crt,key} - self-signed edge certificate (localhost);
-#     replace both files with a real certificate for a real hostname.
-#
-# Usage: gen-secrets.sh [--host NAME]...   extra DNS names for the certificate
-# Overrides (tests): SECRETS_ENV_FILE, SECRETS_DIR
+
+# Generates every secret the stack needs, once, and never overwrites one that already exists (safe to re-run; called by startup.sh and demo.sh).
+# Usage: gen-secrets.sh [--host NAME]...   extra DNS names for the certificate Overrides (tests): SECRETS_ENV_FILE, SECRETS_DIR
+
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

@@ -1,28 +1,6 @@
 #!/usr/bin/env python3
-"""Bring the whole Misinformation Monitor system up, in one command.
+# Bring the whole Misinformation Monitor system up, in one command.
 
-    python3 up.py                  secure prototype: Fabric (3 orgs), IPFS, gateways,
-                                   AI pipeline, fact-checking service, web client, monitoring
-    python3 up.py --orgs 5         consortium size (3..30)
-    python3 up.py --benchmark      well-known API keys + validation load, for the research harnesses
-    python3 up.py --no-ai          skip the flagging engine (2.2 GB model, ~3 GB RAM)
-    python3 up.py --explorer       also start Hyperledger Explorer
-    python3 up.py --smoke          finish by sending one tip through the whole pipeline
-    python3 up.py --seed-claims 0  start with an empty review queue (default: 10 claims from data/test.json)
-    python3 up.py --demo           web client on the in-memory mock ledger (no Fabric, light)
-    python3 up.py --dry-run        show the plan and run the pre-flight checks only
-    python3 up.py --status         list running containers, their IP addresses and how to reach them
-
-At the end of a run up.py prints the same container table.
-
-Every run starts from a clean slate (it calls down.py first), because the
-Fabric network is rebuilt from scratch on each start anyway. The first run
-downloads the Fabric binaries and Docker images and builds every service, which
-takes a while; later runs reuse them.
-
-Shut everything down again with:  python3 down.py
-Stdlib only. Output is also written to logs/up-<timestamp>.log.
-"""
 from __future__ import annotations
 
 import argparse
@@ -106,8 +84,6 @@ def base_env() -> dict:
     return env
 
 
-# --- pre-flight --------------------------------------------------------------
-
 def mem_available_gb() -> float | None:
     try:
         for line in Path("/proc/meminfo").read_text().splitlines():
@@ -123,7 +99,7 @@ def fabric_provisioned() -> bool:
 
 
 def preflight(args) -> list[str]:
-    """Hard requirements fail; soft ones become warnings."""
+    # Hard requirements fail; soft ones become warnings.
     warnings: list[str] = []
     if sys.version_info < (3, 10):
         fail("Python 3.10+ is required")
@@ -178,7 +154,7 @@ def provision_fabric() -> None:
         fail("Fabric provisioning did not produce bin/, config/ and test-network/ in blockchain/fabric-samples")
 
 
-# --- health checks -----------------------------------------------------------
+# health checks
 
 _INSECURE = ssl.create_default_context()
 _INSECURE.check_hostname = False
@@ -214,7 +190,7 @@ def wait_for(name: str, url: str, timeout_s: int, ok=lambda s, b: s == 200) -> b
 
 
 def health_checks(args, env: dict) -> list[tuple[str, str, bool, bool]]:
-    """(name, url, ok, required)"""
+    # (name, url, ok, required)
     web = f"https://127.0.0.1:{env.get('WEB_HTTPS_PORT', '8443')}"
     status_ok = lambda s, b: s == 200 and isinstance(b, dict) and b.get("status") == "ok"  # noqa: E731
     checks = [
@@ -247,7 +223,7 @@ def health_checks(args, env: dict) -> list[tuple[str, str, bool, bool]]:
 
 
 def smoke_test(env: dict) -> bool:
-    """One tip through edge -> ingest -> Kafka -> AI -> submission -> gateway -> IPFS -> Fabric."""
+    # One tip through edge -> ingest -> Kafka -> AI -> submission -> gateway -> IPFS -> Fabric.
     web = f"https://127.0.0.1:{env.get('WEB_HTTPS_PORT', '8443')}"
     status, body = http(f"{web}/tips", "POST", {
         "claim": f"Smoke test from up.py at {time.strftime('%Y-%m-%d %H:%M:%S')}: checking the end-to-end pipeline."})
@@ -268,7 +244,7 @@ def smoke_test(env: dict) -> bool:
 
 
 def seed_claims(count: int, env: dict, engine_ready: bool) -> bool:
-    """A fixed sample of data/test.json through the real pipeline, so the review queue starts filled."""
+    # A fixed sample of data/test.json through the real pipeline, so the review queue starts filled.
     cmd = [sys.executable, "-u", str(ROOT / "blockchain/scripts/seed-claims.py"), "--count", str(count), "--force"]
     if not engine_ready:
         say("   the flagging engine is still loading: queuing the claims without waiting for them")
@@ -276,7 +252,7 @@ def seed_claims(count: int, env: dict, engine_ready: bool) -> bool:
     return run(cmd, env=env, check=False) == 0
 
 
-# --- container addresses -----------------------------------------------------
+# container addresses
 
 # What a published port is for, so the table says how to open it.
 PORT_HINTS = {
@@ -302,7 +278,7 @@ ORDER = ["web-client", "blockchain-gateway", "fact-checking-service", "claim-ing
 
 
 def lan_ip() -> str | None:
-    """This machine's address on its local network (no packet is sent)."""
+    # This machine's address on its local network
     import socket
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
@@ -330,7 +306,7 @@ def system_containers() -> list[dict]:
 
 
 def describe(c: dict, lan: str | None) -> tuple[str, list[str], list[str]]:
-    """(display name, ["IP (network)"], ["how to reach it"])"""
+    # (display name, ["IP (network)"], ["how to reach it"])
     name = c["Name"].lstrip("/")
     display = name
     if name.startswith("dev-peer"):  # chaincode container, e.g. dev-peer0.org1.example.com-misinformation_2.4-<hash>
@@ -385,9 +361,6 @@ def print_addresses() -> None:
     say("   network also reach each other by name (e.g. http://blockchain-gateway:8000).")
     if lan:
         say(f"   This machine's LAN address is {lan}; from other machines only [public] ports answer.")
-
-
-# --- main --------------------------------------------------------------------
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0],

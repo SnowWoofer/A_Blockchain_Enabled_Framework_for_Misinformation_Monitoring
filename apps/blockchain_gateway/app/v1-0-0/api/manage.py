@@ -1,17 +1,3 @@
-"""Operator CLI for the gateway's user accounts and audit log.
-
-Over the API only a signed-in official can create users, so the first
-official of each org is bootstrapped here. Run it where the gateway's
-databases live, usually inside the container:
-
-    docker exec -it blockchain-gateway python api/manage.py seed --orgs org1,org2,org3
-    docker exec -it blockchain-gateway python api/manage.py create-user --username alice --org org2 --role fact_checker
-    docker exec -it blockchain-gateway python api/manage.py reset --username alice
-    docker exec    blockchain-gateway python api/manage.py list-users
-    docker exec    blockchain-gateway python api/manage.py verify-audit
-
-New accounts get a one-time password and must choose their own at first
-sign-in."""
 from __future__ import annotations
 
 import argparse
@@ -88,8 +74,7 @@ def cmd_list(args: argparse.Namespace) -> int:
 
 
 def cmd_seed(args: argparse.Namespace) -> int:
-    """One official and one fact-checker per org, skipping accounts that
-    already exist. Credentials go to stdout and, with --out, to a 0600 file."""
+    # One official and one fact-checker per org, skipping accounts that already exist. Credentials go to stdout and, with --out, to a 0600 file.
     store = _store()
     lines = []
     for org in [o.strip() for o in args.orgs.split(",") if o.strip()]:

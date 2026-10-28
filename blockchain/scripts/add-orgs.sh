@@ -116,7 +116,7 @@ add_org_assets() {
   p1="$(org_peer_port "${n}")"
   p2=$((p1 + 1))
 
-  # ── Fabric CA crypto for org4+ ──────────────────────────────────
+  # Fabric CA crypto for org4+
   local ca_p=$((12054 + 1000 * (n - 4)))
   local ca_cert_dir="${ADD_ORG3}/fabric-ca/org${n}"
   local org_root="${TEST_NETWORK}/organizations/peerOrganizations/org${n}.example.com"
@@ -149,7 +149,7 @@ CAEOF
     -f compose/compose-ca-org${n}.yaml up -d 2>&1 | tail -2)
   sleep 10
 
-  # ── Enroll CA admin ─────────────────────────────────────────────
+  # Enroll CA admin 
   echo ">> [org${n}] enrolling CA admin..."
   mkdir -p "${org_root}"
   export FABRIC_CA_CLIENT_HOME="${org_root}"
@@ -183,7 +183,7 @@ NODEEOF
   mkdir -p "${org_root}/ca"
   cp "${ca_cert_dir}/ca-cert.pem" "${org_root}/ca/ca.org${n}.example.com-cert.pem"
 
-  # ── Register peers and users ────────────────────────────────────
+  #  Register peers and users
   echo ">> [org${n}] registering peer0, user1, org admin..."
   fabric-ca-client register --caname "ca-org${n}" \
     --id.name peer0 --id.secret peer0pw --id.type peer \
@@ -195,7 +195,7 @@ NODEEOF
     --id.name "org${n}admin" --id.secret "org${n}adminpw" --id.type admin \
     --tls.certfiles "${ca_cert_dir}/tls-cert.pem" >/dev/null 2>&1 || true
 
-  # ── Enroll peer0 (MSP + TLS) ───────────────────────────────────
+  #  Enroll peer0 (MSP + TLS) 
   echo ">> [org${n}] enrolling peer0..."
   local peer_msp="${org_root}/peers/peer0.org${n}.example.com/msp"
   local peer_tls="${org_root}/peers/peer0.org${n}.example.com/tls"
@@ -214,7 +214,7 @@ NODEEOF
   cp "${peer_tls}/signcerts/"*  "${peer_tls}/server.crt"
   cp "${peer_tls}/keystore/"*   "${peer_tls}/server.key"
 
-  # ── Enroll user1 and org admin MSPs ─────────────────────────────
+  # Enroll user1 and org admin MSPs 
   echo ">> [org${n}] enrolling User1 and Admin..."
   fabric-ca-client enroll -u "https://user1:user1pw@localhost:${ca_p}" \
     --caname "ca-org${n}" \
@@ -238,7 +238,7 @@ NODEEOF
 
   unset FABRIC_CA_CLIENT_HOME
 
-  # ── Org definition (configtxgen) ────────────────────────────────
+  # Org definition (configtxgen) 
   echo ">> [org${n}] generating org definition (configtxgen)..."
   local cfgdir="${ADD_ORG3}/.configtx-org${n}"
   mkdir -p "${cfgdir}"

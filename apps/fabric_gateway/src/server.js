@@ -20,15 +20,12 @@ const GATEWAY_TARGET = process.env.GATEWAY_TARGET || `${GATEWAY_PEER}:7051`;
 const TLS_NAME_OVERRIDE = process.env.TLS_NAME_OVERRIDE === '1';
 const INVOKE_TIMEOUT_MS = parseInt(process.env.INVOKE_TIMEOUT_MS || '60000', 10);
 const QUERY_TIMEOUT_MS = parseInt(process.env.QUERY_TIMEOUT_MS || '15000', 10);
-// Shared secret the blockchain gateway presents as X-Internal-Token. This
-// service holds every org's signing keys, so nothing reaches /invoke or /query
-// without it.
+// Shared secret the blockchain gateway presents as X-Internal-Token. This service holds every org's signing keys, so nothing reaches /invoke or /query without it.
 const INTERNAL_API_TOKEN = process.env.INTERNAL_API_TOKEN || '';
 const DEFAULT_ROLE = (process.env.GATEWAY_ROLE || 'official').trim();
 const ROLES = ['official', 'fact_checker'];
 
-// Only the misinformation contract's own transactions are callable, and
-// read-only functions only through /query.
+// Only the misinformation contract's own transactions are callable, and read-only functions only through /query.
 const INVOKE_FUNCTIONS = new Set([
   'RegisterOrg', 'RequestOrgAdmission', 'VoteOnOrgAdmission', 'FinalizeOrgAdmission',
   'SetFoundingOrgLimit', 'Submit', 'SubmitFactCheck', 'FinalizeReport', 'ExpireReport',
@@ -48,20 +45,6 @@ function readPrivateKey(dir) {
   return fs.readFileSync(path.join(dir, file));
 }
 
-// Which identity an org signs with. Defaults to Admin for backwards
-// compatibility, but submitting claims and fact-checks only needs a *client*
-// identity: the channel's Writers policy is OR('OrgNMSP.admin',
-// 'OrgNMSP.client'), while OR('OrgNMSP.admin') alone gates channel-config
-// changes. A member that only ever fact-checks should therefore sign as
-// User1 (OU=client) and keep its admin key offline — set IDENTITY_ORG4=User1.
-//
-// For ABAC, role-bearing identities are registered by register-roles.sh:
-//   officialN@orgN.example.com     — role=official     (admin/governance)
-//   fact_checkerN@orgN.example.com — role=fact_checker (submit/fact-check)
-// Each request names the role it acts under (the gateway passes the caller's
-// role), so the chaincode sees a fact-checker as a fact-checker rather than
-// every call signing as official. GATEWAY_ROLE is the default for requests
-// that name none.
 function identityNamesFor(num, role) {
   if (role === 'official') return [`official${num}`];
   if (role === 'fact_checker') return [`fact_checker${num}`, `factchecker${num}`];
@@ -129,7 +112,7 @@ function getContract(org, role) {
   return contracts.get(key);
 }
 
-// ------------------------------------------------------------------ app ----
+// ---app---
 const app = express();
 app.disable('x-powered-by');
 app.use(express.json({ limit: '64kb' }));
@@ -148,8 +131,7 @@ function requireInternalToken(req, res, next) {
   next();
 }
 
-// Validates and normalises an /invoke or /query body; returns an error string
-// or the parsed call.
+// Validates and normalises an /invoke or /query body; returns an error string or the parsed call.
 function parseCall(body, allowed) {
   const { org = 'org1', role = DEFAULT_ROLE, function: fn, args = [] } = body || {};
   if (!fn) return { error: 'missing "function"' };
@@ -176,10 +158,6 @@ app.get('/health', (_req, res) => {
   });
 });
 
-// GatewayError (EndorseError/SubmitError/CommitError) carries the real
-// chaincode-thrown message per endorsing peer in `.details[].message`; the
-// top-level `.message` is just a generic gRPC status ("10 ABORTED: failed to
-// endorse transaction..."). Prefer the detail messages when present.
 function errorMessage(err) {
   if (Array.isArray(err.details) && err.details.length) {
     const messages = [...new Set(err.details.map((d) => d.message).filter(Boolean))];

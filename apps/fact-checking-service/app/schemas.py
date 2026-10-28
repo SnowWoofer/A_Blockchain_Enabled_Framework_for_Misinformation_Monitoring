@@ -8,8 +8,7 @@ VALID_OUTCOMES = ("0", "1")
 
 
 def _safe_url(url: str) -> bool:
-    # Evidence links end up as <a href> in the web client: absolute http(s)
-    # only, no embedded credentials.
+    # Evidence links end up as <a href> in the web client: absolute http(s) only, no embedded credentials.
     if len(url) > 2048 or any(c.isspace() for c in url):
         return False
     try:

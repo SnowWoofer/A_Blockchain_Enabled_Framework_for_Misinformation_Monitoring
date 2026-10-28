@@ -58,8 +58,7 @@ async def caller(
     authorization: Optional[str] = Header(None, alias="Authorization"),
     x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
 ) -> Caller:
-    """Forward the caller's own credential (never one of ours) and let the
-    blockchain gateway say who they are."""
+    # Forward the caller's own credential (never one of ours) and let the blockchain gateway say who they are.
     creds: Dict[str, str] = {}
     if authorization:
         creds["Authorization"] = authorization
@@ -91,7 +90,7 @@ async def list_pending(
     ai_label: Optional[Literal["0", "1"]] = None,
     who: Caller = Depends(caller),
 ):
-    """Open claims the caller's org may still vote on."""
+    #Open claims the caller's org may still vote on.
     return await _chain_call(CLIENT.queue(who.creds, who.mspid, limit=limit, offset=offset,
                                           sort=sort, ai_label=ai_label))
 
@@ -99,7 +98,7 @@ async def list_pending(
 @app.get("/claims/reviewed")
 async def list_reviewed(limit: int = Query(20, ge=1, le=100), offset: int = Query(0, ge=0),
                         who: Caller = Depends(caller)):
-    """Claims the caller's org has already voted on."""
+    #Claims the caller's org has already voted on.
     return await _chain_call(CLIENT.reviewed(who.creds, who.mspid, limit=limit, offset=offset))
 
 

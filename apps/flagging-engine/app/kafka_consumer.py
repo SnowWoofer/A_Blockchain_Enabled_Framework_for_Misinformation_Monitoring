@@ -16,10 +16,6 @@ logger = logging.getLogger(__name__)
 
 
 class FlaggingConsumer:
-    """Kafka 'data inject' / 'data egest' side of the Flagging-Engine: reads raw
-    claims off KAFKA_INPUT_TOPIC, runs them through the dynamic batcher, and
-    writes the verdict (original fields + label/confidence) to
-    KAFKA_OUTPUT_TOPIC for the Registration-Service to pick up."""
 
     def __init__(self, batcher: DynamicBatcher, model_version: str):
         self.batcher = batcher
@@ -35,8 +31,7 @@ class FlaggingConsumer:
             group_id=settings.kafka_consumer_group,
             value_deserializer=lambda v: json.loads(v.decode("utf-8")),
             enable_auto_commit=True,
-            # A fresh group starts at the beginning of the topic, so claims queued
-            # while the model was still loading are scored rather than skipped.
+            # A fresh group starts at the beginning of the topic, so claims queued while the model was still loading are scored rather than skipped.
             auto_offset_reset="earliest",
         )
         self.producer = AIOKafkaProducer(

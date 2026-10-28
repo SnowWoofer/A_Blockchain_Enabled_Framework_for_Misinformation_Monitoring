@@ -9,19 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 class MisinfoModel:
-    """Loads the fine-tuned AfroXLM-R checkpoint and applies the requested
-    device / quantization combination.
-
-    Quantization support is backend-dependent:
-      - cuda: int8 / 4bit via bitsandbytes (BitsAndBytesConfig), fp16 via
-        torch_dtype, none = full fp32 precision (max-throughput server test).
-      - cpu:  int8 via torch's built-in dynamic quantization (CPU-only kernel,
-        no CUDA needed) to shrink AfroXLM-R Large towards ~700MB. 4bit has no
-        CPU kernel in stock PyTorch, so it falls back to int8 with a warning.
-      - mps:  bitsandbytes and torch dynamic quantization both lack MPS
-        kernels, so int8/4bit requests fall back to unquantized fp32/fp16 on
-        mps with a warning rather than silently moving the model to cpu.
-    """
+    # Loads the fine-tuned AfroXLM-R checkpoint and applies the requested device / quantization combination.
 
     def __init__(self):
         self.device = self._resolve_device(settings.torch_device)

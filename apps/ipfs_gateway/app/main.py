@@ -1,16 +1,3 @@
-"""Generic IPFS read/write bridge — a "dumb pipe" over kubo's HTTP API,
-mirroring how apps/fabric_gateway is a dumb pipe over the Fabric SDK: it
-knows nothing about report schemas, verdicts, or any other application
-concept, just raw bytes in (POST /add -> CID) and raw bytes out
-(GET /cat/{cid} -> bytes). blockchain_gateway is the only thing that knows
-what those bytes mean.
-
-Also independently reachable — downstream consumers that just need to fetch
-a report by CID (a public-transparency dashboard, an archival tool, another
-org's own systems) can hit this directly without going through
-blockchain_gateway's org-authenticated API at all, since IPFS content is
-already content-addressed: knowing the CID is itself the access grant, the
-same trust model any public IPFS gateway uses."""
 import hashlib
 import hmac
 import json
@@ -98,7 +85,7 @@ async def add(request: Request, x_internal_token: Optional[str] = Header(None, a
 
 @app.get("/cat/{cid}")
 def cat(cid: str):
-    """Fetch raw bytes for a CID, exactly as stored — no reinterpretation."""
+    # Fetch raw bytes for a CID, exactly as stored — no reinterpretation.
     if not CID_RE.fullmatch(cid):
         raise HTTPException(status_code=400, detail="malformed CID")
     req = urllib.request.Request(f"{settings.ipfs_api_url}/cat?arg={cid}", data=b"", method="POST")

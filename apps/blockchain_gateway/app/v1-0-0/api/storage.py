@@ -19,14 +19,12 @@ class StorageError(Exception):
 
 
 def hash_api_key(api_key: str) -> str:
-    # API keys are high-entropy bearer secrets, so a plain digest is enough to
-    # keep them out of the database without slowing every request with bcrypt.
+    # API keys are high-entropy bearer secrets, so a plain digest is enough to keep them out of the database without slowing every request with bcrypt.
     return hashlib.sha256(api_key.encode("utf-8")).hexdigest()
 
 
 def internal_headers() -> Dict[str, str]:
-    """Shared-secret header for the gateway's own sidecars (fabric_gateway,
-    ipfs_gateway). Empty when INTERNAL_API_TOKEN is unset (dev only)."""
+    # Shared-secret header for the gateway's own sidecars (fabric_gateway, ipfs_gateway). Empty when INTERNAL_API_TOKEN is unset (dev only).
     token = os.environ.get("INTERNAL_API_TOKEN", "")
     return {"X-Internal-Token": token} if token else {}
 
@@ -86,11 +84,7 @@ class CryptoGate:
 
 
 class IpfsStore:
-    """Thin client for apps/ipfs_gateway — a generic IPFS read/write bridge,
-    independently reachable by other consumers too (not just this service).
-    This class no longer talks to kubo directly; it just forwards bytes to
-    that bridge, same relationship as FabricGatewayBridge has with
-    apps/fabric_gateway."""
+    # Thin client for apps/ipfs_gateway — a generic IPFS read/write bridge, independently reachable by other consumers too (not just this service). This class no longer talks to kubo directly; it just forwards bytes to that bridge, same relationship as FabricGatewayBridge has with apps/fabric_gateway.
 
     def __init__(self, api_url: Optional[str] = None) -> None:
         self.api_url = (api_url or os.environ.get("IPFS_GATEWAY_URL", "http://localhost:9101")).rstrip("/")
@@ -163,8 +157,7 @@ class OffChainStore:
                 )
                 """
             )
-            # Older databases kept API keys in plaintext (org_keys). Hash them
-            # into api_keys once and drop the plaintext copy.
+            # Older databases kept API keys in plaintext (org_keys). Hash them into api_keys once and drop the plaintext copy.
             legacy = self._conn.execute(
                 "SELECT name FROM sqlite_master WHERE type='table' AND name='org_keys'"
             ).fetchone()
@@ -223,11 +216,7 @@ class OffChainStore:
                     "ALTER TABLE report_index ADD COLUMN content_hash TEXT NOT NULL DEFAULT ''"
                 )
     def _ipfs_ready(self) -> bool:
-        """`_ipfs_ok` is a cache, not a permanent verdict: if IPFS was down
-        (or ipfs_gateway just hadn't finished starting yet — a real race on
-        every fresh `docker compose up`, not just a rare edge case), retry
-        here rather than staying stuck on SQLite for the rest of the
-        process's life once the dependency comes back."""
+        #`_ipfs_ok` is a cache, not a permanent verdict: if IPFS was down (or ipfs_gateway just hadn't finished starting yet — a real race on every fresh `docker compose up`, not just a rare edge case), retry here rather than staying stuck on SQLite for the rest of the process's life once the dependency comes back.
         if not self._ipfs_ok:
             self._ipfs_ok = self._ipfs.is_available()
         return self._ipfs_ok
@@ -259,7 +248,7 @@ class OffChainStore:
                 )
 
     def principal_for_key(self, api_key: str) -> Optional[Tuple[str, str, str]]:
-        """(org, role, label) for a live API key, else None."""
+        # (org, role, label) for a live API key, else None.
         with self._lock:
             row = self._conn.execute(
                 "SELECT org, role, label FROM api_keys WHERE key_hash=? AND revoked=0",
@@ -321,8 +310,7 @@ class OffChainStore:
         return row["report_id"] if row else None
 
     def search_reports(self, query: str, limit: int = 500) -> List[str]:
-        """Report ids whose claim text matches every word in `query`. Words are
-        extracted and quoted, so user input can never form FTS5 syntax."""
+        # Report ids whose claim text matches every word in `query`. Words are extracted and quoted, so user input can never form FTS5 syntax.
         tokens = _FTS_TOKEN.findall(query)[:12]
         if not tokens:
             return []
@@ -342,10 +330,7 @@ class OffChainStore:
         return [r["report_id"] for r in rows]
 
     def save_report(self, report: Dict[str, Any]) -> str:
-        # content_hash is set by report.make_report() over the claim's fixed
-        # core fields (source/inference) and must not be touched here
-        # — it has to stay identical across every later version of this
-        # claim's document (see report._core_content).
+        # content_hash is set by report.make_report() over the claim's fixed core fields (source/inference) and must not be touched here — it has to stay identical across every later version of this claim's document (see report._core_content).
         created_at = report.get("submitter", {}).get("submitted_at", "")
         content = report["content_hash"]
         if self._ipfs_ready():
@@ -377,12 +362,7 @@ class OffChainStore:
         return f"http://localhost:8000/api/reports/{report['report_id']}"
 
     def save_report_version(self, report_id: str, report: Dict[str, Any]) -> str:
-        """Publishes `report` (the current full snapshot — claim content plus
-        every fact_check so far) as a new, immutable off-chain object without
-        changing the claim's stable report_id/on-chain ledger key. The old
-        CID stays resolvable in IPFS; this claim's version history is
-        recoverable from the ledger's own transaction history
-        (GET /api/reports/{id}/history) — nothing extra is tracked here."""
+        # Publishes `report` (the current full snapshot — claim content plus every fact_check so far) as a new, immutable off-chain object without changing the claim's stable report_id/on-chain ledger key. The old CID stays resolvable in IPFS; this claim's version history is recoverable from the ledger's own transaction history (GET /api/reports/{id}/history) — nothing extra is tracked here.
         report = {**report, "report_id": report_id}
         content = report["content_hash"]
         created_at = report.get("submitter", {}).get("submitted_at", "")

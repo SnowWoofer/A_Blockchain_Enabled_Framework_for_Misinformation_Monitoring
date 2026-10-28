@@ -114,7 +114,7 @@ class TestSessions:
         access = {"Authorization": f"Bearer {resp.json()['access_token']}"}
         assert client.get("/api/auth/me", headers=access).status_code == 200
 
-        # replaying the rotated token (as a thief would) ends the session
+        # replaying the rotated token as a thief would ends the session
         client.cookies.clear()
         client.cookies.set(auth.REFRESH_COOKIE, first)
         monkeypatch.setattr(auth, "REFRESH_REUSE_GRACE_S", 0)
@@ -126,7 +126,7 @@ class TestSessions:
         client.post("/api/auth/login", json={"username": "alice", "password": PASSWORD})
         first = client.cookies.get(auth.REFRESH_COOKIE)
         assert client.post("/api/auth/refresh", headers=XHR).status_code == 200
-        # a second tab sent the same (now rotated) cookie a moment later
+        # a second tab sent the same cookie a moment later
         client.cookies.clear()
         client.cookies.set(auth.REFRESH_COOKIE, first)
         resp = client.post("/api/auth/refresh", headers=XHR)

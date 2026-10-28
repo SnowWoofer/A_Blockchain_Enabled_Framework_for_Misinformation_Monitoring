@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
-# Sourced by the start-*.sh scripts: exports the repo-root .env (written by
-# gen-secrets.sh) so `docker compose -f apps/<svc>/docker-compose.yaml`, whose
-# project directory is not the repo root, still sees the shared secrets.
-# Values already set in the environment win.
+# Sourced by the start-*.sh scripts: exports the repo-root .env (written by gen-secrets.sh) so `docker compose -f apps/<svc>/docker-compose.yaml`, whose project directory is not the repo root, still sees the shared secrets.
+
 
 _env_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 _env_file="${SECRETS_ENV_FILE:-${_env_root}/.env}"

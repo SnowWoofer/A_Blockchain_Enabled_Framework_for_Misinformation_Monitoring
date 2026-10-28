@@ -22,9 +22,7 @@ def quorum_for(registered: int) -> int:
 
 
 class BlockchainClient:
-    """Thin client for apps/blockchain_gateway — the only thing this service
-    talks to. It forwards the caller's own credential on every call, so the
-    gateway (and through it the chaincode) sees the real caller."""
+    #Thin client for apps/blockchain_gateway — the only thing this service talks to. It forwards the caller's own credential on every call, so the gateway (and through it the chaincode) sees the real caller.
 
     def __init__(self):
         self.http = httpx.AsyncClient(base_url=settings.blockchain_api_base, timeout=20.0)
@@ -59,14 +57,7 @@ class BlockchainClient:
 
     @staticmethod
     def project(record: Dict[str, Any], doc: Dict[str, Any], registered: int, viewer_msp: str) -> Dict[str, Any]:
-        """A claim as a fact-checker sees it: the on-chain record joined with
-        the readable content of its off-chain document.
-
-        Blind review: until the viewer's org has cast its vote (or the report
-        has closed), other orgs' verdicts, reasoning and the yes/no tally are
-        withheld; only how many orgs have voted is shown. This keeps each
-        org's assessment independent. It is a property of this workflow, not
-        of the ledger, which any member can still query directly."""
+        # A claim as a fact-checker sees it: the on-chain record joined with the readable content of its off-chain document.
         source = doc.get("source", {})
         checks = record.get("fact_checks") or []
         submitter = record.get("submitted_by", "")
@@ -121,8 +112,7 @@ class BlockchainClient:
 
     async def queue(self, creds: Dict[str, str], viewer_msp: str, *, limit: int, offset: int,
                     sort: str, ai_label: Optional[str]) -> Dict[str, Any]:
-        """Open claims this org has not voted on yet, its own submissions
-        included. Most urgent (earliest deadline) first by default."""
+        # Open claims this org has not voted on yet, its own submissions included. Most urgent (earliest deadline) first by default.
         records, registered = await asyncio.gather(
             self.request("GET", creds, "/api/reports"), self.registered_orgs(creds))
         todo = [

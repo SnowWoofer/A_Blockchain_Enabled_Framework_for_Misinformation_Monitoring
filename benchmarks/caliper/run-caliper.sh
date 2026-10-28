@@ -4,9 +4,7 @@
 #   run-caliper.sh            build + run the full benchmark suite, then show report path
 #   run-caliper.sh down       remove the caliper container
 #
-# Runs inside the fabric_test docker network (same reason as the Explorer):
-# discovered endorser hostnames resolve natively. Crypto material is mounted
-# read-only at /crypto. Results land in benchmarks/caliper/report.html.
+# Runs inside the fabric_test docker network (same reason as the Explorer) discovered endorser hostnames resolve natively. Crypto material is mounted read-only at /crypto. Results land in benchmarks/caliper/report.html.
 
 set -euo pipefail
 

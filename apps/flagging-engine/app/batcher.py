@@ -11,9 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 class DynamicBatcher:
-    """Collects individual inference requests into batches, flushing whichever
-    bound is hit first: MAX_BATCH_SIZE requests, or MAX_QUEUE_DELAY_MS elapsed
-    since the first request in the batch arrived."""
+    # Collects individual inference requests into batches, flushing whichever bound is hit first: MAX_BATCH_SIZE requests, or MAX_QUEUE_DELAY_MS elapsed since the first request in the batch arrived.
 
     def __init__(
         self,

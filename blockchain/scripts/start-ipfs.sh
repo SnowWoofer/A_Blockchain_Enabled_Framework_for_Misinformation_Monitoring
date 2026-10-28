@@ -1,12 +1,7 @@
 #!/usr/bin/env bash
-#
-# Brings up the three-node IPFS swarm (apps/ipfs_gateway/docker-compose.yaml)
-# and dials the nodes into one another.
-#
-# The nodes used to be a hand-run `docker run` container that this script tried
-# to start with `docker compose up -d ipfs-node` — a service that did not exist
-# in any compose file, so the call failed and the node only ever survived
-# because someone had created it manually. They are compose services now.
+
+# Brings up the three-node IPFS swarm (apps/ipfs_gateway/docker-compose.yaml) and dials the nodes into one another.
+
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -26,8 +21,7 @@ if [[ "${1:-up}" == "down" ]]; then
   exit 0
 fi
 
-# Node 0's datastore volume is declared external (it may predate compose);
-# create it on a fresh host so `compose up` does not fail.
+# Node 0's datastore volume is declared external (it may predate compose); create it on a fresh host so `compose up` does not fail.
 docker volume inspect ipfs-data >/dev/null 2>&1 || docker volume create ipfs-data >/dev/null
 
 echo ">> Starting IPFS swarm (${NODES[*]})..."
@@ -46,7 +40,6 @@ for port in "${RPC_PORTS[@]}"; do
   echo "   ready: http://localhost:${port}"
 done
 
-# Close the swarm (shared swarm.key, no public bootstrap) before wiring the
-# nodes together, so claim documents never reach the public IPFS network.
+# Close the swarm (shared swarm.key, no public bootstrap) before wiring the nodes together, so claim documents never reach the public IPFS network.
 "${SCRIPT_DIR}/ipfs-private-swarm.sh"
 "${SCRIPT_DIR}/peer-ipfs.sh"

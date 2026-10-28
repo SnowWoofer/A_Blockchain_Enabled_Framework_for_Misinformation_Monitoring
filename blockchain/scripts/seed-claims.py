@@ -1,18 +1,7 @@
 #!/usr/bin/env python3
-"""Fill a fresh deployment's review queue with claims from data/test.json.
+# Fill a fresh deployment's review queue with claims from data/test.json.
+# Usage: python3 blockchain/scripts/seed-claims.py --count 10 --seed 42
 
-Picks --count claims from the multilingual evaluation set with a fixed --seed,
-so every fresh deployment starts with the same claims, and sends them in
-through claim-ingest-worker's POST /ingest (INGEST_API_KEY). From there they
-take the real pipeline: Kafka -> flagging engine (the AI scores each one) ->
-submission worker -> gateway -> IPFS + Fabric. Only the statement text is
-sent; the dataset's ground-truth label stays out, so review stays blind.
-
-Nothing is sent when the ledger already holds reports (--force to seed
-anyway), so re-running the script does not duplicate the queue.
-
-    python3 blockchain/scripts/seed-claims.py --count 10 --seed 42
-"""
 from __future__ import annotations
 
 import argparse

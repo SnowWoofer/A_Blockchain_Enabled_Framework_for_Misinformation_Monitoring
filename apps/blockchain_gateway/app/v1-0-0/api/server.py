@@ -115,7 +115,7 @@ def _ledger() -> "MockLedger":
 
 
 def bridge_for(org: str, role: str = "official", endorsers: Optional[List[str]] = None) -> Any:
-    """A ledger client that signs as `org` using the identity for `role`."""
+    # A ledger client that signs as `org` using the identity for `role`.
     if FABRIC_BACKEND == "mock":
         return MockLedgerBridge(_ledger(), org=org, role=role)
     if FABRIC_BACKEND in ("gateway", "auto") and FabricGatewayBridge is not None:
@@ -138,8 +138,7 @@ def _bridge(principal: Principal) -> Any:
 
 
 def _chain_error_detail(exc: Exception) -> str:
-    """The sidecar wraps chaincode errors as `gateway service error (500):
-    {"ok":false,...,"error":"<message>"}`; surface just the message."""
+    # The sidecar wraps chaincode errors as `gateway service error (500):{"ok":false,...,"error":"<message>"}`; surface just the message.
     text = str(exc)
     brace = text.find("{")
     if brace != -1:
@@ -216,9 +215,7 @@ def _audit(principal: Principal, request: Request, action: str, target: str = ""
                  target=target, outcome=outcome, ip=client_ip(request), details=details)
 
 
-# Off-chain documents are read-modify-written on every vote; concurrent votes
-# from different orgs on the same report would otherwise lose one another's
-# reasoning. Striped locks keep memory bounded however many reports exist.
+# Off-chain documents are read-modify-written on every vote; concurrent votes from different orgs on the same report would otherwise lose one another's reasoning. Striped locks keep memory bounded however many reports exist.
 _DOC_LOCKS = [threading.Lock() for _ in range(64)]
 
 
@@ -227,8 +224,7 @@ def _doc_lock(report_id: str) -> threading.Lock:
 
 
 class _TTLCache:
-    """Short-lived cache for the unauthenticated read API, so public traffic
-    cannot turn into one full-ledger scan per request against the peers."""
+    # Short-lived cache for the unauthenticated read API, so public traffic cannot turn into one full-ledger scan per request against the peers.
 
     def __init__(self) -> None:
         self._data: Dict[str, Any] = {}
@@ -291,8 +287,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Misinformation Monitoring API", version="3.0", lifespan=lifespan)
 install_security_middleware(app)
-# The web client is served from the same origin as the API (via the edge
-# proxy), so CORS stays closed unless specific origins are configured.
+# The web client is served from the same origin as the API (via the edge proxy), so CORS stays closed unless specific origins are configured.
 _cors = [o.strip() for o in os.environ.get("CORS_ORIGINS", "").split(",") if o.strip()]
 if _cors:
     app.add_middleware(
@@ -428,8 +423,7 @@ def list_reports(status: Optional[str] = Query(None, max_length=16), principal: 
 
 
 def consensus_summary(record: Dict[str, Any], registered: int, viewer_msp: str = "") -> Dict[str, Any]:
-    """Where a report stands against the chaincode's 2/3 rule. Every registered
-    org votes, the submitter included."""
+    # Where a report stands against the chaincode's 2/3 rule. Every registered org votes, the submitter included.
     checks = record.get("fact_checks") or []
     yes = sum(1 for c in checks if c.get("outcome") == "1")
     voted = {c.get("checker_msp") for c in checks}
@@ -588,10 +582,7 @@ def audit_verify(principal: Principal = Depends(_governor)):
         raise HTTPException(status_code=500, detail="audit log not initialized")
     return log.verify()
 
-# Public, unauthenticated read API for the transparency portal. Only closed
-# reports are exposed: an unverified claim still under review is never
-# published, so the portal cannot amplify misinformation. Fact-checkers
-# appear only as their organisation.
+# Public, unauthenticated read API for the transparency portal. Only closed reports are exposed: an unverified claim still under review is never published, so the portal cannot amplify misinformation. Fact-checkers appear only as their organisation.
 
 CLOSED_STATUSES = ("FINAL", "REJECTED", "EXPIRED")
 
@@ -634,8 +625,7 @@ def _public_summary(record: Dict[str, Any], meta: Optional[Dict[str, Any]], regi
 
 
 def _ensure_meta(records: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
-    """Claim text for a page of reports. Reports submitted before the search
-    index existed are back-filled from their off-chain document."""
+    # Claim text for a page of reports. Reports submitted before the search index existed are back-filled from their off-chain document.
     ids = [r["id"] for r in records if r.get("id")]
     meta = STORE.report_meta(ids)
     for rid in ids:
@@ -732,8 +722,7 @@ def public_report(report_id: str):
 
 @app.get("/api/public/tips/{msg_id}")
 def public_tip_status(msg_id: str):
-    """Lets whoever submitted a tip follow it using the reference they got
-    back. The reference is random, so it reveals nothing about other claims."""
+    # Lets whoever submitted a tip follow it using the reference they got back. The reference is random, so it reveals nothing about other claims.
     if not MSG_ID_RE.fullmatch(msg_id):
         raise HTTPException(status_code=400, detail="malformed reference")
     report_id = STORE.report_id_for_msg(msg_id)

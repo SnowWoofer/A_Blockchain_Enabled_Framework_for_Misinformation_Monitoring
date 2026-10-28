@@ -1,17 +1,7 @@
 #!/usr/bin/env bash
-#
-# demo.sh — the web client without Hyperledger Fabric, for laptop demos and UI
-# work: blockchain gateway on its in-memory mock ledger (FABRIC_BACKEND=mock),
-# fact-checking service and the TLS web edge, seeded with sample claims.
-#
-# The mock ledger mirrors the chaincode's rules but is NOT a blockchain, and
-# the UI says so in a banner. For the real system use ./startup.sh.
-#
-#   ./demo.sh up [--orgs N] [--claims N]   build, start, seed accounts + claims
-#   ./demo.sh down                          stop the demo containers
-#   ./demo.sh reset                         down + forget the demo ledger/documents
-#
-# Container names match the full stack's, so stop that first.
+
+# demo.sh — the web client without Hyperledger Fabric, for laptop demos and UI work: blockchain gateway on its in-memory mock ledger (FABRIC_BACKEND=mock), fact-checking service and the TLS web edge, seeded with sample claims.
+
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

@@ -1,7 +1,6 @@
 'use strict';
 
-// Runs without a Fabric network: requests that pass validation fail later at
-// identity loading, which is enough to prove the guards in front of it.
+// Runs without a Fabric network: requests that pass validation fail later at identity loading, which is enough to prove the guards in front of it.
 process.env.INTERNAL_API_TOKEN = 'test-internal-token';
 process.env.CRYPTO_PATH = '/nonexistent';
 process.env.ORGS = 'org1,org2';

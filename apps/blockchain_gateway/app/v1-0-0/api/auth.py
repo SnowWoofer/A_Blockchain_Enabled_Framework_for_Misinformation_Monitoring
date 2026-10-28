@@ -1,24 +1,3 @@
-"""Authentication and authorization for the blockchain gateway.
-
-Two kinds of principal:
-
-* API keys (X-API-Key) - machine clients: benchmark harnesses, the
-  submission worker, other org services. Stored hashed, each bound to an org
-  and a role.
-* User accounts (AUTH_MODE=jwt, the default) - people using the web client.
-  Individual usernames scoped to one org, bcrypt passwords, lockout after
-  repeated failures, optional TOTP. A session is a short-lived JWT access token
-  (kept in memory by the browser) plus a rotating refresh token in an HttpOnly,
-  SameSite=Strict cookie; replaying a rotated refresh token ends the session.
-
-Gateway roles and the Fabric identity each one signs with, so chaincode ABAC
-sees the same role the gateway authorised:
-
-    official      -> officialN      governance, finalize/expire, user admin, vote
-    fact_checker  -> fact_checkerN  vote, escalate claims
-    observer      -> (read only)    never invokes
-    ai_submitter  -> fact_checkerN  POST /api/reports only (the AI pipeline)
-"""
 from __future__ import annotations
 
 import hashlib
@@ -66,8 +45,7 @@ JWT_AUDIENCE = "misinfo-api"
 ACCESS_TTL_S = int(os.environ.get("ACCESS_TOKEN_TTL_S", "900"))
 REFRESH_TTL_S = int(os.environ.get("REFRESH_TOKEN_TTL_S", str(8 * 3600)))
 REFRESH_COOKIE = "mm_refresh"
-# A just-rotated refresh token may be presented once more within this window
-# (two tabs refreshing at the same moment) without being treated as theft.
+# A just-rotated refresh token may be presented once more within this window (two tabs refreshing at the same moment) without being treated as theft.
 REFRESH_REUSE_GRACE_S = float(os.environ.get("REFRESH_REUSE_GRACE_S", "20"))
 MAX_FAILED_LOGINS = int(os.environ.get("MAX_FAILED_LOGINS", "5"))
 LOCKOUT_S = int(os.environ.get("LOCKOUT_S", "900"))
@@ -76,8 +54,7 @@ USERNAME_RE = re.compile(r"^[a-z0-9][a-z0-9._-]{2,63}$")
 
 
 def get_auth_mode() -> str:
-    """`jwt` (default): user accounts and API keys. `bootstrap`: API keys
-    only, the original benchmark-only behaviour."""
+    #`jwt` (default): user accounts and API keys. `bootstrap`: API keys only, the original benchmark-only behaviour.
     return os.environ.get("AUTH_MODE", "jwt").strip().lower()
 
 
@@ -155,8 +132,7 @@ def generate_temp_password() -> str:
     return "-".join("".join(secrets.choice(_TEMP_ALPHABET) for _ in range(4)) for _ in range(4))
 
 
-# Compared against when the username does not exist, so a failed login takes
-# the same time whether or not the account is real.
+# Compared against when the username does not exist, so a failed login takes the same time whether or not the account is real.
 _DUMMY_HASH = hash_password(secrets.token_urlsafe(16))
 
 # User store
@@ -224,9 +200,7 @@ class UserStore:
                 )
                 """
             )
-            # The previous JWT mode had one shared password per org. Carry
-            # those accounts over as `orgN` officials who must pick a new
-            # password at their next sign-in.
+            # The previous JWT mode had one shared password per org. Carry those accounts over as `orgN` officials who must pick a new password at their next sign-in.
             legacy = self._conn.execute(
                 "SELECT name FROM sqlite_master WHERE type='table' AND name='org_users'"
             ).fetchone()
@@ -316,10 +290,7 @@ class UserStore:
         return sid, token
 
     def rotate_refresh(self, token: str) -> Tuple[str, str, str, str]:
-        """(status, sid, username, new_token). status is ok | invalid |
-        expired | reused. A token presented again after rotation (outside the
-        short grace window) revokes its whole session, because only a stolen
-        copy should still be in circulation."""
+        # (status, sid, username, new_token). status is ok | invalid | expired | reused. A token presented again after rotation (outside the short grace window) revokes its whole session, because only a stolen copy should still be in circulation.
         now = time.time()
         with self._lock, self._conn:
             row = self._conn.execute(
@@ -485,8 +456,7 @@ def _deny(request: Request, principal: Principal, detail: str) -> HTTPException:
 
 
 def require(*roles: str, humans_only: bool = False):
-    """Dependency: the caller must hold one of `roles` (and, with
-    humans_only, be a signed-in user rather than an API key)."""
+    # Dependency: the caller must hold one of `roles` (and, with humans_only, be a signed-in user rather than an API key).
     def dependency(request: Request, principal: Principal = Depends(get_principal)) -> Principal:
         if principal.must_change_password:
             raise HTTPException(status_code=403, detail="password change required before continuing")
@@ -499,9 +469,7 @@ def require(*roles: str, humans_only: bool = False):
 
 
 def reviewer_ref(principal: Principal) -> str:
-    """Stable pseudonym for the individual behind a vote. Published in the
-    off-chain document so an org can trace its own reviewers (it can recompute
-    the HMAC) while outsiders cannot single out and target a fact-checker."""
+    # Stable pseudonym for the individual behind a vote. Published in the off-chain document so an org can trace its own reviewers (it can recompute the HMAC) while outsiders cannot single out and target a fact-checker.
     key = _secret("PSEUDONYM_KEY").encode("utf-8")
     return hmac.new(key, f"{principal.org}:{principal.subject}".encode("utf-8"), hashlib.sha256).hexdigest()[:16]
 
@@ -551,9 +519,7 @@ def _require_jwt_mode() -> None:
 
 
 def _require_xhr(request: Request) -> None:
-    # Cookie-authenticated endpoints also demand a custom header: a
-    # cross-site form post cannot set one, so this closes CSRF even if the
-    # SameSite cookie attribute is ignored by an old browser.
+    # Cookie-authenticated endpoints also demand a custom header: a cross-site form post cannot set one, so this closes CSRF even if the SameSite cookie attribute is ignored by an old browser.
     if request.headers.get("x-requested-with") != "XMLHttpRequest":
         raise HTTPException(status_code=403, detail="missing X-Requested-With header")
 
@@ -813,8 +779,7 @@ def update_user(username: str, body: UserUpdate, request: Request, principal: Pr
 
 @router.post("/api/users/{username}/reset")
 def reset_user(username: str, request: Request, principal: Principal = Depends(_org_admin)):
-    """Account recovery: new one-time password, second factor cleared, all
-    sessions ended. The user must choose a new password at next sign-in."""
+    # Account recovery: new one-time password, second factor cleared, all sessions ended. The user must choose a new password at next sign-in.
     _member(username, principal)
     temp = generate_temp_password()
     store = get_user_store()

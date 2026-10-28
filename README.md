@@ -73,6 +73,12 @@ the same name started from another clone of this repository.
 Output is mirrored to `logs/up-<timestamp>.log`. The sections below describe
 the same steps individually.
 
+> **Before the first run**, download the model weights (`model.safetensors`, 2.2 GB,
+> not in git) from the [model folder on Google Drive](https://drive.google.com/drive/folders/1EcaSIEqh1-BTeSL_ThZse6P1IAhImncs?usp=sharing) and place them in
+> `apps/flagging-engine/model/`, or the flagging engine is not started. **On Docker Engine 29.x** two extra steps are needed: re-tag the Fabric
+> images before `up.py`, and attach the blockchain gateway to `fabric_test`
+> after it (see [Docker 29 / WSL 2](#docker-29--wsl-2) below).
+
 ## How it works
 
 The system has **two layers** that run independently:
@@ -170,11 +176,11 @@ fact-check them. Two submission modes:
 |`apps/web-client/`|React web client + nginx TLS edge|
 |`apps/kafka/`|Kafka broker (KRaft)|
 |`monitoring/`|Prometheus + Grafana provisioning|
-|`documentation/`|architecture diagrams, source formats|
 |`data/`|multilingual claim dataset (`train.json`, `val.json`, `test.json`); `test.json` seeds the review queue and feeds the benchmarks|
 |`results/local/`|benchmark CSVs (`http.csv`, `caliper.csv`, `real_loads.csv`)|
 > Git-ignored: Python virtualenv, `blockchain/fabric-samples/`, `offchain.db`,
-> `apps/flagging-engine/model/model.safetensors`.
+> `apps/flagging-engine/model/model.safetensors` (download it from the
+> [model folder on Google Drive](https://drive.google.com/drive/folders/1EcaSIEqh1-BTeSL_ThZse6P1IAhImncs?usp=sharing)).
 
 ## Prerequisites
 
@@ -230,6 +236,9 @@ mv fabric-samples/test-network .
 rm -rf fabric-samples
 # Result: blockchain/fabric-samples/{bin,config,test-network}
 ```
+
+On Docker Engine 29.x, also point the `latest` image tags at Fabric 2.5.16 after
+this step (see [Docker 29 / WSL 2](#docker-29--wsl-2)).
 
 ### 3. Create the Python virtualenv (one-time)
 
@@ -368,6 +377,8 @@ the on-chain org count** via `GET /api/orgs`, so they always match the live
 consortium regardless of what `--orgs` you provisioned. `startup.sh` sets the
 `ORGS_LIST` for the gateways itself, so the gateway org map is always in sync
 on this path (only the incremental path below needs a manual gateway restart).
+On Docker Engine 29.x, run `docker network connect fabric_test blockchain-gateway`
+once `startup.sh` finishes (see [Docker 29 / WSL 2](#docker-29--wsl-2)).
 
 ### Step 2: Start Explorer (patched)
 
@@ -433,7 +444,7 @@ done && echo "engine ready"
 
 ```
 python3 benchmarks/feed_samples.py \
-  --data data/translated_masked_samples_test.json \
+  --data data/test.json \
   --samples 10 \
   --ai-pct 70 \
   --mode direct \
@@ -445,7 +456,7 @@ Results are appended to `results/local/real_loads.csv`.
 
 |Flag|Purpose|Default|
 |-|-|-|
-|`--data`|JSON file with statements|`data/translated_masked_samples_test.json`|
+|`--data`|JSON file with statements|`data/test.json`|
 |`--samples N`|Randomly select N samples|all|
 |`--ai-pct P`|% of reports the AI processed (submitted by org1 in direct mode)|100|
 |`--num-orgs N`|Override on-chain org count|**auto-detected** from `/api/orgs`|
@@ -556,7 +567,7 @@ no manual org count anywhere. Note `add-orgs.sh` requires the org3 baseline
 
 ```
 python3 benchmarks/feed_samples.py \
-  --data data/translated_masked_samples_test.json \
+  --data data/test.json \
   --samples 200 \
   --ai-pct 70 \
   --mode direct \
@@ -568,7 +579,7 @@ Results are appended to `results/local/real_loads.csv`.
 
 |Flag|Purpose|Default|
 |-|-|-|
-|`--data`|JSON file with statements|`data/translated_masked_samples_test.json`|
+|`--data`|JSON file with statements|`data/test.json`|
 |`--samples N`|Randomly select N samples|all|
 |`--ai-pct P`|% of reports the AI processed (submitted by org1 in direct mode)|100|
 |`--num-orgs N`|Override on-chain org count|**auto-detected** from `/api/orgs`|
@@ -656,7 +667,7 @@ sizes:
 ```
 for S in 10 50 100 150; do
   python3 benchmarks/feed_samples.py \
-    --data data/translated_masked_samples_test.json \
+    --data data/test.json \
     --samples "$S" --ai-pct 50 --mode direct --reject-pct 25 --seed 100 \
     --endpoint http://localhost:8004 --blockchain-api http://localhost:8000 \
     --num-orgs N --output results/local/real_loads.csv
@@ -1099,9 +1110,47 @@ docker compose -f blockchain/explorer/docker-compose.yaml down   # or down -v to
 
 ## Troubleshooting
 
+### Docker 29 / WSL 2
+
+These are environment issues seen on Docker Engine 29.x (containerd image store)
+under WSL 2. They need no code changes.
+
+**Chaincode install fails: `docker build failed ... write: broken pipe`.** The
+test-network starts peers from `hyperledger/fabric-peer:latest`. Provisioning
+Fabric 2.5.9 re-tags `latest` to the 2.5.9 peer, which cannot build chaincode
+images with Docker 29. Point `latest` at 2.5.16, then run `python3 down.py` and
+`python3 up.py` again:
+
+```bash
+docker tag hyperledger/fabric-peer:2.5.16    hyperledger/fabric-peer:latest
+docker tag hyperledger/fabric-orderer:2.5.16 hyperledger/fabric-orderer:latest
+```
+
+**`FAILED: ledger reachable, API through the edge did not become healthy`** (the
+web client shows 502 on the review queue). The blockchain gateway cannot reach
+the Fabric Gateway SDK service (`fabric-gateway:9100`) over `misinfo_net`. After
+`up.py` finishes, attach the gateway to the Fabric network as well (repeat after
+every `up.py`):
+
+```bash
+docker network connect fabric_test blockchain-gateway
+curl -sk https://localhost:8443/api/public/info   # expect "ledger_backend":"gateway"
+```
+
+**Flagging engine not started.** `model.safetensors` is missing from
+`apps/flagging-engine/model/`. Download it from the
+[model folder on Google Drive](https://drive.google.com/drive/folders/1EcaSIEqh1-BTeSL_ThZse6P1IAhImncs?usp=sharing), add it, then start only the engine with
+`docker compose up -d --build flagging-engine`, or re-run `up.py`.
+
+**`feed_samples.py` / `load-http.py` cannot authenticate.** They use the
+well-known `key-orgN` / `stress-key` keys, which only exist when the system is
+started with `python3 up.py --benchmark` (the default secure mode revokes them).
+
+### Common issues
+
 |Symptom|Cause / fix|
 |-|-|
-|`ERROR: unknown flag` from `startup.sh`|Only `--orgs`, `--test-samples`, `--skip-caliper` and `--help` exist.|
+|`ERROR: unknown flag` from `startup.sh`|Only `--orgs`, `--test-samples`, `--skip-caliper`, `--secure` and `--help` exist.|
 |`ERROR: API gateway unreachable (HTTP 000)`|Gateway not running. Run `./startup.sh` first.|
 |Gateway returns `401` on `/api/status`|API keys never seeded — run `bootstrap-keys.sh`.|
 |`ERROR: --orgs must be a positive integer (got 'org1,...,orgN')`|A shell exported the CSV org list into the `ORGS` integer variable. The startup scripts use a separate `ORGS_LIST`; don't clobber `ORGS`.|

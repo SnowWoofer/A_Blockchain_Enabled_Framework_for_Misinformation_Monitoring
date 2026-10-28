@@ -4,7 +4,7 @@ from tests.conftest import api_key, reset_ledger, submit, user_headers, vote
 
 
 def _split_report(client):
-    """6 orgs (quorum 4): two YES and one NO leaves the report open."""
+    #6 orgs, quorum 4: two YES and one NO leaves the report open.
     reset_ledger(client, orgs=6)
     report_id = submit(client, api_key(client, "org1"))
     vote(client, api_key(client, "org2"), report_id, "1")

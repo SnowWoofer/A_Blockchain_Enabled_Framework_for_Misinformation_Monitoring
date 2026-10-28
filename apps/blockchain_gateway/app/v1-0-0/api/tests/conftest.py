@@ -7,10 +7,10 @@ from typing import Dict, List, Tuple
 
 import pytest
 
-# Must be set before the gateway modules are imported (read at import time).
+# Must be set before the gateway modules are imported.
 os.environ.setdefault("BCRYPT_ROUNDS", "4")
 os.environ["COOKIE_SECURE"] = "0"  # the test client talks plain http
-# Orgs the gateway can sign for; the ledger fixture registers only org1..org3.
+# Orgs the gateway can sign for, the ledger fixture registers only org1..org3.
 os.environ["ORGS"] = ",".join(f"org{i}" for i in range(1, 10))
 os.environ["JWT_SECRET"] = "test-jwt-secret-" + "x" * 32
 os.environ["PSEUDONYM_KEY"] = "test-pseudonym-key"
@@ -25,7 +25,7 @@ PASSWORD = "correct-horse-battery"
 
 
 class FakeIpfs(IpfsStore):
-    """Content-addressed in-memory stand-in for apps/ipfs_gateway."""
+    #Content-addressed in-memory stand-in for apps/ipfs_gateway.
 
     def __init__(self) -> None:
         super().__init__("http://fake-ipfs")
@@ -44,8 +44,7 @@ class FakeIpfs(IpfsStore):
 
 
 class RecordingBridges:
-    """bridge_for() replacement over one shared MockLedger that remembers
-    which (org, role) identity every call signed with."""
+    #bridge_for() replacement over one shared MockLedger that remembers which (org, role) identity every call signed with.
 
     def __init__(self, ledger) -> None:
         self.ledger = ledger
@@ -108,7 +107,7 @@ def client_bootstrap(tmp_path, bridges):
 
 
 def reset_ledger(client, orgs: int = 3, window_s: int = 72 * 3600) -> None:
-    """Swap in a fresh ledger with org1..org<orgs> registered."""
+    #Swap in a fresh ledger with org1..org<orgs> registered.
     from mock_ledger import MockLedger
     client.bridges.ledger = MockLedger([f"org{i}" for i in range(1, orgs + 1)], window_s=window_s)
 

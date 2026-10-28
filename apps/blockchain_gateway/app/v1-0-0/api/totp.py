@@ -1,5 +1,3 @@
-"""RFC 6238 time-based one-time passwords (SHA-1, 6 digits, 30 s steps — the
-parameters every mainstream authenticator app defaults to)."""
 from __future__ import annotations
 
 import base64
@@ -36,8 +34,7 @@ def code_at(secret: str, now: Optional[float] = None) -> str:
 
 
 def verify(secret: str, code: str, last_step: int = -1, now: Optional[float] = None) -> Optional[int]:
-    """The matching time step (±1 step of clock drift), or None. Steps at or
-    before `last_step` are refused so a captured code cannot be replayed."""
+    # The matching time step (±1 step of clock drift), or None. Steps at or before `last_step` are refused so a captured code cannot be replayed.
     code = (code or "").strip().replace(" ", "")
     if not (code.isdigit() and len(code) == DIGITS):
         return None

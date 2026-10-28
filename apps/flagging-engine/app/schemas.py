@@ -2,8 +2,7 @@ from pydantic import BaseModel, Field
 
 
 class ClaimMessage(BaseModel):
-    """The claims.raw Kafka input contract, produced by the Claim-Ingest-workers.
-    This model is the contract — there is no separate schema file."""
+    #The claims.raw Kafka input contract, produced by the Claim-Ingest-workers. This model is the contract — there is no separate schema file.
 
     msg_id: str
     source_platform: str

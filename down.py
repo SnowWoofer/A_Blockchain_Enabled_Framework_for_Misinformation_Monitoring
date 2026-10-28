@@ -1,19 +1,6 @@
 #!/usr/bin/env python3
-"""Shut the whole Misinformation Monitor system down and clean up, in one command.
+# Shut the whole Misinformation Monitor system down and clean up, in one command.
 
-    python3 down.py              stop and remove every container, network, volume,
-                                 chaincode image and runtime file the system created
-    python3 down.py --purge      also delete the generated secrets (.env, secrets/,
-                                 the IPFS swarm key) and the images built here
-    python3 down.py --dry-run    show what would be removed, change nothing
-
-Never touched: research results (results/), datasets (data/), the model
-weights, the Fabric binaries in blockchain/fabric-samples/, and source code.
-
-Container names are fixed in the compose files, so this also removes
-containers of the same name started from another clone of the repository.
-Stdlib only; needs Docker with Compose v2.
-"""
 from __future__ import annotations
 
 import argparse
@@ -59,8 +46,7 @@ RUNTIME_FILES = [
 ]
 PURGE_PATHS = [ROOT / ".env", ROOT / "secrets", ROOT / "blockchain/scripts/swarm.key",
                ROOT / "apps/web-client/dist"]
-# Placeholders so `compose down` can parse files whose ${VAR:?} secrets are
-# unset (e.g. after a purge). Only used when the real value is missing.
+# Placeholders so `compose down` can parse files whose ${VAR:?} secrets are unset (e.g. after a purge). Only used when the real value is missing.
 COMPOSE_PLACEHOLDERS = {
     k: "unset" for k in ("JWT_SECRET", "INTERNAL_API_TOKEN", "PSEUDONYM_KEY", "PIPELINE_RAW_KEY",
                          "PIPELINE_FLAGGED_KEY", "INGEST_API_KEY", "SUBMITTER_API_KEY", "GRAFANA_ADMIN_PASSWORD")

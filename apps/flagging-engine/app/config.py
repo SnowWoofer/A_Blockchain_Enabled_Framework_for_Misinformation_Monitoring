@@ -4,7 +4,6 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore", protected_namespaces=())
 
-    # --- Machine Learning Acceleration ---
     # cpu | mps  -> laptop test        cuda -> 5090 server test
     torch_device: str = "cpu"
     # none | fp16 -> full precision (server)   int8 | 4bit -> compressed (laptop)
@@ -24,14 +23,12 @@ class Settings(BaseSettings):
     kafka_output_topic: str = "claims.flagged"
     kafka_consumer_group: str = "flagging-engine"
 
-    # HMAC keys (see app/signing.py): verify what claim-ingest-worker put on
-    # claims.raw, sign what this engine puts on claims.flagged.
+    # HMAC keys (see app/signing.py): verify what claim-ingest-worker put on claims.raw, sign what this engine puts on claims.flagged.
     pipeline_raw_key: str = ""
     pipeline_flagged_key: str = ""
     pipeline_allow_unsigned: bool = False
 
-    # Optional X-API-Key for POST /predict. The port is loopback-only, and the
-    # benchmark harness calls it directly, so it is off unless set.
+    # Optional X-API-Key for POST /predict. The port is loopback-only, and the benchmark harness calls it directly, so it is off unless set.
     predict_api_key: str = ""
 
     log_level: str = "INFO"

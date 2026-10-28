@@ -8,8 +8,7 @@ class Settings(BaseSettings):
     kafka_output_topic: str = "claims.raw"
     source_platform: str = "test"
 
-    # Signs every claims.raw message (see app/signing.py). Required unless
-    # pipeline_allow_unsigned is set for a throwaway dev run.
+    # Signs every claims.raw message (see app/signing.py). Required unless pipeline_allow_unsigned is set for a throwaway dev run.
     pipeline_raw_key: str = ""
     pipeline_allow_unsigned: bool = False
 

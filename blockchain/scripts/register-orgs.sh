@@ -1,8 +1,5 @@
 #!/usr/bin/env bash
-# register-orgs.sh — register stakeholder orgs 1..N on-chain via the
-# "misinformation" chaincode. The chaincode's SubmitReport rejects work from any
-# caller whose MSP is not a registered org, so this must run after the network
-# is up (this is wired into deploy.sh).
+# register-orgs.sh — register stakeholder orgs 1..N on-chain via the "misinformation" chaincode. 
 
 set -euo pipefail
 

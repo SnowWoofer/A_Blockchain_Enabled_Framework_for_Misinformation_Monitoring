@@ -1,6 +1,3 @@
-"""Integration tests: this service in front of the real blockchain gateway
-app (in-process, on its mock ledger), so credential pass-through and the
-gateway's authorisation are exercised for real."""
 from __future__ import annotations
 import hashlib
 import os

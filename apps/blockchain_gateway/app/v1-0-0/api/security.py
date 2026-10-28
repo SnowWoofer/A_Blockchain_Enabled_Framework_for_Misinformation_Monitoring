@@ -1,9 +1,3 @@
-"""Request-level hardening shared by every gateway route: input validators,
-an in-process rate limiter, security headers and a request-body size cap.
-
-The edge proxy (apps/web-client nginx) applies its own rate limits and
-headers too; these are the defence-in-depth copies for anything that reaches
-the gateway directly (benchmarks, other org services on the host)."""
 from __future__ import annotations
 
 import collections
@@ -41,9 +35,7 @@ def validate_msp(msp: str) -> str:
 
 
 def is_safe_url(url: str) -> bool:
-    """Evidence links are rendered as <a href> in the web client, so only
-    absolute http(s) URLs without embedded credentials are accepted —
-    javascript:, data: and friends never reach a browser."""
+    # Evidence links are rendered as <a href> in the web client, so only absolute http(s) URLs without embedded credentials are accepted — javascript:, data: and friends never reach a browser.
     if len(url) > 2048 or any(c.isspace() for c in url):
         return False
     try:

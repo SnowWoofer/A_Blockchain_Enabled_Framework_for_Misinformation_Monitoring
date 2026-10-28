@@ -1,17 +1,6 @@
 #!/usr/bin/env python3
-"""Populate a demo deployment (demo.sh, FABRIC_BACKEND=mock) with sample
-claims and votes so the web client has something to show.
+# Populate a demo deployment (demo.sh, FABRIC_BACKEND=mock) with sample claims and votes so the web client has something to show.
 
-Claims come from data/test.json (the multilingual evaluation set) when it is
-present. They are submitted through the gateway API as the AI pipeline would
-(SUBMITTER_API_KEY), then some are voted on by the other orgs using
-short-lived keys minted for this run and revoked at the end. Every seeded
-vote's reasoning says it is demo data; model_version is "demo-seed", not the
-real model.
-
-    python3 blockchain/scripts/demo-seed.py --gateway http://127.0.0.1:8000 \\
-        --db apps/blockchain_gateway/app/v1-0-0/api/offchain.db --orgs 3 --claims 12
-"""
 from __future__ import annotations
 
 import argparse

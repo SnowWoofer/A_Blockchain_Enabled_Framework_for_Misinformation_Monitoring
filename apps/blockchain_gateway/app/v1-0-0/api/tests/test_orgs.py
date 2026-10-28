@@ -11,7 +11,7 @@ class TestListOrgs:
 
 class TestAdmission:
     def test_admission_workflow(self, client):
-        # org4 is not yet a registered stakeholder; it applies with its own identity
+        # org4 is not yet a registered stakeholder, it applies with its own identity
         resp = client.post("/api/orgs/Org4MSP/admission", headers=api_key(client, "org4"))
         assert resp.status_code == 200
         assert resp.json()["candidate_msp"] == "Org4MSP"

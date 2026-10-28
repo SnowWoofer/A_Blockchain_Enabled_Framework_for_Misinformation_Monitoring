@@ -33,8 +33,7 @@ func isValidOutcome(v string) bool {
 	return v == outcomeNonMisinformation || v == outcomeMisinformation
 }
 
-// requireRole checks that the transaction submitter carries one of the
-// allowed ABAC roles in its X509 certificate attribute extension.
+// requireRole checks that the transaction submitter carries one of the allowed ABAC roles in its X509 certificate attribute extension.
 func requireRole(ctx contractapi.TransactionContextInterface, allowedRoles ...string) error {
 	role, found, err := cid.GetAttributeValue(ctx.GetStub(), "role")
 	if err != nil {
@@ -587,8 +586,7 @@ func (c *MisinformationContract) SubmitFactCheck(
 	if record.Status != statusPending && record.Status != statusUnderReview {
 		return fmt.Errorf("report %s is %s; only PENDING/UNDER_REVIEW reports accept fact-checks", reportID, record.Status)
 	}
-	// The submitting org votes like any other: one vote, on the record. With two
-	// or more registered orgs the 2/3 quorum is at least 2, so it never decides alone.
+	// The submitting org votes like any other: one vote, on the record. With two or more registered orgs the 2/3 quorum is at least 2, so it never decides alone.
 	for _, v := range record.FactChecks {
 		if v.CheckerMSP == checkerMSP {
 			return fmt.Errorf("org %s has already fact-checked report %s", checkerMSP, reportID)
@@ -642,8 +640,7 @@ func tallyFactChecks(checks []FactCheck) map[string]int {
 	return tally
 }
 
-// remainingEligibleVoters counts registered orgs that may still vote on the
-// report: every registered org, the submitter included, that has not voted.
+// remainingEligibleVoters counts registered orgs that may still vote on the report: every registered org, the submitter included, that has not voted.
 func remainingEligibleVoters(orgs []*RegisteredOrg, record ReportRecord) int {
 	voted := make(map[string]bool, len(record.FactChecks))
 	for _, v := range record.FactChecks {
@@ -658,10 +655,7 @@ func remainingEligibleVoters(orgs []*RegisteredOrg, record ReportRecord) int {
 	return remaining
 }
 
-// FinalizeReport closes a stalled report by simple majority of the votes cast
-// (at least 2, no tie). It is only available once the fact-check window has
-// closed: while voting is open the 2/3 quorum rule in SubmitFactCheck is the
-// only way to reach FINAL, so a single official cannot cut a vote short.
+// FinalizeReport closes a stalled report by simple majority of the votes cast (at least 2, no tie).
 func (c *MisinformationContract) FinalizeReport(
 	ctx contractapi.TransactionContextInterface,
 	reportID string,
