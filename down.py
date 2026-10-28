@@ -1,4 +1,19 @@
 #!/usr/bin/env python3
+"""Shut the whole Misinformation Monitor system down and clean up, in one command.
+
+    python3 down.py              stop and remove every container, network, volume,
+                                 chaincode image and runtime file the system created
+    python3 down.py --purge      also delete the generated secrets (.env, secrets/,
+                                 the IPFS swarm key) and the images built here
+    python3 down.py --dry-run    show what would be removed, change nothing
+
+Never touched: research results (results/), datasets (data/), the model
+weights, the Fabric binaries in blockchain/fabric-samples/, and source code.
+
+Container names are fixed in the compose files, so this also removes
+containers of the same name started from another clone of the repository.
+Stdlib only; needs Docker with Compose v2.
+"""
 # Shut the whole Misinformation Monitor system down and clean up, in one command.
 
 from __future__ import annotations

@@ -1,4 +1,28 @@
 #!/usr/bin/env python3
+"""Bring the whole Misinformation Monitor system up, in one command.
+
+    python3 up.py                  secure prototype: Fabric (3 orgs), IPFS, gateways,
+                                   AI pipeline, fact-checking service, web client, monitoring
+    python3 up.py --orgs 5         consortium size (3..30)
+    python3 up.py --benchmark      well-known API keys + validation load, for the research harnesses
+    python3 up.py --no-ai          skip the flagging engine (2.2 GB model, ~3 GB RAM)
+    python3 up.py --explorer       also start Hyperledger Explorer
+    python3 up.py --smoke          finish by sending one tip through the whole pipeline
+    python3 up.py --seed-claims 0  start with an empty review queue (default: 10 claims from data/test.json)
+    python3 up.py --demo           web client on the in-memory mock ledger (no Fabric, light)
+    python3 up.py --dry-run        show the plan and run the pre-flight checks only
+    python3 up.py --status         list running containers, their IP addresses and how to reach them
+
+At the end of a run up.py prints the same container table.
+
+Every run starts from a clean slate (it calls down.py first), because the
+Fabric network is rebuilt from scratch on each start anyway. The first run
+downloads the Fabric binaries and Docker images and builds every service, which
+takes a while; later runs reuse them.
+
+Shut everything down again with:  python3 down.py
+Stdlib only. Output is also written to logs/up-<timestamp>.log.
+"""
 # Bring the whole Misinformation Monitor system up, in one command.
 
 from __future__ import annotations
