@@ -75,9 +75,8 @@ the same steps individually.
 
 > **Before the first run**, download the model weights (`model.safetensors`, 2.2 GB,
 > not in git) from the [model folder on Google Drive](https://drive.google.com/drive/folders/1EcaSIEqh1-BTeSL_ThZse6P1IAhImncs?usp=sharing) and place them in
-> `apps/flagging-engine/model/`, or the flagging engine is not started. **On Docker Engine 29.x** two extra steps are needed: re-tag the Fabric
-> images before `up.py`, and attach the blockchain gateway to `fabric_test`
-> after it (see [Docker 29 / WSL 2](#docker-29--wsl-2) below).
+> `apps/flagging-engine/model/`, or the flagging engine is not started. If you hit problems on **Docker Engine 29.x**,
+> see [Docker 29 / WSL 2](#docker-29--wsl-2) below.
 
 ## How it works
 
@@ -1118,8 +1117,8 @@ under WSL 2. They need no code changes.
 **Chaincode install fails: `docker build failed ... write: broken pipe`.** The
 test-network starts peers from `hyperledger/fabric-peer:latest`. Provisioning
 Fabric 2.5.9 re-tags `latest` to the 2.5.9 peer, which cannot build chaincode
-images with Docker 29. Point `latest` at 2.5.16, then run `python3 down.py` and
-`python3 up.py` again:
+images with Docker 29. `up.py` points `latest` at 2.5.16 itself. If you run
+`startup.sh` directly, do this first:
 
 ```bash
 docker tag hyperledger/fabric-peer:2.5.16    hyperledger/fabric-peer:latest

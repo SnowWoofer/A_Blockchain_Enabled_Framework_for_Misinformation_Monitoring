@@ -13,12 +13,6 @@
     python3 up.py --dry-run        show the plan and run the pre-flight checks only
     python3 up.py --status         list running containers, their IP addresses and how to reach them
 
-At the end of a run up.py prints the same container table.
-
-Every run starts from a clean slate (it calls down.py first), because the
-Fabric network is rebuilt from scratch on each start anyway. The first run
-downloads the Fabric binaries and Docker images and builds every service, which
-takes a while; later runs reuse them.
 
 Shut everything down again with:  python3 down.py
 Stdlib only. Output is also written to logs/up-<timestamp>.log.
@@ -45,6 +39,7 @@ ROOT = Path(__file__).resolve().parent
 FABRIC_DIR = ROOT / "blockchain/fabric-samples"
 MODEL = ROOT / "apps/flagging-engine/model/model.safetensors"
 FABRIC_VERSION, CA_VERSION = "2.5.9", "1.5.9"
+FABRIC_RUNTIME_VERSION = "2.5.16"
 BOOTSTRAP_URL = os.environ.get(
     "FABRIC_BOOTSTRAP_URL", "https://raw.githubusercontent.com/hyperledger/fabric/main/scripts/bootstrap.sh")
 APP_SERVICES = ["kafka", "claim-ingest-worker", "flagging-engine", "submission-worker",
@@ -176,6 +171,14 @@ def provision_fabric() -> None:
         shutil.rmtree(nested)
     if not fabric_provisioned():
         fail("Fabric provisioning did not produce bin/, config/ and test-network/ in blockchain/fabric-samples")
+
+
+def pin_fabric_images() -> None:
+    for image in ("fabric-peer", "fabric-orderer"):
+        tagged = f"hyperledger/{image}:{FABRIC_RUNTIME_VERSION}"
+        if subprocess.run(["docker", "image", "inspect", tagged], capture_output=True).returncode != 0:
+            run(["docker", "pull", tagged])
+        run(["docker", "tag", tagged, f"hyperledger/{image}:latest"])
 
 
 # health checks
@@ -444,6 +447,7 @@ def main() -> int:
     else:
         step("Fabric binaries")
         provision_fabric()
+        pin_fabric_images()
 
         step("Secrets and Docker networks")
         run([str(ROOT / "blockchain/scripts/gen-secrets.sh")])
