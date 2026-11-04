@@ -7,9 +7,9 @@ caliper:
 info:
   Framework: Misinformation Monitoring Consortium
   Channel: mychannel
-  Chaincode: misinformation v2.1
-  Endorsement: OutOf(2, Org1MSP, Org2MSP, Org3MSP)
-  StateDB: CouchDB
+  Chaincode: misinformation
+  Organizations: 20
+  Identity: fact_checker1@org1 (fact_checker)
 
 channels:
   - channelName: mychannel
@@ -20,12 +20,11 @@ organizations:
   - mspid: Org1MSP
     identities:
       certificates:
-        - name: 'Admin'
-          admin: true
+        - name: 'fact_checker1'
           clientPrivateKey:
-            path: '/crypto/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp/keystore/priv_sk'
+            path: '/crypto/peerOrganizations/org1.example.com/users/fact_checker1@org1.example.com/msp/keystore/2dcc61b5bde5ecae2d8bc5c9bc9cb8b4f3084a883f05dfd3c6684524dc950a14_sk'
           clientSignedCert:
-            path: '/crypto/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp/signcerts/Admin@org1.example.com-cert.pem'
+            path: '/crypto/peerOrganizations/org1.example.com/users/fact_checker1@org1.example.com/msp/signcerts/cert.pem'
     connectionProfile:
       path: 'networks/fabric/ccp.json'
       discover: true
