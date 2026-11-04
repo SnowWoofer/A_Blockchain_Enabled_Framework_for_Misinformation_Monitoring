@@ -63,7 +63,6 @@ enroll_ca_admin() {
   local n="$1" port="$2" cert="$3"
   local org_root="${TEST_NETWORK}/organizations/peerOrganizations/org${n}.example.com"
 
-  # Must set FABRIC_CA_CLIENT_HOME BEFORE the skip check so that subsequent fabric-ca-client register calls can find the enrollment.
   export FABRIC_CA_CLIENT_HOME="${org_root}"
 
   if [ -d "${org_root}/msp/keystore" ]; then

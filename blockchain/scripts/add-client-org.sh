@@ -61,7 +61,7 @@ EOF
   (cd "${TEST_NETWORK}" && cryptogen generate --config="${crypto_yaml}" --output="./organizations" >/dev/null)
   rm -f "${crypto_yaml}"
 fi
-# No peers/ directory is the expected outcome here — count defensively, since `ls` on a missing path fails and `set -o pipefail` would abort the script.
+# No peers/ directory is the expected outcome here count defensively, since `ls` on a missing path fails and `set -o pipefail` would abort the script.
 peers_made=0
 [ -d "${ORGDIR}/peers" ] && peers_made="$(find "${ORGDIR}/peers" -mindepth 1 -maxdepth 1 | wc -l)"
 echo ">> [org${N}] peers provisioned: ${peers_made} (expected 0)"

@@ -141,8 +141,7 @@ func (c *MisinformationContract) SetFoundingOrgLimit(
 	if err := requireRole(ctx, "official"); err != nil {
 		return 0, err
 	}
-	// Founding is a one-time step: once any organisation is registered, new members
-	// join only through RequestOrgAdmission and a two-thirds vote.
+	// Founding is a one-time step: once any organisation is registered, new members join only through RequestOrgAdmission and a two-thirds vote.
 	orgs, err := c.getRegisteredOrgs(ctx)
 	if err != nil {
 		return 0, err
@@ -623,8 +622,7 @@ func (c *MisinformationContract) SubmitFactCheck(
 			record.FinalizedAt = deterministicTimestamp(ctx)
 		}
 
-		// early rejection
-		// even if ALL remaining orgs vote YES, can't reach threshold
+		// early rejection even if ALL remaining orgs vote YES, can't reach threshold
 		if record.Status == statusUnderReview && tally["1"]+remaining < required {
 			record.Status = statusRejected
 		}

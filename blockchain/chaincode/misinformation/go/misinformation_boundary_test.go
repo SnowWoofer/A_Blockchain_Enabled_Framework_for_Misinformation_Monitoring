@@ -1,9 +1,5 @@
 package main
 
-// Boundary behaviour of the report state machine: abstention, no votes, late votes,
-// votes after closure, post-deadline majority finalisation and membership changes.
-// These tests document what the chaincode does in each case.
-
 import (
 	"encoding/json"
 	"fmt"
@@ -80,7 +76,7 @@ func TestBoundary_MinimumQuorumExactlyReached(t *testing.T) {
 	}
 }
 
-// A one-organisation consortium decides alone: the "never decides alone" guarantee needs N >= 2.
+// A one-organisation consortium decides alone: the never decides alone guarantee needs N >= 2.
 func TestBoundary_SingleOrgDecidesAlone(t *testing.T) {
 	stub := bqSetup(t, 1)
 	submitReport(stub, "tx-s", "Org1MSP", "r")
@@ -135,8 +131,7 @@ func TestBoundary_TooFewVotesCanOnlyExpire(t *testing.T) {
 	}
 }
 
-// Late votes: the 72-hour window only gates the official's closing actions. While a report is
-// still open a vote is accepted after the deadline and can still trigger early acceptance.
+// Late votes: the 72-hour window only gates the official's closing actions. While a report is still open a vote is accepted after the deadline and can still trigger early acceptance.
 func TestBoundary_LateVoteAcceptedWhileOpen(t *testing.T) {
 	stub := bqSetup(t, 3)
 	bqSubmitOld(t, stub, "r")
@@ -200,8 +195,7 @@ func TestBoundary_ManualFinaliseBelowTwoThirds(t *testing.T) {
 	}
 }
 
-// The official route is the only way to reach FINAL with label 0, and early rejection
-// means it needs a consortium large enough that "0" votes can lead without closing the report.
+// The official route is the only way to reach FINAL with label 0, and early rejection means it needs a consortium large enough that "0" votes can lead without closing the report.
 func TestBoundary_ManualFinaliseLabelZero(t *testing.T) {
 	stub := bqSetup(t, 10) // threshold 7, so up to 3 "0" votes keep the report open
 	bqSubmitOld(t, stub, "r")
