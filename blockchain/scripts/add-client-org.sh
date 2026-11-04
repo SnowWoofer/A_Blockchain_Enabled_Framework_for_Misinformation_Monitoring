@@ -71,7 +71,7 @@ echo ">> [org${N}] generating org definition (configtxgen)..."
 cfgdir="${ADD_ORG3}/.configtx-client-org${N}"
 mkdir -p "${cfgdir}"
 sed -e "s|MSPDir: ../organizations|MSPDir: ../../organizations|" \
-    -e "s/Org3MSP/Org${N}MSP/g" -e "s/org3/org${N}/g" -e "s/Org3/Org${N}/g" \
+    -e "s/org3/org${N}/g" -e "s/Org3/Org${N}/g" \
     "${ADD_ORG3}/configtx.yaml" > "${cfgdir}/configtx.yaml"
 (cd "${cfgdir}" && FABRIC_CFG_PATH="${cfgdir}" configtxgen -printOrg "Org${N}MSP" \
    > "${ORGDIR}/org${N}.json" 2>/dev/null)

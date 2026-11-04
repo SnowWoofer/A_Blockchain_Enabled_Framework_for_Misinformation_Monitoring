@@ -117,7 +117,8 @@ add_org_assets() {
   p2=$((p1 + 1))
 
   # Fabric CA crypto for org4+
-  local ca_p=$((12054 + 1000 * (n - 4)))
+  # orgs 9+ use 22054, 22154, ...: 17054/18054/19054/21054 are the test-network CA operations ports, and 32768+ is the Linux ephemeral range
+  local ca_p; if [ "${n}" -le 8 ]; then ca_p=$((12054 + 1000 * (n - 4))); else ca_p=$((22054 + 100 * (n - 9))); fi
   local ca_cert_dir="${ADD_ORG3}/fabric-ca/org${n}"
   local org_root="${TEST_NETWORK}/organizations/peerOrganizations/org${n}.example.com"
 
@@ -243,7 +244,7 @@ NODEEOF
   local cfgdir="${ADD_ORG3}/.configtx-org${n}"
   mkdir -p "${cfgdir}"
   sed -e "s|MSPDir: ../organizations|MSPDir: ../../organizations|" \
-    -e "s/Org3MSP/Org${n}MSP/g" -e "s/org3/org${n}/g" -e "s/Org3/Org${n}/g" \
+    -e "s/org3/org${n}/g" -e "s/Org3/Org${n}/g" \
     "${ADD_ORG3}/configtx.yaml" > "${cfgdir}/configtx.yaml"
   (cd "${cfgdir}" && FABRIC_CFG_PATH="${cfgdir}" configtxgen -printOrg "Org${n}MSP" \
     > "${org_root}/org${n}.json" 2>/dev/null)

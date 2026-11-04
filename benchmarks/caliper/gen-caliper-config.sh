@@ -7,6 +7,12 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 OUT_CCP="${SCRIPT_DIR}/networks/fabric/ccp.json"
 OUT_BENCH="${SCRIPT_DIR}/benchmarks/misinformation-benchmark.yaml"
+OUT_NET="${SCRIPT_DIR}/networks/fabric/test-network.yaml"
+# Host path of the test-network crypto that docker-compose mounts at /crypto.
+CRYPTO_HOST="${SCRIPT_DIR}/../../blockchain/fabric-samples/test-network/organizations"
+# Caliper signs as this role's identity (register-roles.sh): the chaincode only
+# lets official / fact_checker submit, and the CA-mode Admin has no role attribute.
+CALIPER_ROLE="${CALIPER_ROLE:-fact_checker}"
 
 N=3
 SAMPLES=50
@@ -39,10 +45,30 @@ WRITES=$((SAMPLES * 10))
 READS=$((SAMPLES * 10))
 
 if [ "${BENCHMARK_ONLY}" -eq 0 ]; then
-  python3 - "${N}" > "${OUT_CCP}" <<'PY'
-import json, sys
+  python3 - "${N}" "${CRYPTO_HOST}" "${CALIPER_ROLE}" "${OUT_NET}" > "${OUT_CCP}" <<'PY'
+import json, os, sys
 n = int(sys.argv[1])
+crypto_host, role, out_net = sys.argv[2], sys.argv[3], sys.argv[4]
 base = "/crypto/peerOrganizations"
+
+
+def identity(i):
+    # Fabric CA (network.sh up -ca) names the cert cert.pem and the key <hash>_sk.
+    org = f"org{i}"
+    user = f"{role}{i}@{org}.example.com"
+    rel = f"{org}.example.com/users/{user}/msp"
+    keystore = os.path.join(crypto_host, "peerOrganizations", rel, "keystore")
+    keys = sorted(os.listdir(keystore)) if os.path.isdir(keystore) else []
+    key = "priv_sk" if "priv_sk" in keys else next((k for k in keys if k.endswith("_sk")), None)
+    if key is None:
+        sys.exit(f"ERROR: no private key for {user} in {keystore}; deploy the network first (startup.sh runs register-roles.sh)")
+    return {
+        "name": f"{role}{i}",
+        "clientPrivateKey": {"path": f"{base}/{rel}/keystore/{key}"},
+        "clientSignedCert": {"path": f"{base}/{rel}/signcerts/cert.pem"},
+    }
+
+
 organizations = {}
 peer_entries = {}
 for i in range(1, n + 1):
@@ -50,20 +76,10 @@ for i in range(1, n + 1):
     msp = f"Org{i}MSP"
     port = 7051 + 2000 * (i - 1)
     peer = f"peer0.{org}.example.com"
-    admin_msp = f"{base}/{org}.example.com/users/Admin@{org}.example.com/msp"
     organizations[msp] = {
         "mspid": msp,
         "peers": [peer],
-        "identities": {
-            "certificates": [
-                {
-                    "name": "Admin",
-                    "admin": True,
-                    "clientPrivateKey": {"path": f"{admin_msp}/keystore/priv_sk"},
-                    "clientSignedCert": {"path": f"{admin_msp}/signcerts/Admin@{org}.example.com-cert.pem"},
-                }
-            ]
-        },
+        "identities": {"certificates": [identity(i)]},
     }
     peer_entries[peer] = {
         "url": f"grpcs://{peer}:{port}",
@@ -83,8 +99,44 @@ profile = {
 }
 json.dump(profile, sys.stdout, indent=2)
 print()
+
+# Caliper network config: Org1 is the client organisation.
+client = identity(1)
+with open(out_net, "w") as f:
+    f.write(f"""name: Caliper Benchmarks
+version: "2.0.0"
+
+caliper:
+  blockchain: fabric
+
+info:
+  Framework: Misinformation Monitoring Consortium
+  Channel: mychannel
+  Chaincode: misinformation
+  Organizations: {n}
+  Identity: {client['name']}@org1 ({role})
+
+channels:
+  - channelName: mychannel
+    contracts:
+      - id: misinformation
+
+organizations:
+  - mspid: Org1MSP
+    identities:
+      certificates:
+        - name: '{client['name']}'
+          clientPrivateKey:
+            path: '{client['clientPrivateKey']['path']}'
+          clientSignedCert:
+            path: '{client['clientSignedCert']['path']}'
+    connectionProfile:
+      path: 'networks/fabric/ccp.json'
+      discover: true
+""")
 PY
   echo ">> Caliper connection profile written for org1..${N}: ${OUT_CCP}"
+  echo ">> Caliper network config written (identity ${CALIPER_ROLE}1@org1): ${OUT_NET}"
 fi
 
 python3 - "${WRITES}" "${READS}" > "${OUT_BENCH}" <<'PY'
@@ -119,6 +171,3 @@ print()
 PY
 
 echo ">> Caliper benchmark config written (writes=${WRITES}, reads=${READS}): ${OUT_BENCH}"
-if [ "${BENCHMARK_ONLY}" -eq 0 ]; then
-  echo ">> NOTE: if N > 3, also extend networks/fabric/test-network.yaml with the extra organizations."
-fi

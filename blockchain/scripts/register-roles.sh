@@ -23,13 +23,13 @@ if ! [[ "${LIMIT}" =~ ^[0-9]+$ ]] || [ "${LIMIT}" -lt 1 ]; then
   exit 1
 fi
 
-# CA ports: org1=7054, org2=8054, org3=11054, org4+=12054,13054,...
+# CA ports: org1=7054, org2=8054, org3=11054, org4-8=12054..16054, org9+=22054,22154,... (17054-21054 are CA operations ports; 32768+ is the ephemeral range)
 ca_port() {
   case "$1" in
     1) echo 7054 ;;
     2) echo 8054 ;;
     3) echo 11054 ;;
-    *) if [ "$1" -ge 4 ]; then echo $((12054 + 1000 * ($1 - 4))); else echo ""; fi ;;
+    *) if [ "$1" -ge 9 ]; then echo $((22054 + 100 * ($1 - 9))); elif [ "$1" -ge 4 ]; then echo $((12054 + 1000 * ($1 - 4))); else echo ""; fi ;;
   esac
 }
 
@@ -138,5 +138,5 @@ unset FABRIC_CA_CLIENT_HOME
 echo
 echo ">> Role registration complete."
 echo "   officialN@orgN.example.com   — role=official  (admin/governance)"
-echo "   factcheckerN@orgN.example.com — role=fact_checker (submit/fact-check)"
+echo "   fact_checkerN@orgN.example.com — role=fact_checker (submit/fact-check)"
 echo "   Admin@orgN.example.com        — no role attribute (query-only)"

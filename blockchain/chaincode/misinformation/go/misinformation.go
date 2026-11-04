@@ -141,6 +141,15 @@ func (c *MisinformationContract) SetFoundingOrgLimit(
 	if err := requireRole(ctx, "official"); err != nil {
 		return 0, err
 	}
+	// Founding is a one-time step: once any organisation is registered, new members
+	// join only through RequestOrgAdmission and a two-thirds vote.
+	orgs, err := c.getRegisteredOrgs(ctx)
+	if err != nil {
+		return 0, err
+	}
+	if len(orgs) > 0 {
+		return 0, fmt.Errorf("founding org limit can only be set before the first org registers; call RequestOrgAdmission instead")
+	}
 	if limit < 1 {
 		return 0, fmt.Errorf("founding org limit must be >= 1, got %d", limit)
 	}
