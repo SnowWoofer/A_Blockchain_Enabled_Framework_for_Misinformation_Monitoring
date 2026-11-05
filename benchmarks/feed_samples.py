@@ -196,6 +196,7 @@ def _write_csv(path: Path, results: list[dict]) -> None:
         "votes_cast", 
         "final_status", 
         "latency_ms",
+        "submit_to_final_ms",
     ]
     write_header = not path.exists() or path.stat().st_size == 0
     ts = datetime.now(timezone.utc).isoformat(timespec="seconds")
@@ -342,6 +343,7 @@ def main() -> int:
         submit_org = _org_for_key(submit_key, num_orgs, args.mode)
 
         # submit report
+        submit_started = time.perf_counter()
         report_id, ms = _submit_report(
             args.blockchain_api, submit_key, msg_id, label, confidence,
             statement)
@@ -354,6 +356,7 @@ def main() -> int:
             # fact-checking
             fc_outcomes: list[dict] = []
             final_status = "SUBMITTED"
+            final_ms = None
             if args.fact_check:
                 is_rejected = (i in reject_indices)
                 # every org votes, the submitter included (chaincode v2.4)
@@ -384,6 +387,7 @@ def main() -> int:
                         args.blockchain_api, voting_org_keys[0], report_id)
                     if status in ("FINAL", "REJECTED"):
                         final_status = status
+                        final_ms = (time.perf_counter() - submit_started) * 1000.0
                         break
                     if status:
                         final_status = status
@@ -395,6 +399,7 @@ def main() -> int:
                 rejected += 1
         else:
             final_status = "SUBMIT_FAILED"
+            final_ms = None
             fc_outcomes = []
 
         results.append({
@@ -412,6 +417,7 @@ def main() -> int:
             "votes_cast": len(fc_outcomes),
             "final_status": final_status,
             "latency_ms": round(ms, 1),
+            "submit_to_final_ms": round(final_ms, 1) if final_ms is not None else None,
         })
 
         tag = "OK" if final_status == "FINAL" else (
@@ -460,6 +466,10 @@ def main() -> int:
             p50 = sl[len(sl)//2]
             p95 = sl[int(len(sl)*0.95)]
             print(f"  p50/p95:      {p50:.1f} / {p95:.1f}ms")
+    to_final = [r["submit_to_final_ms"] for r in results if r.get("submit_to_final_ms") is not None]
+    if to_final:
+        print(f"  submit-to-final: mean {statistics.fmean(to_final):.1f}ms, "
+              f"range {min(to_final):.1f}-{max(to_final):.1f}ms")
     print("=" * 64)
     print(f"  Output: {args.output}")
     print("=" * 64)
